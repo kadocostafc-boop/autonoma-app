@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id           Int          @id @default(autoincrement())
+  nome         String
+  email        String       @unique
+  senha        String
+  tipo         String       // "cliente" ou "profissional"
+  criadoEm     DateTime     @default(now())
+  profissional Profissional?
+}
+
+model Profissional {
+  id                Int         @id @default(autoincrement())
+  usuarioId         Int         @unique
+  nome              String
+  idade             Int
+  tempoExperiencia  Int
+  fotoUrl           String?
+  descricao         String?
+  endereco          Endereco?
+  servicos          Servico[] 
+  avaliacoes        Avaliacao[]
+  mensagens         Mensagem[]
+  criadoEm          DateTime    @default(now())
+  usuario           Usuario     @relation(fields: [usuarioId], references: [id])
+}
+
+model Endereco {
+  id               Int           @id @default(autoincrement())
+  profissionalId   Int           @unique
+  cidade           String
+  bairro           String
+  estado           String
+  latitude         Float?
+  longitude        Float?
+  profissional     Profissional  @relation(fields: [profissionalId], references: [id])
+}
+
+model Categoria {
+  id         Int        @id @default(autoincrement())
+  nome       String     @unique
+  servicos   Servico[]
+}
+
+model Servico {
+  id              Int           @id @default(autoincrement())
+  profissionalId  Int
+  categoriaId     Int
+  titulo          String
+  descricao       String
+  preco           Float
+  publicado       Boolean       @default(true)
+  criadoEm        DateTime      @default(now())
+  profissional    Profissional  @relation(fields: [profissionalId], references: [id])
+  categoria       Categoria     @relation(fields: [categoriaId], references: [id])
+}
+
+model Avaliacao {
+  id              Int          @id @default(autoincrement())
+  profissionalId  Int
+  nota            Int
+  comentario      String?
+  clienteNome     String
+  criadoEm        DateTime     @default(now())
+  profissional    Profissional @relation(fields: [profissionalId], references: [id])
+}
+
+model Mensagem {
+  id              Int          @id @default(autoincrement())
+  profissionalId  Int
+  nomeCliente     String
+  contato         String
+  mensagem        String
+  respondido      Boolean      @default(false)
+  criadoEm        DateTime     @default(now())
+  profissional    Profissional @relation(fields: [profissionalId], references: [id])
+}
+
+model Assinatura {
+  id              Int      @id @default(autoincrement())
+  usuarioId       Int
+  plano           String
+  ativo           Boolean  @default(true)
+  criadoEm        DateTime @default(now())
+}
+

@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: autonoma-app
+    env: node
+    plan: free
+    region: oregon
+    buildCommand: "npm install"
+    startCommand: "node server.js"
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: SECURE_COOKIES
+        value: "false"
+      - key: DATA_DIR
+        value: "/data"
+      - key: BACKUP_KEEP
+        value: "20"
+    healthCheckPath: /healthz
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1

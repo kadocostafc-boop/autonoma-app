@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Login do Administrador • Autônoma.app</title>
+  <style>
+    :root{--bg:#f5f7fb;--card:#fff;--text:#1f2937;--muted:#6b7280;--brand:#2d6cdf;--ring:rgba(45,108,223,.25)}
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .wrap{max-width:420px;margin:10vh auto;padding:20px}
+    .card{background:var(--card);border:1px solid #e5e7eb;border-radius:14px;padding:18px;box-shadow:0 8px 20px rgba(0,0,0,.06)}
+    h1{margin:0 0 10px} p{color:var(--muted)}
+    label{display:block;font-weight:700;margin:10px 0 6px}
+    input{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;outline:none}
+    input:focus{border-color:var(--brand);box-shadow:0 0 0 4px var(--ring)}
+    .row{display:flex;gap:10px;margin-top:12px}
+    .btn{appearance:none;border:none;border-radius:10px;padding:10px 12px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block}
+    .primary{background:#2d6cdf;color:#fff}
+    .ghost{background:#f3f4f6;color:#111827}
+    small{color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Login do Administrador</h1>
+      <p>Acesso restrito para verificar perfis.</p>
+      <form method="POST" action="/admin/login">
+        <input type="hidden" name="next" id="next">
+        <label for="usuario">Usuário</label>
+        <input id="usuario" name="usuario" required>
+        <label for="senha">Senha</label>
+        <input id="senha" name="senha" type="password" required>
+        <div class="row">
+          <button class="btn primary" type="submit">Entrar</button>
+          <a class="btn ghost" href="/">Cancelar</a>
+        </div>
+        <small>Dica: defina <strong>ADMIN_USER</strong> e <strong>ADMIN_PASS</strong> no arquivo <code>.env</code>.</small>
+      </form>
+    </div>
+  </div>
+  <script>
+    const u = new URL(location.href);
+    const next = u.searchParams.get('next') || '/profissionais';
+    document.getElementById('next').value = next;
+  </script>
+</body>
+</html>

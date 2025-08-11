@@ -1,0 +1,77 @@
+1<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Autônoma.app</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, #2d6cdf, #1e4fbf);
+      color: white;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      height: 100vh;
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+    p {
+      font-size: 1.2rem;
+      margin-bottom: 2rem;
+    }
+    .buttons {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      background: white;
+      color: #2d6cdf;
+      padding: 15px 25px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 1.1rem;
+      font-weight: bold;
+      transition: 0.3s;
+      border: none;
+    }
+    .btn:hover {
+      background: #f0f0f0;
+      transform: scale(1.05);
+    }
+    .btn.ghost {
+      background: transparent;
+      border: 2px solid white;
+      color: white;
+    }
+    .btn.ghost:hover {
+      background: white;
+      color: #2d6cdf;
+    }
+    footer {
+      position: absolute;
+      bottom: 15px;
+      width: 100%;
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <h1>Bem-vindo ao Autônoma.app</h1>
+  <p>Escolha uma opção:</p>
+  <div class="buttons">
+    <a class="btn ghost" href="/clientes.html">Sou Cliente</a>
+    <a class="btn" href="/cadastro.html">Sou Profissional</a>
+  </div>
+  <footer>
+    &copy; 2025 Autônoma.app - Todos os direitos reservados.
+  </footer>
+</body>
+</html>
