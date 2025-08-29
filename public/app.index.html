@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Baixar o app • Autônoma</title>
+  <link rel="stylesheet" href="/css/app.css">
+  <meta name="theme-color" content="#0b49c8">
+  <style>
+    body{background:linear-gradient(160deg,#0e50d4 0%, #0a3fb0 60%, #082c8a 100%); color:#fff}
+    .wrap-narrow{max-width:820px;margin:0 auto;padding:18px}
+    .header{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+    .logo{height:32px;width:auto}
+    .cardish{
+      background:rgba(0,15,60,.42);
+      border:1px solid rgba(255,255,255,.18);
+      border-radius:16px; padding:16px; backdrop-filter: blur(6px);
+    }
+    h1{margin:6px 0 0}
+    h2{margin:10px 0 6px}
+    .grid{display:grid;gap:12px}
+    @media (min-width:760px){ .grid{grid-template-columns:1fr 1fr} }
+    .btn-install{
+      display:inline-flex;align-items:center;gap:10px;
+      background:#1b2a6b;border:1px solid rgba(255,255,255,.2);
+      color:#fff;border-radius:14px;padding:12px 16px;text-decoration:none;font-weight:700
+    }
+    .badges{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:10px}
+    .badges img{height:28px;filter:brightness(0) invert(1);opacity:.95}
+    .meta{opacity:.9}
+    .ok{color:#bbf7d0}
+    .warn{color:#fde68a}
+  </style>
+</head>
+<body>
+  <div class="wrap-narrow">
+    <header class="header">
+      <a href="/" aria-label="Início"><img src="/img/logo.png" class="logo" alt="Autônoma.app" onerror="this.style.display='none'"></a>
+      <h1>Baixar o app</h1>
+      <div style="margin-left:auto"><a class="btn ghost" href="/">Início</a></div>
+    </header>
+
+    <div class="cardish">
+      <p class="meta">Instale o Autônoma no seu celular para ter um profissional ao seu alcance — mesmo offline.</p>
+
+      <div style="margin-top:8px">
+        <button id="btnInstall" class="btn-install">⬇️ Instalar agora</button>
+        <div class="badges">
+          <a href="https://www.apple.com/br/app-store/" target="_blank" rel="noopener"><img src="/img/appstore-badge.svg" alt="App Store"></a>
+          <a href="https://play.google.com/store" target="_blank" rel="noopener"><img src="/img/googleplay-badge.svg" alt="Google Play"></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:12px">
+      <div class="cardish">
+        <h2>Android (Chrome)</h2>
+        <ol>
+          <li>Toque em <strong>Instalar agora</strong> (acima). Se aparecer um popup, confirme.</li>
+          <li>Se não aparecer, toque no menu ⋮ do Chrome &rarr; <strong>Adicionar à tela inicial</strong>.</li>
+        </ol>
+        <p class="meta">O app ficará na gaveta e na tela inicial.</p>
+      </div>
+
+      <div class="cardish">
+        <h2>iPhone (Safari)</h2>
+        <ol>
+          <li>Abrir no <strong>Safari</strong>.</li>
+          <li>Toque no botão <strong>Compartilhar</strong> (quadrado com seta) &rarr; <strong>Adicionar à Tela de Início</strong>.</li>
+        </ol>
+        <p class="meta">O ícone aparecerá na tela inicial como um app.</p>
+      </div>
+    </div>
+
+    <div class="cardish" style="margin-top:12px">
+      <h2>Status do PWA</h2>
+      <ul class="meta" id="pwaStatus">
+        <li>Service Worker: <span id="swState">checando…</span></li>
+        <li>Modo de exibição: <span id="displayMode">checando…</span></li>
+        <li>Instalável agora: <span id="canInstall">checando…</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // ——— Registro do SW (se existir sw.js no /public)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(()=>{});
+      navigator.serviceWorker.getRegistration().then(reg=>{
+        document.getElementById('swState').textContent = reg ? 'ativado ✅' : 'não registrado';
+      });
+    } else {
+      document.getElementById('swState').textContent = 'indisponível';
+    }
+
+    // ——— Detecta display-mode
+    const dm = window.matchMedia('(display-mode: standalone)').matches ? 'standalone ✅' : 'browser';
+    document.getElementById('displayMode').textContent = dm;
+
+    // ——— Fluxo do beforeinstallprompt
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e)=>{
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('canInstall').textContent = 'sim ✅';
+    });
+    if (!deferredPrompt) document.getElementById('canInstall').textContent = 'talvez (use o menu do navegador)';
+
+    document.getElementById('btnInstall').addEventListener('click', async ()=>{
+      if (deferredPrompt){
+        deferredPrompt.prompt();
+        deferredPrompt = null;
+      } else {
+        // fallback: instrução visual rápida
+        alert('Se o botão do navegador aparecer, confirme a instalação. Caso contrário, use o menu "Adicionar à tela inicial".');
+      }
+    });
+  </script>
+</body>
+</html>

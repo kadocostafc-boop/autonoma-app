@@ -1,77 +1,306 @@
-1<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Autônoma.app</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Autônoma • Profissionais perto de você</title>
+
+  <!-- Canonical + SEO -->
+  <link rel="canonical" href="https://autonomaapp.com.br/">
+  <meta name="description" content="Encontre profissionais perto de você. Perfis verificados, avaliações reais e contato direto por WhatsApp. Rápido, simples e gratuito para clientes.">
+  <meta name="theme-color" content="#0b49c8">
+
+  <!-- Open Graph / Twitter -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Autônoma.app">
+  <meta property="og:title" content="Autônoma • Profissionais perto de você">
+  <meta property="og:description" content="Perfis verificados, avaliações reais e contato direto por WhatsApp.">
+  <meta property="og:url" content="https://autonomaapp.com.br/">
+  <meta property="og:image" content="https://autonomaapp.com.br/img/og-cover.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Autônoma • Profissionais perto de você">
+  <meta name="twitter:description" content="Perfis verificados, avaliações reais e contato direto por WhatsApp.">
+  <meta name="twitter:image" content="https://autonomaapp.com.br/img/og-cover.png">
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
+  <!-- Favicons -->
+  <link rel="icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+
+  <!-- CSS global -->
+  <link rel="stylesheet" href="/css/app.css">
+
+  <!-- JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org/",
+    "@type":"Organization",
+    "name":"Autônoma.app",
+    "url":"https://autonomaapp.com.br/",
+    "logo":"https://autonomaapp.com.br/img/logo.png",
+    "email":"contato@autonomaapp.com.br"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org/",
+    "@type":"WebSite",
+    "name":"Autônoma.app",
+    "url":"https://autonomaapp.com.br/",
+    "potentialAction":{
+      "@type":"SearchAction",
+      "target":"https://autonomaapp.com.br/clientes.html?q={search_term_string}",
+      "query-input":"required name=search_term_string"
+    }
+  }
+  </script>
+
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      background: linear-gradient(135deg, #2d6cdf, #1e4fbf);
-      color: white;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      height: 100vh;
+    /* ======= Visual clean e centralizado ======= */
+    :root{
+      --bg1:#0a38b0; --bg2:#0b2b8a;
+      --pill:#ffffff; --text:#eff4ff; --muted:#cbd5e1; --ink:#0f172a;
+      --brand-cta:#0f1a46; --brand-cta-2:#0a1436;
     }
-    h1 {
-      font-size: 2.5rem;
-      margin-bottom: 0.5rem;
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; color:var(--text);
+      font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
+      background:
+        radial-gradient(1200px 900px at 90% -10%, #64a4ff22, transparent 60%),
+        radial-gradient(1200px 900px at -10% 120%, #2c7dff22, transparent 60%),
+        linear-gradient(180deg,var(--bg1),var(--bg2));
+      display:flex; align-items:center; justify-content:center;
+      text-align:center;
     }
-    p {
-      font-size: 1.2rem;
-      margin-bottom: 2rem;
+    .shell{ width:100%; max-width:560px; padding:32px 18px 40px; margin:auto; }
+    .brand{
+      font-size:clamp(44px, 8.2vw, 68px);
+      font-weight:900; letter-spacing:.3px; line-height:1.02; margin:0 0 16px;
     }
-    .buttons {
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      flex-wrap: wrap;
+    .group{ display:flex; flex-direction:column; gap:12px; align-items:center; }
+    .pill{
+      display:inline-flex; align-items:center; justify-content:center; gap:10px;
+      width:min(520px, 100%); max-width:520px;
+      background:var(--pill); color:var(--ink);
+      border:none; border-radius:28px; padding:14px 16px; /* ligeiramente menor */
+      font-size:18px; font-weight:800; text-decoration:none;
+      box-shadow:0 10px 26px rgba(0,0,0,.18);
+      transition:transform .05s ease, filter .2s ease, box-shadow .2s ease;
     }
-    .btn {
-      background: white;
-      color: #2d6cdf;
-      padding: 15px 25px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-size: 1.1rem;
-      font-weight: bold;
-      transition: 0.3s;
-      border: none;
+    .pill:hover{ filter:brightness(1.03) }
+    .pill:active{ transform:translateY(1px) }
+
+    /* Botão do Painel: variação outline escura */
+    .pill.outline{
+      background:transparent; color:#fff; border:1px solid #c7d2fe99;
+      box-shadow: none;
     }
-    .btn:hover {
-      background: #f0f0f0;
-      transform: scale(1.05);
+
+    /* Slogan */
+    .slogan{
+      margin:18px auto 16px;
+      font-size:clamp(16px, 3.4vw, 20px);
+      line-height:1.4; color:#f1f5ff;
+      max-width:34ch;
     }
-    .btn.ghost {
-      background: transparent;
-      border: 2px solid white;
-      color: white;
+
+    /* CTA de download */
+    .cta-download{
+      display:inline-flex; align-items:center; justify-content:center; gap:10px;
+      width:min(520px, 100%); max-width:520px;
+      background:linear-gradient(180deg, var(--brand-cta), var(--brand-cta-2));
+      color:#fff; border:1px solid #1c2b66;
+      border-radius:28px; padding:14px 16px; font-size:18px; font-weight:900;
+      text-decoration:none; box-shadow:0 14px 34px rgba(0,0,0,.28);
+      transition:transform .05s ease, filter .2s ease, box-shadow .2s ease;
     }
-    .btn.ghost:hover {
-      background: white;
-      color: #2d6cdf;
+    .cta-download:active{ transform:translateY(1px) }
+
+    /* App Store / Google Play */
+    .stores{ margin-top:10px; display:flex; gap:14px; align-items:center; justify-content:center; opacity:.9; font-size:14px }
+    .stores .dot{ width:4px; height:4px; border-radius:999px; background:#c7d2fe; opacity:.6 }
+
+    /* Rodapé */
+    .foot{ margin-top:22px; display:flex; gap:12px; justify-content:center; font-size:13px; opacity:.9 }
+    .foot a{ color:#fff; text-decoration:underline; text-underline-offset:3px }
+
+    /* A2HS */
+    .a2hs{
+      position:fixed; left:12px; right:12px; bottom:12px; z-index:50;
+      background:#0b1229; color:#fff; border:1px solid #1f2937;
+      border-radius:16px; padding:12px; display:none; box-shadow:0 12px 36px rgba(0,0,0,.35);
+      text-align:left;
     }
-    footer {
-      position: absolute;
-      bottom: 15px;
-      width: 100%;
-      font-size: 0.9rem;
-      opacity: 0.8;
-    }
+    .a2hs .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .a2hs .title{ font-weight:800; }
+    .a2hs .meta{ color:#cbd5e1; font-size:13px; }
+    .a2hs .spacer{ flex:1 }
+    .a2hs .btn{ background:#2563eb; color:#fff; border:none; border-radius:10px; padding:8px 12px; font-weight:700; cursor:pointer; }
+    .a2hs .ghost{ background:transparent; border:1px solid #334155; color:#e2e8f0; }
+    .a2hs .x{ background:transparent; border:none; color:#94a3b8; font-size:20px; cursor:pointer; }
+    @media (min-width:720px){ .a2hs{ left:calc(50% - 340px); right:auto; width:680px; } }
+
+    a:focus, button:focus { outline:3px solid #a5b4fc; outline-offset:2px; }
   </style>
 </head>
 <body>
-  <h1>Bem-vindo ao Autônoma.app</h1>
-  <p>Escolha uma opção:</p>
-  <div class="buttons">
-    <a class="btn ghost" href="/clientes.html">Sou Cliente</a>
-    <a class="btn" href="/cadastro.html">Sou Profissional</a>
+  <main class="shell" role="main">
+    <a href="/" aria-label="Início" style="text-decoration:none;color:inherit">
+      <h1 class="brand" id="title">Autônoma</h1>
+    </a>
+
+    <!-- Botões principais centralizados -->
+    <nav class="group" aria-label="Ações principais">
+      <a class="pill" id="btnCliente" href="/clientes.html">
+        👤 <span id="txtCliente">Cliente</span>
+      </a>
+      <a class="pill" id="btnCadastro" href="/cadastro.html">
+        🧰 <span id="txtCadastro">Cadastrar profissional</span>
+      </a>
+      <!-- NOVO: Entrar no Painel -->
+      <a class="pill outline" id="btnPainel" href="/painel_login.html" rel="nofollow">
+        👨‍💼 Entrar no Painel
+      </a>
+    </nav>
+
+    <!-- Slogan (A/B controla o texto; default novo texto) -->
+    <p class="slogan" id="slogan">Tenha um profissional ao seu alcance com apenas 2 cliques.</p>
+
+    <!-- CTA de download central -->
+    <a class="cta-download" id="btnDownload" href="/app">⬇️ Baixar o app</a>
+
+    <!-- App Store / Google Play CENTRAL -->
+    <div class="stores">
+      <span> App Store</span><span class="dot"></span><span>▶︎ Google Play</span>
+    </div>
+
+    <!-- Rodapé -->
+    <div class="foot">
+      <a href="/clientes.html">Início</a><span>•</span>
+      <a href="/favoritos.html">Favoritos</a><span>•</span>
+      <a href="/cadastro.html">Sou profissional</a><span>•</span>
+      <a href="/top10.html">Top 10</a><span>•</span>
+      <a href="/planos.html">Planos</a><span>•</span>
+      <a href="/termos-de-uso.html">Termos de Uso</a><span>•</span>
+      <a href="/politica-de-privacidade.html">Privacidade</a>
+    </div>
+  </main>
+
+  <!-- Smart Banner A2HS -->
+  <div class="a2hs" id="a2hs" role="dialog" aria-label="Adicionar Autônoma à Tela inicial">
+    <div class="row" style="margin-bottom:6px">
+      <div class="title">Adicionar à tela inicial</div>
+      <div class="spacer"></div>
+      <button class="x" id="a2hsClose" aria-label="Fechar">×</button>
+    </div>
+    <div class="row">
+      <div class="meta" id="a2hsHint">Acesse mais rápido pela sua tela inicial.</div>
+      <div class="spacer"></div>
+      <button class="btn ghost" id="a2hsLater">Depois</button>
+      <button class="btn" id="a2hsInstall">Adicionar</button>
+    </div>
   </div>
-  <footer>
-    &copy; 2025 Autônoma.app - Todos os direitos reservados.
-  </footer>
+
+  <script>
+  // -------- PWA --------
+  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(()=>{}); }
+
+  // -------- A/B Test (V1 x V2) --------
+  const LS = {
+    get(k, d=null){ try{ const v = localStorage.getItem(k); return v==null?d:JSON.parse(v);}catch{ return d; } },
+    set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} }
+  };
+  const VAR_KEY = 'ab.variant';
+  const METR_KEY = 'ab.metrics';
+  function pickVariant(){
+    let v = LS.get(VAR_KEY, null);
+    if (!v) { v = (Math.random() < 0.5) ? 'V1' : 'V2'; LS.set(VAR_KEY, v); }
+    return v;
+  }
+  function applyVariant(v){
+    const slogan = document.getElementById('slogan');
+    const txtCliente = document.getElementById('txtCliente');
+    const txtCadastro = document.getElementById('txtCadastro');
+    if (v === 'V2') {
+      slogan.textContent = 'Encontre agora profissionais bem avaliados no seu bairro — fale pelo WhatsApp em segundos.';
+      txtCliente.textContent = 'Encontrar profissional';
+      txtCadastro.textContent = 'Sou profissional — cadastrar';
+    } else {
+      // V1 = novo texto padrão solicitado
+      slogan.textContent = 'Tenha um profissional ao seu alcance com apenas 2 cliques.';
+      txtCliente.textContent = 'Cliente';
+      txtCadastro.textContent = 'Cadastrar profissional';
+    }
+  }
+  function metrInc(field){
+    const v = LS.get(VAR_KEY, 'V1');
+    const metr = LS.get(METR_KEY, { V1:{}, V2:{} });
+    const bucket = metr[v] || (metr[v] = {});
+    bucket[field] = (bucket[field] || 0) + 1;
+    LS.set(METR_KEY, metr);
+  }
+  window.__abMetrics = () => LS.get(METR_KEY, {});
+  const variant = pickVariant();
+  applyVariant(variant);
+  metrInc('home_impression');
+
+  // clicks
+  document.getElementById('btnCliente').addEventListener('click', ()=> metrInc('click_cliente'));
+  document.getElementById('btnCadastro').addEventListener('click', ()=> metrInc('click_cadastrar'));
+  document.getElementById('btnDownload').addEventListener('click', ()=> metrInc('click_download'));
+  document.getElementById('btnPainel').addEventListener('click', ()=> metrInc('click_painel_login'));
+
+  // -------- Smart Banner A2HS --------
+  const a2hs = document.getElementById('a2hs');
+  const a2hsHint = document.getElementById('a2hsHint');
+  const a2hsInstall = document.getElementById('a2hsInstall');
+  const a2hsClose = document.getElementById('a2hsClose');
+  const a2hsLater = document.getElementById('a2hsLater');
+  const A2HS_KEY_HIDE_UNTIL = 'a2hs.hideUntil';
+  let deferredPrompt = null;
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const isiOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isAndroid = /android/i.test(navigator.userAgent);
+  window.addEventListener('beforeinstallprompt', (e) => { deferredPrompt = e; });
+  function shouldShowBanner(){
+    if (isStandalone) return false;
+    const hideUntil = LS.get(A2HS_KEY_HIDE_UNTIL, 0);
+    return Date.now() >= hideUntil;
+  }
+  function showBanner(){
+    if (!shouldShowBanner()) return;
+    if (isiOS) a2hsHint.textContent = 'No iPhone: Compartilhar → “Adicionar à Tela de Início”.';
+    else if (isAndroid) a2hsHint.textContent = 'No Android: toque em “Adicionar” para instalar o app.';
+    else a2hsHint.textContent = 'Adicione o Autônoma à sua tela inicial.';
+    a2hs.style.display = 'block';
+    metrInc('a2hs_impression');
+  }
+  a2hsClose.addEventListener('click', () => {
+    a2hs.style.display = 'none'; metrInc('a2hs_close');
+    LS.set(A2HS_KEY_HIDE_UNTIL, Date.now() + 7*24*60*60*1000);
+  });
+  a2hsLater.addEventListener('click', () => {
+    a2hs.style.display = 'none'; metrInc('a2hs_later');
+    LS.set(A2HS_KEY_HIDE_UNTIL, Date.now() + 2*24*60*60*1000);
+  });
+  a2hsInstall.addEventListener('click', async () => {
+    metrInc('a2hs_install_click');
+    if (deferredPrompt && isAndroid) { deferredPrompt.prompt(); deferredPrompt = null; a2hs.style.display = 'none'; }
+    else if (isiOS) { alert('No iPhone: Compartilhar → “Adicionar à Tela de Início”.'); a2hs.style.display = 'none'; }
+    else { alert('Se o seu navegador suportar, use o menu para instalar o app.'); a2hs.style.display = 'none'; }
+  });
+  setTimeout(showBanner, 1400);
+
+  // Fallback para o botão “Baixar o app”
+  document.getElementById('btnDownload')?.addEventListener('click', (ev)=>{
+    if (deferredPrompt){ ev.preventDefault(); deferredPrompt.prompt(); deferredPrompt = null; metrInc('download_prompt_shown'); }
+  });
+  </script>
 </body>
 </html>

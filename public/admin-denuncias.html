@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Admin • Denúncias • Autônoma.app</title>
+  <meta name="theme-color" content="#2d6cdf">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/css/app.css">
+  <style>
+    .header { display:flex; align-items:center; gap:12px; padding:12px 16px; }
+    .header .logo { height:32px; width:auto; display:block; }
+    .wrap-max{ max-width:1120px; margin:0 auto; padding:16px; }
+    .panel{ background:#fff; border:1px solid #e5e7eb; border-radius:16px; padding:14px; }
+    .toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px }
+    .table{ width:100%; border-collapse: collapse; }
+    .table th, .table td{ border-bottom:1px solid #e5e7eb; padding:8px; text-align:left; font-size:14px; vertical-align:top }
+    .table th{ background:#f8fafc; position:sticky; top:0; z-index:1 }
+    .status-pill{ font-size:12px; padding:2px 6px; border-radius:999px; border:1px solid #cbd5e1; background:#f1f5f9; color:#334155; }
+    .status-pill.resolvida{ border-color:#bbf7d0; background:#ecfccb; color:#166534; }
+    .meta{ color:#64748b }
+    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+    .notes { width:100%; min-height: 86px; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <a href="/" aria-label="Início">
+      <img src="/img/logo.png" alt="Autônoma.app" class="logo" onerror="this.style.display='none'">
+    </a>
+    <div style="margin-left:auto;">
+      <a class="btn ghost" href="/admin">← Voltar ao Admin</a>
+      <a class="btn outline" href="/admin/logout">Sair</a>
+    </div>
+  </header>
+
+  <main class="wrap-max">
+    <div class="panel">
+      <div class="toolbar">
+        <input id="f_q" class="input" placeholder="Buscar (perfil, tipo, detalhes, e-mail)">
+        <select id="f_status" class="input">
+          <option value="all">Todas</option>
+          <option value="aberta">Abertas</option>
+          <option value="resolvida">Resolvidas</option>
+        </select>
+        <button id="f_go" class="btn">Filtrar</button>
+        <span class="meta" id="listInfo">—</span>
+      </div>
+
+      <div style="overflow:auto; max-height:560px">
+        <table class="table" id="tab">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Perfil / Cidade</th>
+              <th>Motivo</th>
+              <th>Detalhes</th>
+              <th>Contato</th>
+              <th>Status</th>
+              <th style="min-width:180px">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="row" style="justify-content:space-between; margin-top:10px">
+        <div class="row">
+          <button id="prev" class="btn ghost">«</button>
+          <span id="pageInfo" class="meta">1/1</span>
+          <button id="next" class="btn ghost">»</button>
+        </div>
+        <span class="meta" id="errList" style="display:none;color:#b91c1c">Erro ao carregar.</span>
+      </div>
+    </div>
+
+    <!-- Modal Detalhes -->
+    <div id="modal" class="modal" style="display:none">
+      <div class="box" style="background:#fff;border-radius:16px;max-width:700px;width:100%;padding:16px">
+        <h2 style="margin:0 0 6px">Detalhes da denúncia <span id="m_id" class="meta"></span></h2>
+        <p class="meta" style="margin:0 0 10px">Criada em <span id="m_created"></span></p>
+
+        <div class="row" style="align-items:flex-start">
+          <div style="flex:1;min-width:260px">
+            <div><strong>Perfil/ID:</strong> <span id="m_profile"></span></div>
+            <div><strong>Cidade:</strong> <span id="m_cidade"></span></div>
+            <div><strong>Motivo:</strong> <span id="m_tipo"></span></div>
+            <div style="margin-top:8px"><strong>Detalhes:</strong><br><pre id="m_detalhes" style="white-space:pre-wrap;font-family:inherit"></pre></div>
+            <div style="margin-top:8px"><strong>Evidências:</strong> <span id="m_evidencias"></span></div>
+            <div style="margin-top:8px"><strong>Contato:</strong> <span id="m_contato"></span></div>
+            <div style="margin-top:8px"><strong>Status:</strong> <span id="m_status" class="status-pill"></span></div>
+            <div class="meta" id="m_resolved" style="margin-top:4px;display:none"></div>
+          </div>
+          <div style="flex:1;min-width:260px">
+            <label for="m_notes"><strong>Notas do admin</strong></label>
+            <textarea id="m_notes" class="notes"></textarea>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <button id="m_toggle" class="btn outline">Marcar como resolvida</button>
+          <button id="m_save" class="btn">Salvar notas / status</button>
+          <button id="m_del" class="btn ghost">Excluir</button>
+          <button id="m_close" class="btn ghost" style="margin-left:auto">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    (function(){
+      const $ = (id) => document.getElementById(id);
+      const tbody = $('tbody'), errList = $('errList'), listInfo = $('listInfo'), pageInfo = $('pageInfo');
+      const f_q = $('f_q'), f_status = $('f_status'), f_go = $('f_go'), prev = $('prev'), next = $('next');
+      let PAGE = 1, PAGES = 1;
+
+      async function apiJSON(url, opt) {
+        const r = await fetch(url, { cache:'no-store', ...(opt||{}) });
+        if (!r.ok) throw new Error('HTTP '+r.status);
+        return r.json();
+      }
+      async function postJSON(url, body) {
+        const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{}) });
+        if (!r.ok) throw new Error('HTTP '+r.status);
+        return r.json();
+      }
+
+      async function loadList(page=1){
+        PAGE = page;
+        const qs = new URLSearchParams({
+          q: f_q.value.trim(),
+          status: f_status.value,
+          page: String(PAGE),
+          limit: "20",
+        });
+        try{
+          const data = await apiJSON('/api/admin/denuncias?'+qs.toString());
+          renderList(data);
+          errList.style.display='none';
+        } catch {
+          errList.style.display='';
+        }
+      }
+
+      function escapeHtml(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+
+      function renderList(data){
+        const items = data.items || [];
+        tbody.innerHTML = items.map(r=>{
+          const contato = [r.email||'', r.telefone||''].filter(Boolean).join(' • ');
+          const statusChip = `<span class="status-pill ${r.status==='resolvida' ? 'resolvida':''}">${escapeHtml(r.status||'')}</span>`;
+          const perfil = escapeHtml(r.profile||'');
+          const cid = escapeHtml(r.cidade||'');
+          const tipo = escapeHtml(r.tipo||'');
+          const detalhes = escapeHtml((r.detalhes||'').length>140 ? r.detalhes.slice(0,140)+'…' : r.detalhes||'');
+          return `
+            <tr>
+              <td>${r.id}</td>
+              <td><div><strong>${perfil}</strong></div><div class="meta">${cid}</div></td>
+              <td>${tipo}</td>
+              <td>${detalhes}</td>
+              <td>${escapeHtml(contato)||'—'}</td>
+              <td>${statusChip}</td>
+              <td class="row">
+                <button class="btn" data-act="ver" data-id="${r.id}">Ver</button>
+                ${r.status==='resolvida'
+                  ? `<button class="btn outline" data-act="reabrir" data-id="${r.id}">Reabrir</button>`
+                  : `<button class="btn outline" data-act="resolver" data-id="${r.id}">Resolver</button>`}
+                <button class="btn ghost" data-act="excluir" data-id="${r.id}">Excluir</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+        listInfo.textContent = `Total: ${data.total} • Página ${data.page}/${data.pages}`;
+        PAGES = data.pages;
+        pageInfo.textContent = `${data.page}/${data.pages}`;
+
+        tbody.querySelectorAll('button[data-act]').forEach(btn=>{
+          btn.addEventListener('click', ()=> handleRowAction(btn.getAttribute('data-act'), Number(btn.getAttribute('data-id'))));
+        });
+      }
+
+      prev.addEventListener('click', ()=>{ if (PAGE>1) loadList(PAGE-1); });
+      next.addEventListener('click', ()=>{ if (PAGE<PAGES) loadList(PAGE+1); });
+      f_go.addEventListener('click', ()=> loadList(1));
+
+      // Modal
+      const modal = $('modal');
+      const m_id=$('m_id'), m_created=$('m_created'), m_profile=$('m_profile'), m_cidade=$('m_cidade'),
+            m_tipo=$('m_tipo'), m_detalhes=$('m_detalhes'), m_evidencias=$('m_evidencias'),
+            m_contato=$('m_contato'), m_status=$('m_status'), m_resolved=$('m_resolved'),
+            m_notes=$('m_notes'), m_toggle=$('m_toggle'), m_save=$('m_save'), m_del=$('m_del'), m_close=$('m_close');
+
+      let currentId = null, currentItem = null;
+
+      function openModal(){ modal.style.display='flex'; }
+      function closeModal(){ modal.style.display='none'; }
+
+      async function handleRowAction(act, id){
+        if (act==='ver'){
+          const data = await apiJSON('/api/admin/denuncias/'+id);
+          if (!data.ok) return;
+          currentId = id; currentItem = data.item;
+          fillModal(currentItem);
+          openModal();
+        } else if (act==='resolver'){
+          await postJSON('/api/admin/denuncias/'+id+'/update', { status:'resolvida' });
+          loadList(PAGE);
+        } else if (act==='reabrir'){
+          await postJSON('/api/admin/denuncias/'+id+'/update', { status:'aberta' });
+          loadList(PAGE);
+        } else if (act==='excluir'){
+          if (!confirm('Excluir esta denúncia?')) return;
+          await fetch('/api/admin/denuncias/'+id, { method:'DELETE' });
+          loadList(PAGE);
+        }
+      }
+
+      function fillModal(r){
+        m_id.textContent = '#'+r.id;
+        m_created.textContent = new Date(r.createdAt).toLocaleString();
+        m_profile.textContent = r.profile || '—';
+        m_cidade.textContent = r.cidade || '—';
+        m_tipo.textContent = r.tipo || '—';
+        m_detalhes.textContent = r.detalhes || '—';
+        m_evidencias.textContent = r.evidencias || '—';
+        const contato = [r.email||'', r.telefone||''].filter(Boolean).join(' • ');
+        m_contato.textContent = contato || '—';
+        m_status.textContent = r.status || '—';
+        m_status.className = 'status-pill ' + (r.status==='resolvida' ? 'resolvida' : '');
+        if (r.resolvedAt){
+          m_resolved.style.display='';
+          m_resolved.textContent = 'Resolvida em ' + new Date(r.resolvedAt).toLocaleString();
+        } else {
+          m_resolved.style.display='none';
+          m_resolved.textContent = '';
+        }
+        m_notes.value = r.adminNotes || '';
+        m_toggle.textContent = (r.status==='resolvida') ? 'Reabrir denúncia' : 'Marcar como resolvida';
+      }
+
+      m_toggle.addEventListener('click', async ()=>{
+        if (!currentId) return;
+        const newStatus = (currentItem.status==='resolvida') ? 'aberta' : 'resolvida';
+        await postJSON('/api/admin/denuncias/'+currentId+'/update', { status: newStatus, adminNotes: m_notes.value });
+        const data = await apiJSON('/api/admin/denuncias/'+currentId);
+        currentItem = data.item; fillModal(currentItem); loadList(PAGE);
+      });
+
+      m_save.addEventListener('click', async ()=>{
+        if (!currentId) return;
+        await postJSON('/api/admin/denuncias/'+currentId+'/update', { adminNotes: m_notes.value, status: currentItem.status });
+        const data = await apiJSON('/api/admin/denuncias/'+currentId);
+        currentItem = data.item; fillModal(currentItem); loadList(PAGE);
+      });
+
+      m_del.addEventListener('click', async ()=>{
+        if (!currentId) return;
+        if (!confirm('Excluir esta denúncia?')) return;
+        await fetch('/api/admin/denuncias/'+currentId, { method:'DELETE' });
+        closeModal(); loadList(PAGE);
+      });
+
+      m_close.addEventListener('click', closeModal);
+      modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+
+      // boot
+      loadList(1);
+    })();
+  </script>
+</body>
+</html>

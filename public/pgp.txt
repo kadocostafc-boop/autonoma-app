@@ -1,0 +1,13 @@
+# Autônoma.app — pgp.txt
+# Este endpoint existe para publicar nossa chave PGP (OpenPGP) usada em
+# comunicação segura com a equipe de segurança.
+#
+# Status: ainda não publicamos uma chave PGP oficial.
+# Enquanto isso, use o contato por e-mail:
+#   contato@autonomaapp.com.br
+#
+# Assim que a chave estiver pronta, este arquivo será substituído por:
+# -----BEGIN PGP PUBLIC KEY BLOCK-----
+# Version: OpenPGP
+# (conteúdo da chave)
+# -----END PGP PUBLIC KEY BLOCK-----

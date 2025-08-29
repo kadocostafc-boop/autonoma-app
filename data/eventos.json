@@ -1,0 +1,7 @@
+[
+  { "date": "2025-01-20", "profId": 1, "type": "visit" },
+  { "date": "2025-01-20", "profId": 1, "type": "call" },
+  { "date": "2025-01-20", "profId": 2, "type": "visit" },
+  { "date": "2025-01-20", "profId": 3, "type": "visit" },
+  { "date": "2025-01-21", "profId": 3, "type": "call" }
+]

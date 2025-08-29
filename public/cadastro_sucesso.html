@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Cadastro concluído • Autônoma.app</title>
+
+  <!-- Canonical + SEO -->
+  <link rel="canonical" href="https://autonomaapp.com.br/cadastro_sucesso.html">
+  <meta name="description" content="Seu perfil foi criado com sucesso! Em instantes você será redirecionado para a página do seu perfil.">
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0b49c8">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
+  <!-- Favicons -->
+  <link rel="icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Autônoma.app">
+  <meta property="og:title" content="Cadastro concluído • Autônoma.app">
+  <meta property="og:description" content="Seu perfil foi criado com sucesso!">
+  <meta property="og:image" content="https://autonomaapp.com.br/img/og-cover.png">
+  <meta property="og:url" content="https://autonomaapp.com.br/cadastro_sucesso.html">
+
+  <!-- CSS global -->
+  <link rel="stylesheet" href="/css/app.css">
+
+  <style>
+    /* Estilo suave para a página de sucesso */
+    .header { display:flex; align-items:center; gap:12px; padding:12px 16px; }
+    .header .logo { height:32px; width:auto; display:block; }
+    .success {
+      border:1px solid #bbf7d0; background:#ecfccb; border-radius:16px;
+      padding:18px;
+    }
+    .success h1 { margin:0 0 6px; }
+    .meta small { font-size:12px; color:#64748b }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center }
+    .count { font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+<header class="header" role="banner">
+  <a href="/" aria-label="Início">
+    <img src="/img/logo.png" alt="Autônoma.app" class="logo" onerror="this.style.display='none'">
+  </a>
+  <div style="margin-left:auto">
+    <a class="btn ghost" href="/">Início</a>
+  </div>
+</header>
+
+<main class="wrap" role="main">
+  <article class="card success" aria-live="polite">
+    <h1>🎉 Cadastro concluído!</h1>
+    <p class="meta">
+      Seu perfil foi criado com sucesso. Em instantes você será redirecionado para a página do seu perfil.
+      <br><small>Se não redirecionar automaticamente, use o botão abaixo.</small>
+    </p>
+    <div class="row" style="margin-top:10px">
+      <a id="perfilLink" class="btn" href="#" rel="noopener">Ir para o perfil</a>
+      <a class="btn outline" href="/clientes.html">Ver profissionais</a>
+    </div>
+    <p class="meta" style="margin-top:8px">
+      Redirecionando em <span id="count" class="count">3</span>…
+    </p>
+  </article>
+
+  <section class="card" style="margin-top:12px">
+    <h2 style="margin:0 0 6px">Dicas rápidas</h2>
+    <ul class="meta" style="margin:8px 0 0; padding-left:18px">
+      <li>Confira se sua foto está nítida e bem enquadrada.</li>
+      <li>Adicione uma descrição clara do serviço e área de atendimento.</li>
+      <li>Mantenha WhatsApp atualizado para receber contatos imediatos.</li>
+    </ul>
+  </section>
+</main>
+
+<script>
+(function(){
+  // Lê ?id= da URL e prepara redirecionamento
+  const params = new URLSearchParams(location.search);
+  const id = Number(params.get('id') || '0');
+  const link = document.getElementById('perfilLink');
+  const countEl = document.getElementById('count');
+
+  if (id > 0) {
+    const href = '/profissional/' + id;
+    link.href = href;
+
+    // contador com fallback acessível
+    let t = 3;
+    const tick = () => {
+      if (!countEl) return;
+      countEl.textContent = String(t);
+      t -= 1;
+      if (t < 0) {
+        location.href = href;
+      } else {
+        setTimeout(tick, 800);
+      }
+    };
+    tick();
+  } else {
+    // Sem id: esconde botão e contador
+    link.style.display = 'none';
+    if (countEl) countEl.parentElement.style.display = 'none';
+  }
+})();
+</script>
+</body>
+</html>

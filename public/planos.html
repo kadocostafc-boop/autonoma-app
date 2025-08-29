@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Planos • Autônoma.app</title>
+
+  <!-- SEO básico -->
+  <link rel="canonical" href="/planos.html">
+  <meta name="description" content="Compare os planos Free, Pro e Premium da Autônoma.app. Ative Radar (tempo real), defina raio de atendimento, ganhe destaque e métricas.">
+  <meta name="theme-color" content="#2563eb">
+
+  <!-- PWA + Favicons -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" href="/favicon.ico">
+
+  <!-- CSS global -->
+  <link rel="stylesheet" href="/css/app.css">
+
+  <style>
+    .wrap-narrow{max-width:1080px;margin:auto}
+    .center{text-align:center}
+    .hero h1{margin:8px 0 6px}
+    .hero p{margin:0;color:#64748b}
+    .grid-plans{
+      display:grid;gap:14px;grid-template-columns:1fr; margin-top:14px
+    }
+    @media(min-width: 900px){
+      .grid-plans{ grid-template-columns: 1fr 1fr 1fr; }
+    }
+    .plan{
+      border:1px solid #e5e7eb; border-radius:16px; padding:16px; background:#fff;
+      display:flex; flex-direction:column; gap:10px;
+    }
+    .plan.pop{ border-color:#2563eb; box-shadow:0 6px 30px rgba(37,99,235,.12) }
+    .tag{font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid #e5e7eb;background:#f1f5f9;display:inline-block}
+    .price{font-size:28px; font-weight:800}
+    .price small{font-size:14px; color:#64748b; font-weight:600}
+    .features{display:flex;flex-direction:column;gap:6px}
+    .features li{list-style:none; display:flex; gap:8px; align-items:flex-start}
+    .features li .ok{background:#ecfccb;border:1px solid #bbf7d0;border-radius:8px;padding:2px 6px;font-size:12px}
+    .muted{color:#64748b}
+    .disclaimer{font-size:12px;color:#64748b}
+    .compare{overflow:auto}
+    table.compare{width:100%; border-collapse:collapse}
+    .compare th,.compare td{border:1px solid #e5e7eb; padding:10px; text-align:center}
+    .compare th{background:#f8fafc}
+    .cta-box{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  </style>
+</head>
+<body>
+  <!-- Header simples -->
+  <header class="header" role="banner">
+    <a href="/" aria-label="Início"><img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display='none'"></a>
+    <nav style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+      <a class="btn ghost" href="/clientes.html">Buscar</a>
+      <a class="btn ghost" href="/cadastro.html">Sou profissional</a>
+      <a class="btn outline" href="/top10.html">Top 10</a>
+      <a class="btn" href="/painel_login.html">Entrar no painel</a>
+    </nav>
+  </header>
+
+  <main class="wrap wrap-narrow" role="main">
+    <!-- Hero -->
+    <section class="card hero center">
+      <h1 class="mt-0">Planos de Assinatura</h1>
+      <p>Escolha o plano ideal para crescer sua presença e fechar mais serviços.</p>
+      <div class="cta-box" style="margin-top:10px">
+        <a class="btn" href="/painel_login.html">Entrar no painel</a>
+        <a class="btn outline" href="/cadastro.html">Começar grátis</a>
+      </div>
+    </section>
+
+    <!-- Cards -->
+    <section class="grid-plans">
+      <!-- Free -->
+      <article class="plan">
+        <div class="row">
+          <strong>🆓 Free (Básico)</strong>
+          <span class="tag">Sem custo</span>
+        </div>
+        <div class="price">R$ 0,00 <small>/ mês</small></div>
+        <ul class="features">
+          <li>• Cadastro simples no app</li>
+          <li>• Perfil nas buscas locais (1 cidade + 1 bairro fixos)</li>
+          <li>• Avaliações e contato por WhatsApp</li>
+          <li class="muted">• Sem destaque, sem métricas</li>
+        </ul>
+        <div class="cta-box">
+          <a class="btn outline" href="/cadastro.html">Usar Free</a>
+        </div>
+      </article>
+
+      <!-- Pro -->
+      <article class="plan pop">
+        <div class="row">
+          <strong>💼 Pro</strong>
+          <span class="tag">Mais escolhido</span>
+        </div>
+        <div class="price">R$ 29,90 <small>/ mês</small></div>
+        <ul class="features">
+          <li>• Tudo do Free</li>
+          <li>• Raio de atendimento até <strong>30km</strong></li>
+          <li>• Até <strong>3 cidades extras</strong></li>
+          <li>• Destaque leve na busca</li>
+          <li>• Relatórios básicos (visitas e contatos)</li>
+          <li>• <strong>Radar</strong> (tempo real): até <strong>5 ativações/mês</strong></li>
+        </ul>
+        <div class="cta-box">
+          <a class="btn" href="/painel_login.html?plan=pro">Assinar Pro</a>
+          <a class="btn ghost" href="/planos.html#comparar">Comparar</a>
+        </div>
+      </article>
+
+      <!-- Premium -->
+      <article class="plan">
+        <div class="row">
+          <strong>⭐ Premium</strong>
+          <span class="tag">Para quem quer prioridade</span>
+        </div>
+        <div class="price">R$ 49,90 <small>/ mês</small></div>
+        <ul class="features">
+          <li>• Tudo do Pro</li>
+          <li>• <strong>Radar ilimitado</strong> (tempo real)</li>
+          <li>• Prioridade máxima na busca</li>
+          <li>• Selo <strong>Profissional Premium</strong> e visual de destaque</li>
+          <li>• Relatórios avançados (chamadas, QR, visitas, denúncias, engajamento)</li>
+          <li>• Elegível ao <strong>Top 10</strong> da semana</li>
+        </ul>
+        <div class="cta-box">
+          <a class="btn" href="/painel_login.html?plan=premium">Assinar Premium</a>
+          <a class="btn ghost" href="/planos.html#comparar">Comparar</a>
+        </div>
+      </article>
+    </section>
+
+    <!-- Aviso de taxas / pagamento via app -->
+    <section class="card">
+      <h2 class="mt-0">Pagamentos pelo app (opcional)</h2>
+      <p class="meta">Se optar por receber pelo app (Pix, Crédito/Débito), a Autônoma retém <strong>4%</strong> por transação para operação e suporte. O repasse ao profissional segue o prazo do método escolhido.</p>
+      <div class="cta-box" style="margin-top:6px">
+        <a class="btn outline" href="/checkout.html">Entender como funciona</a>
+      </div>
+    </section>
+
+    <!-- Comparador -->
+    <section class="card compare" id="comparar">
+      <h2 class="mt-0">Comparar planos</h2>
+      <table class="compare">
+        <thead>
+          <tr>
+            <th>Recurso</th>
+            <th>Free</th>
+            <th>Pro</th>
+            <th>Premium</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Presença nas buscas</td>
+            <td>Local (1 bairro/cidade)</td>
+            <td>Destaque leve</td>
+            <td>Prioridade máxima</td>
+          </tr>
+          <tr>
+            <td>Raio de atendimento</td>
+            <td>—</td>
+            <td>Até 30km</td>
+            <td>Até 50km</td>
+          </tr>
+          <tr>
+            <td>Cidades extras</td>
+            <td>—</td>
+            <td>Até 3</td>
+            <td>Até 10</td>
+          </tr>
+          <tr>
+            <td>Radar (tempo real)</td>
+            <td>—</td>
+            <td>5 ativações/mês</td>
+            <td>Ilimitado</td>
+          </tr>
+          <tr>
+            <td>Métricas</td>
+            <td>—</td>
+            <td>Básicas</td>
+            <td>Avançadas</td>
+          </tr>
+          <tr>
+            <td>Top 10</td>
+            <td>—</td>
+            <td>—</td>
+            <td>Elegível</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="disclaimer" style="margin-top:8px">
+        Valores podem ser ajustados no lançamento oficial. Recursos sujeitos a disponibilidade regional.
+      </p>
+    </section>
+
+    <!-- CTA final -->
+    <section class="card center">
+      <div class="cta-box">
+        <a class="btn" href="/painel_login.html">Entrar no painel</a>
+        <a class="btn outline" href="/cadastro.html">Cadastrar grátis</a>
+      </div>
+    </section>
+
+    <!-- Rodapé -->
+    <div class="foot">
+      <a href="/clientes.html">Início</a><span>•</span>
+      <a href="/favoritos.html">Favoritos</a><span>•</span>
+      <a href="/cadastro.html">Sou profissional</a><span>•</span>
+      <a href="/top10.html">Top 10</a><span>•</span>
+      <a href="/termos-de-uso.html">Termos</a><span>•</span>
+      <a href="/politica-de-privacidade.html">Privacidade</a>
+    </div>
+  </main>
+
+  <script>
+    // Se vier com plan=pro|premium na URL, persistimos a intenção para o painel
+    const u = new URL(location.href);
+    const plan = (u.searchParams.get('plan')||'').toLowerCase();
+    if (plan === 'pro' || plan === 'premium'){
+      try { localStorage.setItem('intent.plan', plan); } catch(_){}
+    }
+  </script>
+</body>
+</html>

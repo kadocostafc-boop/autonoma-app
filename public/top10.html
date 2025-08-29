@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>🏆 Top 10 • Autônoma.app</title>
+
+  <!-- Canonical + SEO -->
+  <link rel="canonical" href="https://autonomaapp.com.br/top10.html">
+  <meta name="description" content="Veja o Top 10 de profissionais da semana por cidade e serviço. Descubra os mais bem avaliados e chamados.">
+  <meta name="theme-color" content="#2563eb">
+
+  <!-- PWA / Icons -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" href="/favicon.ico">
+
+  <!-- CSS global -->
+  <link rel="stylesheet" href="/css/app.css">
+
+  <style>
+    .grid-top{display:grid;gap:12px;grid-template-columns:1fr}
+    @media(min-width:720px){ .grid-top{grid-template-columns:1fr 1fr} }
+    @media(min-width:1100px){ .grid-top{grid-template-columns:repeat(4,1fr)} }
+    .plan-badge{ font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid #e5e7eb;background:#f1f5f9;font-weight:800 }
+    .plan-badge.PRO{ background:#eef2ff;border-color:#6366f1 }
+    .plan-badge.PREMIUM{ background:#fffbeb;border-color:#fbbf24 }
+    .pill{display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border:1px solid #e5e7eb;border-radius:999px;background:#f8fafc;font-size:12px}
+    .subtle{ color:#64748b; font-size:13px }
+    .filters{ display:grid; gap:10px; grid-template-columns:1fr }
+    @media(min-width:720px){ .filters{ grid-template-columns:1fr 1fr } }
+    .cover{ width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:10px; border:1px solid #e5e7eb }
+  </style>
+</head>
+<body>
+  <header class="header" role="banner">
+    <a href="/" aria-label="Início">
+      <img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display='none'">
+    </a>
+    <nav style="margin-left:auto;display:flex;gap:8px">
+      <a class="btn ghost" href="/clientes.html">🔎 Buscar</a>
+      <a class="btn ghost" href="/planos.html">💳 Planos</a>
+      <a class="btn outline" href="/painel_login.html">🔑 Entrar</a>
+    </nav>
+  </header>
+
+  <main class="wrap" role="main" id="root">
+    <div class="card">
+      <h1 class="mt-0">🏆 Top 10 da Semana</h1>
+      <p class="meta">Ranking calculado por visitas, chamadas e avaliações recentes.</p>
+
+      <!-- filtros -->
+      <form id="formFiltros" class="filters" novalidate>
+        <div>
+          <label for="cidade">Cidade</label>
+          <input id="cidade" name="cidade" type="text" placeholder="Digite a cidade" list="dl-cidades" autocomplete="off">
+          <datalist id="dl-cidades"></datalist>
+        </div>
+        <div>
+          <label for="servico">Serviço</label>
+          <input id="servico" name="servico" type="text" placeholder="Ex.: Eletricista" list="dl-servicos" autocomplete="off">
+          <datalist id="dl-servicos"></datalist>
+        </div>
+        <div class="actions" style="margin-top:6px">
+          <button class="btn" type="submit">Filtrar</button>
+          <button class="btn ghost" type="button" id="btnLimpar">Limpar</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="row" style="align-items:center">
+        <h2 class="mt-0" id="tituloLista">Top 10</h2>
+        <div class="pill" id="sumario">—</div>
+      </div>
+      <div id="listaTop" class="grid-top" aria-live="polite"></div>
+    </div>
+
+    <div class="foot">
+      <a href="/">Início</a><span>•</span>
+      <a href="/clientes.html">Buscar</a><span>•</span>
+      <a href="/planos.html">Planos</a><span>•</span>
+      <a href="/termos-de-uso.html">Termos</a><span>•</span>
+      <a href="/politica-de-privacidade.html">Privacidade</a>
+    </div>
+  </main>
+
+  <script>
+    // ===== Utils =====
+    const $ = s => document.querySelector(s);
+    const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    const estrelas = n => '★'.repeat(Math.round(n||0)) + '☆'.repeat(5 - Math.round(n||0));
+    const kmFmt = v => (v==null || isNaN(v)) ? "—" : (v<1? `${(v*1000).toFixed(0)} m` : `${v.toFixed(1)} km`);
+
+    // badge plano
+    const planBadgeHTML = plano => {
+      if(plano==='premium') return ' <span class="plan-badge PREMIUM">Premium</span>';
+      if(plano==='pro')     return ' <span class="plan-badge PRO">Pro</span>';
+      return '';
+    };
+
+    // card
+    function card(pro){
+      const foto = pro.foto || 'https://via.placeholder.com/400x300?text=Profissional';
+      const rating = Number(pro.rating||0);
+      const dist   = pro.distanceKm!=null ? kmFmt(pro.distanceKm) : '—';
+      const atend  = Number(pro.atendimentos||0);
+      const badge  = planBadgeHTML(pro.plano || pro.badge);
+      const loc    = esc([pro.bairro, pro.cidade].filter(Boolean).join(' – '));
+      return `
+        <div class="card">
+          <img class="cover" src="${esc(foto)}" alt="Foto de ${esc(pro.nome||'Profissional')}" loading="lazy"
+               onerror="this.src='https://via.placeholder.com/400x300?text=Profissional'">
+          <h3 style="margin:8px 0 2px">${esc(pro.nome||'Profissional')}${badge}</h3>
+          <div class="meta">${esc(pro.servico||pro.profissao||'—')}</div>
+          <div class="meta">${loc}</div>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <span class="pill">${estrelas(rating)} <strong>${rating?rating.toFixed(1):'—'}</strong></span>
+            <span class="pill">Atend. <strong>${atend}</strong></span>
+            ${pro.distanceKm!=null ? `<span class="pill">Dist. <strong>${dist}</strong></span>` : ``}
+          </div>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+            <a class="btn" href="/profissional/${encodeURIComponent(pro.id)}">Ver perfil</a>
+          </div>
+        </div>
+      `;
+    }
+
+    // ===== Autocomplete (cidades/serviços) =====
+    async function loadCidadesOnce(){
+      try{
+        const r = await fetch('/api/geo/cidades'); if(!r.ok) return;
+        const js = await r.json();
+        $('#dl-cidades').innerHTML = (js||[]).map(c=>`<option value="${esc(c)}">`).join('');
+      }catch{}
+    }
+    async function suggestServicos(q){
+      try{
+        const r = await fetch('/api/geo/servicos/suggest?q='+encodeURIComponent(q||'')); if(!r.ok) return [];
+        return await r.json();
+      }catch{ return []; }
+    }
+    let sDeb=null;
+    $('#servico').addEventListener('input', (e)=>{
+      clearTimeout(sDeb);
+      const q = e.target.value;
+      sDeb = setTimeout(async ()=>{
+        const list = await suggestServicos(q);
+        $('#dl-servicos').innerHTML = list.map(v=>`<option value="${esc(v)}">`).join('');
+      }, 120);
+    });
+
+    // ===== Data =====
+    async function fetchTop10(cidade, servico){
+      // 1) tenta rota dedicada /api/top10
+      const qs = new URLSearchParams();
+      if(cidade) qs.set('cidade', cidade);
+      if(servico) qs.set('servico', servico);
+      try{
+        const r = await fetch('/api/top10?'+qs.toString());
+        if(r.ok){
+          const js = await r.json();
+          if(js && Array.isArray(js.items)) return js.items;
+        }
+      }catch{}
+      // 2) fallback via /api/profissionais (top 10 por "ranking")
+      qs.set('page','1'); qs.set('limit','10'); qs.set('sort','ranking'); qs.set('dir','desc');
+      const r2 = await fetch('/api/profissionais?'+qs.toString());
+      if(!r2.ok) throw new Error('Falha ao carregar resultados');
+      const js2 = await r2.json();
+      return Array.isArray(js2.items) ? js2.items : [];
+    }
+
+    async function render(){
+      const cidade  = ($('#cidade').value||'').trim();
+      const servico = ($('#servico').value||'').trim();
+      $('#tituloLista').textContent = 'Top 10' + (cidade? ` • ${cidade}`:'') + (servico? ` • ${servico}`:'');
+      $('#listaTop').innerHTML = '<div class="meta">Carregando…</div>';
+      try{
+        const arr = await fetchTop10(cidade, servico);
+        $('#listaTop').innerHTML = arr.map(card).join('') || '<div class="meta">Sem resultados para o filtro.</div>';
+        $('#sumario').textContent = `${arr.length} de 10`;
+      }catch(e){
+        $('#listaTop').innerHTML = `<div class="err">Erro ao carregar: ${esc(e.message||'falha de conexão')}.</div>`;
+        $('#sumario').textContent = '—';
+      }
+    }
+
+    // ===== Eventos =====
+    $('#formFiltros').addEventListener('submit', (e)=>{ e.preventDefault(); render(); });
+    $('#btnLimpar').addEventListener('click', ()=>{ $('#cidade').value=''; $('#servico').value=''; render(); });
+
+    // ===== Boot =====
+    (async function(){
+      await loadCidadesOnce();
+      // querystring
+      const q = new URL(location.href).searchParams;
+      if(q.has('cidade')) $('#cidade').value = q.get('cidade');
+      if(q.has('servico')) $('#servico').value = q.get('servico');
+      await render();
+    })();
+  </script>
+</body>
+</html>

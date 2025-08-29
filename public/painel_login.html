@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Entrar no Painel • Autônoma.app</title>
+  <meta name="theme-color" content="#2d6cdf">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" href="/favicon.ico">
+  <link rel="stylesheet" href="/css/app.css">
+  <style>
+    .header{display:flex;align-items:center;gap:12px;padding:12px 16px}
+    .header .logo{height:32px;width:auto;display:block}
+    .header .home{margin-left:auto}
+    .wrap{max-width:520px;margin:0 auto;padding:16px}
+    .card.center{max-width:520px;margin:18px auto}
+    .hint{font-size:12px;color:#64748b}
+    .error{color:#b91c1c}
+    .ok{color:#166534}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .token{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .qr{width:180px;height:180px;border:1px dashed #cbd5e1;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#f8fafc}
+    .foot{display:flex;gap:8px;justify-content:center;margin-top:16px}
+    .pill{font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid #e5e7eb;background:#f1f5f9}
+  </style>
+</head>
+<body>
+<header class="header">
+  <a href="/" aria-label="Início"><img src="/img/logo.png" alt="Autônoma.app" class="logo" onerror="this.style.display='none'"></a>
+  <div class="home">
+    <a class="btn ghost" href="/">Início</a>
+    <a class="btn outline" href="/admin/login">Admin</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="card center" aria-live="polite">
+    <h1 class="mt-0" style="text-align:center">Entrar no Painel</h1>
+    <p class="hint" style="text-align:center;margin:-6px 0 12px">Use seu <strong>WhatsApp</strong> cadastrado para acessar.</p>
+
+    <form id="form" novalidate>
+      <label for="wa">Seu WhatsApp (com DDD)</label>
+      <input id="wa" name="wa" type="tel" inputmode="numeric" placeholder="(21) 98888-7777" required>
+      <p id="waHint" class="hint">Digite somente números — exemplo: 21988887777.</p>
+
+      <div class="row" style="margin-top:10px">
+        <button class="btn" type="submit">Entrar</button>
+        <button class="btn ghost" type="button" id="btnLink">Gerar link de acesso</button>
+      </div>
+
+      <p id="msg" class="hint" style="margin-top:8px"></p>
+    </form>
+
+    <div class="divider" style="margin:14px 0"></div>
+
+    <details>
+      <summary class="hint">Como funciona?</summary>
+      <div class="hint" style="margin-top:8px">
+        Para acesso rápido, o sistema usa um <em>token simples</em> com o seu número de WhatsApp
+        (com código do país <span class="pill">55</span>). Ao enviar, você será redirecionado para
+        <span class="token">/painel.html?token=55XXXXXXXXXXX</span> e a sessão será criada automaticamente.
+        <br><br>
+        <strong>Dica:</strong> salve o atalho nos favoritos do seu navegador para abrir o painel em um toque.
+      </div>
+    </details>
+
+    <div class="divider" style="margin:14px 0"></div>
+
+    <h3 style="margin:0 0 6px">Preferir por QR?</h3>
+    <div class="row" style="align-items:flex-start">
+      <div id="qrBox" class="qr">—</div>
+      <div class="hint">
+        Após digitar seu WhatsApp acima, clique em <em>Gerar link de acesso</em> para mostrar um QR.
+        Escaneie no celular que você usa no WhatsApp.
+      </div>
+    </div>
+
+    <div class="foot">
+      <a class="btn ghost" href="/cadastro.html">Ainda não tenho cadastro</a>
+      <a class="btn ghost" href="/clientes.html">Sou cliente, quero buscar</a>
+    </div>
+  </div>
+</main>
+
+<script>
+(function(){
+  const $ = (s)=> document.querySelector(s);
+  const esc = (s)=> String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+
+  const onlyDigits = (v)=> String(v||'').replace(/\D/g,'');
+  const ensureBR = (d)=> d ? (d.startsWith('55') ? d : '55'+d) : d;
+  function validWhats(raw){
+    const d = onlyDigits(raw);
+    const br = ensureBR(d);
+    return /^\d{12,13}$/.test(br) ? br : '';
+  }
+
+  function goPanelWith(br){
+    // O server confere: ensureBR(whatsapp no DB) === token
+    const url = '/painel.html?token=' + encodeURIComponent(br);
+    location.href = url;
+  }
+
+  const inp = $('#wa');
+  const msg = $('#msg');
+  const hint = $('#waHint');
+  const qrBox = $('#qrBox');
+
+  // Máscara leve (visual apenas)
+  inp.addEventListener('input', ()=>{
+    const d = onlyDigits(inp.value);
+    if (d.length <= 2) { hint.textContent = 'Digite somente números — exemplo: 21988887777.'; return; }
+    hint.textContent = d.startsWith('55')
+      ? 'Ok, número já inclui o 55. Continue.'
+      : 'O 55 será adicionado automaticamente.';
+  });
+
+  $('#form').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    msg.textContent=''; msg.className='hint';
+    const br = validWhats(inp.value);
+    if (!br){
+      msg.textContent='Número inválido. Use DDD (ex.: 21988887777).';
+      msg.className='hint error';
+      return;
+    }
+    msg.textContent='Entrando…';
+    goPanelWith(br);
+  });
+
+  $('#btnLink').addEventListener('click', async ()=>{
+    msg.textContent=''; msg.className='hint';
+    const br = validWhats(inp.value);
+    if (!br){
+      msg.textContent='Digite um WhatsApp válido primeiro.';
+      msg.className='hint error';
+      return;
+    }
+    const link = location.origin + '/painel.html?token=' + encodeURIComponent(br);
+    try{
+      await navigator.clipboard.writeText(link);
+      msg.textContent='Link copiado. Você também pode escanear o QR ao lado.';
+      msg.className='hint ok';
+    }catch{
+      msg.textContent='Link pronto: '+ link;
+      msg.className='hint';
+    }
+    // Tenta carregar um QR gerado pelo back (se disponível)
+    const img = new Image();
+    img.width = 180; img.height = 180; img.alt = 'QR de acesso';
+    img.onload = ()=>{ qrBox.innerHTML=''; qrBox.appendChild(img); };
+    img.onerror = ()=>{ qrBox.textContent = 'QR indisponível'; };
+    img.src = '/api/qr?text=' + encodeURIComponent(link);
+  });
+
+  // se já vier ?token, manda direto pro painel (qualquer link salvo)
+  const qs = new URL(location.href).searchParams;
+  if (qs.has('token')){
+    location.href = '/painel.html?token=' + encodeURIComponent(qs.get('token'));
+  }
+})();
+</script>
+</body>
+</html>

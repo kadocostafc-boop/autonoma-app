@@ -1,0 +1,40 @@
+{
+  "id": "/",
+  "name": "Autônoma.app",
+  "short_name": "Autônoma",
+  "description": "Encontre profissionais do seu bairro com avaliações e perfil detalhado.",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "window-controls-overlay"],
+  "background_color": "#ffffff",
+  "theme_color": "#0b49c8",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Buscar profissionais",
+      "short_name": "Buscar",
+      "url": "/clientes.html",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Cadastrar profissional",
+      "short_name": "Cadastrar",
+      "url": "/cadastro.html",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Meus favoritos",
+      "short_name": "Favoritos",
+      "url": "/favoritos.html",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
+  "screenshots": [
+    { "src": "/img/pwa-screenshot-1.png", "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow" }
+  ],
+  "prefer_related_applications": false
+}

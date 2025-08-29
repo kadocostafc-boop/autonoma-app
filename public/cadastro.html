@@ -1,159 +1,272 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Cadastro de Profissional • Autônoma.app</title>
 
-  <!-- CSS externo desta página -->
-  <link rel="stylesheet" href="css/cadastro.css" />
-  <!-- Fonte opcional (carregue no CSS se preferir local) -->
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+  <!-- Canonical + SEO -->
+  <link rel="canonical" href="https://autonomaapp.com.br/cadastro.html">
+  <meta name="description" content="Cadastre seu perfil no Autônoma: informe seus dados, cidade, bairro e WhatsApp para receber clientes pelo app.">
+
+  <!-- PWA / Favicons -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#2d6cdf">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+
+  <!-- CSS global -->
+  <link rel="stylesheet" href="/css/app.css">
+
+  <style>
+    /* Ajustes locais */
+    .header { display:flex; align-items:center; gap:12px; padding:12px 16px }
+    .header .logo { height:32px; width:auto; display:block }
+    .help { font-size:12px; color:#64748b; margin-top:4px }
+    .preview { font-size:12px; color:#334155; margin-top:4px }
+    .row-wrap { display:flex; gap:10px; flex-wrap:wrap }
+    .field-50 { flex:1 1 220px }
+    .avatar-preview{ width:84px;height:84px;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb;background:#f8fafc }
+    .warn { color:#b91c1c }
+  </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/3/3f/Logo_Blue.svg" alt="" class="brand-mark" />
-      <span class="brand-name">Autônoma<span class="dot">.app</span></span>
-    </div>
-  </header>
+<header class="header" role="banner">
+  <a href="/" aria-label="Início">
+    <img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display='none'">
+  </a>
+  <div style="margin-left:auto;display:flex;gap:8px">
+    <a class="btn ghost" href="/">Início</a>
+    <a class="btn outline" href="/clientes.html">Ver profissionais</a>
+  </div>
+</header>
 
-  <main class="shell">
-    <section class="card">
-      <h1 class="title">Cadastro de Profissional</h1>
-      <p class="subtitle">Preencha seus dados para aparecer nas buscas do seu bairro e cidade.</p>
+<main class="wrap" role="main">
+  <div class="card">
+    <h1 style="margin:0">Cadastre seu perfil</h1>
+    <p class="meta">É rápido e gratuito. Você recebe contatos pelo <strong>WhatsApp</strong>.</p>
+  </div>
 
-      <!-- IMPORTANTE: multipart para envio de arquivo -->
-      <form id="formCadastro" action="/cadastrar" method="POST" enctype="multipart/form-data" novalidate>
-        <!-- Identificação -->
-        <div class="grid grid-2">
-          <div class="field">
-            <label for="nome">Nome completo</label>
-            <input id="nome" name="nome" type="text" placeholder="Ex.: José Ricardo" required />
-          </div>
+  <div class="card" style="max-width:880px;margin:auto">
+    <form id="formCad" action="/cadastrar" method="POST" enctype="multipart/form-data" novalidate>
+      <!-- Foto -->
+      <label for="foto">Foto de perfil (opcional)</label>
+      <div class="row-wrap" style="align-items:center">
+        <img id="fotoPrev" class="avatar-preview" src="https://via.placeholder.com/160?text=Foto" alt="Prévia da foto">
+        <input id="foto" name="foto" type="file" accept="image/*">
+      </div>
+      <p class="help">Formatos: JPG ou PNG, até 3MB.</p>
 
-          <div class="field">
-            <label for="email">E-mail</label>
-            <input id="email" name="email" type="email" placeholder="seuemail@exemplo.com" required />
-          </div>
+      <!-- Nome -->
+      <label for="nome">Seu nome completo *</label>
+      <input id="nome" name="nome" type="text" maxlength="80" required placeholder="Ex.: Ana Souza">
+
+      <!-- Cidade / Bairro -->
+      <div class="row-wrap">
+        <div class="field-50">
+          <label for="cidade">Cidade *</label>
+          <input id="cidade" name="cidade" type="text" list="lista-cidades" required placeholder="Ex.: Rio de Janeiro / RJ">
+          <datalist id="lista-cidades"></datalist>
+          <p class="help">Digite e escolha na lista. Aceitamos “Cidade/UF” ou só “Cidade”.</p>
         </div>
-
-        <div class="grid grid-3">
-          <div class="field">
-            <label for="telefone">Telefone</label>
-            <input id="telefone" name="telefone" type="tel" inputmode="numeric" placeholder="(21) 99999-0000" required />
-          </div>
-
-          <div class="field">
-            <label for="whatsapp">WhatsApp</label>
-            <input id="whatsapp" name="whatsapp" type="tel" inputmode="numeric" placeholder="(21) 99999-0000" />
-            <small class="hint">Use o mesmo do telefone se preferir.</small>
-          </div>
-
-          <div class="field">
-            <label for="experiencia">Tempo de experiência</label>
-            <input id="experiencia" name="experiencia" type="text" placeholder="Ex.: 5 anos" />
-          </div>
+        <div class="field-50">
+          <label for="bairro">Bairro *</label>
+          <input id="bairro" name="bairro" type="text" list="lista-bairros" required placeholder="Ex.: Copacabana">
+          <datalist id="lista-bairros"></datalist>
+          <p class="help">Depois de escolher a cidade, este campo sugere bairros automaticamente.</p>
         </div>
+      </div>
 
-        <!-- Localização -->
-        <div class="grid grid-3">
-          <div class="field">
-            <label for="cidade">Cidade</label>
-            <input id="cidade" name="cidade" type="text" placeholder="Ex.: Rio de Janeiro" required />
-          </div>
-          <div class="field">
-            <label for="bairro">Bairro</label>
-            <input id="bairro" name="bairro" type="text" placeholder="Ex.: Copacabana" required />
-          </div>
-          <div class="field">
-            <label for="endereco">Endereço</label>
-            <input id="endereco" name="endereco" type="text" placeholder="Rua / nº (opcional)" />
-          </div>
+      <!-- Serviço / Profissão -->
+      <div class="row-wrap">
+        <div class="field-50">
+          <label for="servico">Categoria/Serviço (recomendado)</label>
+          <input id="servico" name="servico" type="text" list="lista-servicos" placeholder="Ex.: Eletricista">
+          <datalist id="lista-servicos"></datalist>
         </div>
-
-        <!-- Profissão / Categoria -->
-        <div class="grid grid-2">
-          <div class="field">
-            <label for="servico">Categoria de serviço</label>
-            <select id="servico" name="servico" required>
-              <option value="">Selecione…</option>
-              <option value="Beleza">Beleza (Cabeleireiro, Maquiador, Manicure…)</option>
-              <option value="Construção">Construção (Pedreiro, Pintor, Azulejista…)</option>
-              <option value="Manutenção">Manutenção (Eletricista, Encanador, Marido de Aluguel…)</option>
-              <option value="Tecnologia">Tecnologia (Técnico de TI, Designer, Fotógrafo…)</option>
-              <option value="Educação">Educação (Aulas particulares, Reforço…)</option>
-              <option value="Saúde">Saúde e Bem-estar (Massoterapeuta, Personal…)</option>
-              <option value="Pets">Pets (Banho e Tosa, Dog Walker…)</option>
-              <option value="Eventos">Eventos (Buffet, DJ, Decoração…)</option>
-              <option value="Transporte">Transporte (Frete, Motoboy…)</option>
-              <option value="Outros">Outros</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="profissao">Profissão (especifique)</label>
-            <input id="profissao" name="profissao" type="text" placeholder="Ex.: Fotógrafo de eventos" required />
-          </div>
+        <div class="field-50">
+          <label for="profissao">Profissão (alternativa)</label>
+          <input id="profissao" name="profissao" type="text" maxlength="60" placeholder="Ex.: Técnico em elétrica">
         </div>
+      </div>
+      <p class="help">Preencha pelo menos <strong>Serviço</strong> ou <strong>Profissão</strong>.</p>
 
-        <!-- Descrição -->
-        <div class="field">
-          <label for="descricao">Sobre o seu trabalho</label>
-          <textarea id="descricao" name="descricao" rows="4" placeholder="Conte brevemente seu diferencial, serviços, horários, etc." required></textarea>
+      <!-- Contatos -->
+      <div class="row-wrap">
+        <div class="field-50">
+          <label for="whatsapp">WhatsApp (com DDD) *</label>
+          <input id="whatsapp" name="whatsapp" type="tel" required inputmode="tel" placeholder="Ex.: (21) 98765-4321">
+          <div id="whatsPrev" class="preview"></div>
+          <p class="help">Pode colar com espaços/parênteses/traços. Nós formatamos automaticamente e adicionamos o +55.</p>
         </div>
-
-        <!-- Preço (opcional) -->
-        <div class="grid grid-2">
-          <div class="field">
-            <label for="precoBase">Preço base (opcional)</label>
-            <input id="precoBase" name="precoBase" type="text" inputmode="decimal" placeholder="Ex.: a partir de R$ 150" />
-          </div>
-          <div class="field">
-            <label for="site">Site / Instagram (opcional)</label>
-            <input id="site" name="site" type="url" placeholder="https://instagram.com/seuperfil" />
-          </div>
+        <div class="field-50">
+          <label for="telefone">Telefone (opcional)</label>
+          <input id="telefone" name="telefone" type="tel" inputmode="tel" placeholder="Ex.: (21) 3456-7890">
+          <div id="telPrev" class="preview"></div>
         </div>
+      </div>
 
-        <!-- Foto + preview -->
-        <div class="grid grid-2 align-start">
-          <div class="field">
-            <label for="foto">Foto de perfil</label>
-            <input id="foto" name="foto" type="file" accept="image/*" />
-            <small class="hint">Formatos aceitos: JPG, PNG. Tamanho até ~2MB.</small>
-          </div>
-
-          <div class="preview">
-            <img id="previewImg" alt="Pré-visualização da foto" />
-            <span id="previewFallback">Pré-visualização da foto aparecerá aqui</span>
-          </div>
+      <!-- E-mail / Site -->
+      <div class="row-wrap">
+        <div class="field-50">
+          <label for="email">E-mail (opcional)</label>
+          <input id="email" name="email" type="email" placeholder="Ex.: voce@email.com">
         </div>
-
-        <!-- Ações -->
-        <div class="actions">
-          <button class="btn primary" type="submit">Cadastrar profissional</button>
-          <a class="btn ghost" href="/">Cancelar</a>
+        <div class="field-50">
+          <label for="site">Site/Catálogo (opcional)</label>
+          <input id="site" name="site" type="url" placeholder="Ex.: https://meuportfolio.com">
         </div>
+      </div>
 
-        <!-- Dica WhatsApp -->
-        <div class="wa-hint">
-          <span>⚡ Dica:</span> com o WhatsApp preenchido, seu perfil exibirá um botão
-          <strong>“Falar no WhatsApp”</strong> para contato direto.
+      <!-- Endereço / Experiência / Preço -->
+      <label for="endereco">Endereço (opcional, oculto no perfil)</label>
+      <input id="endereco" name="endereco" type="text" maxlength="120" placeholder="Rua/Av, número, complemento (apenas para referência interna)">
+
+      <div class="row-wrap">
+        <div class="field-50">
+          <label for="experiencia">Experiência (opcional)</label>
+          <input id="experiencia" name="experiencia" type="text" maxlength="80" placeholder="Ex.: 5 anos">
         </div>
-      </form>
-    </section>
-  </main>
+        <div class="field-50">
+          <label for="precoBase">Preço base (opcional)</label>
+          <input id="precoBase" name="precoBase" type="text" maxlength="40" placeholder="Ex.: R$ 100/hora">
+        </div>
+      </div>
 
-  <footer class="foot">
-    <small>© <span id="yy"></span> Autônoma.app — conectando profissionais ao seu bairro.</small>
-  </footer>
+      <!-- Descrição -->
+      <label for="descricao">Sobre você *</label>
+      <textarea id="descricao" name="descricao" maxlength="600" required placeholder="Descreva seu trabalho, diferenciais e área de atendimento."></textarea>
 
-  <!-- JS desta página -->
-  <script src="js/cadastro.js"></script>
-  <script>
-    // ano dinâmico simples
-    document.getElementById('yy').textContent = new Date().getFullYear();
-  </script>
+      <!-- Lat/Lng (ocultos, se usar GPS no futuro) -->
+      <input type="hidden" id="lat" name="lat">
+      <input type="hidden" id="lng" name="lng">
+
+      <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">
+        <button class="btn" type="submit">Cadastrar</button>
+        <a class="btn ghost" href="/clientes.html">Cancelar</a>
+      </div>
+      <p id="err" class="meta warn" style="display:none;margin-top:8px"></p>
+    </form>
+  </div>
+</main>
+
+<script>
+(function(){
+  const $ = (id)=> document.getElementById(id);
+  const err = $("err");
+
+  // --- Foto preview ---
+  const foto = $("foto"), fotoPrev = $("fotoPrev");
+  if (foto){ foto.addEventListener("change", ()=>{ const f=foto.files?.[0]; if(!f){ fotoPrev.src="https://via.placeholder.com/160?text=Foto"; return; } const url=URL.createObjectURL(f); fotoPrev.src=url; }); }
+
+  // --- Lists dinâmicas ---
+  async function fillCities(){ try{ const r=await fetch("/api/geo/cidades"); if(!r.ok) return; const arr=await r.json(); $("lista-cidades").innerHTML = (arr||[]).map(c=>`<option value="${c}">`).join(""); }catch{} }
+  async function fillServicos(){ try{ const r=await fetch("/api/geo/servicos"); if(!r.ok) return; const arr=await r.json(); $("lista-servicos").innerHTML = (arr||[]).map(s=>`<option value="${s}">`).join(""); }catch{} }
+  async function refreshBairros(){ const cid = $("cidade").value.trim(); if(!cid) return; try{ const r=await fetch("/api/geo/bairros?cidade="+encodeURIComponent(cid)); if(!r.ok) return; const arr=await r.json(); $("lista-bairros").innerHTML = (arr||[]).map(b=>`<option value="${b}">`).join(""); }catch{} }
+  $("cidade").addEventListener("change", refreshBairros);
+  fillCities(); fillServicos();
+
+  // --- Normalização BR: remove não-dígitos; adiciona 55 se vier só DDD+número ---
+  function onlyDigits(s){ return String(s||"").replace(/\D/g,""); }
+  function ensureBR(dig){
+    if (!dig) return "";
+    if (dig.startsWith("55")) return dig;               // já com Brasil
+    if (dig.length===10 || dig.length===11) return "55"+dig; // DDD + 8/9 dígitos
+    return dig; // outros casos (deixa como está)
+  }
+  function isValidBR(digCom55){ return /^\d{12,13}$/.test(digCom55); } // 55 + 2 + 8/9
+
+  // Formatação bonitinha: +55 (21) 98765-4321 ou +55 (21) 3456-7890
+  function formatPrettyBR(digCom55){
+    if (!/^\d{12,13}$/.test(digCom55)) return "";
+    const cc = digCom55.slice(0,2);     // 55
+    const ddd = digCom55.slice(2,4);    // 2 dígitos
+    const rest = digCom55.slice(4);     // 8 ou 9
+    if (rest.length===9){
+      return `+${cc} (${ddd}) ${rest.slice(0,5)}-${rest.slice(5)}`;
+    }else{
+      return `+${cc} (${ddd}) ${rest.slice(0,4)}-${rest.slice(4)}`;
+    }
+  }
+
+  // Atualiza preview e normaliza on-the-fly
+  function bindPhoneInput(inputId, prevId){
+    const input = $(inputId);
+    const prev  = $(prevId);
+    function update(){
+      const raw = input.value;
+      const dig = onlyDigits(raw);
+      const with55 = ensureBR(dig);
+      const pretty = formatPrettyBR(with55);
+      if (pretty){ prev.textContent = "Formato: " + pretty; prev.style.color="#334155"; }
+      else if (dig.length){
+        prev.textContent = "Formato inválido — digite com DDD. Ex.: (21) 98765-4321";
+        prev.style.color="#b91c1c";
+      } else {
+        prev.textContent = "";
+      }
+    }
+    input.addEventListener("input", update);
+    input.addEventListener("blur", ()=>{
+      const dig = onlyDigits(input.value);
+      const with55 = ensureBR(dig);
+      // se válido, persistimos no input (para evitar rejeição do servidor)
+      if (isValidBR(with55)) input.value = with55;
+      update();
+    });
+    update();
+  }
+  bindPhoneInput("whatsapp","whatsPrev");
+  bindPhoneInput("telefone","telPrev"); // telefone é opcional, mas já normaliza se o usuário quiser
+
+  // --- Envio com validação mínima no front (o back valida de verdade) ---
+  const form = $("formCad");
+  form.addEventListener("submit", (e)=>{
+    err.style.display="none"; err.textContent="";
+    // Normaliza telefone/whatsapp antes de enviar
+    const wIn = $("whatsapp"), tIn = $("telefone");
+    const wWith55 = ensureBR( onlyDigits(wIn.value) );
+    if (!isValidBR(wWith55)){
+      e.preventDefault();
+      err.textContent = "WhatsApp inválido. Digite com DDD. Ex.: (21) 98765-4321";
+      err.style.display = "";
+      wIn.focus();
+      return;
+    }
+    wIn.value = wWith55;
+    const tDig = onlyDigits(tIn.value);
+    if (tDig){
+      const tWith55 = ensureBR(tDig);
+      if (!isValidBR(tWith55)){
+        e.preventDefault();
+        err.textContent = "Telefone inválido. Ex.: (21) 3456-7890";
+        err.style.display = "";
+        tIn.focus();
+        return;
+      }
+      tIn.value = tWith55;
+    }
+    // Campos obrigatórios
+    if (!$("nome").value.trim()){
+      e.preventDefault(); err.textContent="Informe seu nome."; err.style.display=""; $("nome").focus(); return;
+    }
+    if (!$("cidade").value.trim()){
+      e.preventDefault(); err.textContent="Informe sua cidade."; err.style.display=""; $("cidade").focus(); return;
+    }
+    if (!$("bairro").value.trim()){
+      e.preventDefault(); err.textContent="Informe seu bairro."; err.style.display=""; $("bairro").focus(); return;
+    }
+    if (!($("servico").value.trim() || $("profissao").value.trim())){
+      e.preventDefault(); err.textContent="Informe Categoria/Serviço ou Profissão."; err.style.display=""; $("servico").focus(); return;
+    }
+    if (!$("descricao").value.trim()){
+      e.preventDefault(); err.textContent="Descreva seu trabalho em 'Sobre você'."; err.style.display=""; $("descricao").focus(); return;
+    }
+    // passa — o servidor trata o resto
+  });
+})();
+</script>
 </body>
 </html>

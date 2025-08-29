@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avaliar Profissional</title>
+  <link rel="stylesheet" href="/css/app.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f6fa;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .avaliar-container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 480px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.4rem;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    label {
+      font-weight: bold;
+      margin-bottom: 6px;
+      display: block;
+      font-size: 0.95rem;
+    }
+
+    input, textarea, button {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-bottom: 16px;
+      font-size: 1rem;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .stars {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .star {
+      font-size: 2rem;
+      cursor: pointer;
+      color: #ccc;
+      transition: color 0.2s;
+    }
+
+    .star.selected,
+    .star:hover,
+    .star:hover ~ .star {
+      color: gold;
+    }
+
+    button {
+      background: #007bff;
+      color: #fff;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    .mensagem {
+      text-align: center;
+      font-size: 1rem;
+      font-weight: bold;
+      margin-top: 10px;
+      color: green;
+    }
+
+    @media (max-width: 600px) {
+      .avaliar-container {
+        margin: 10px;
+        padding: 15px;
+      }
+
+      h1 {
+        font-size: 1.2rem;
+      }
+
+      .star {
+        font-size: 1.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="avaliar-container">
+    <h1>Avaliar Profissional</h1>
+    <form id="avaliarForm">
+      <label for="nome">Seu nome (opcional)</label>
+      <input type="text" id="nome" name="nome" placeholder="Digite seu nome">
+
+      <label>Nota</label>
+      <div class="stars" id="stars">
+        <span class="star" data-value="1">★</span>
+        <span class="star" data-value="2">★</span>
+        <span class="star" data-value="3">★</span>
+        <span class="star" data-value="4">★</span>
+        <span class="star" data-value="5">★</span>
+      </div>
+      <input type="hidden" name="nota" id="nota" value="0">
+
+      <label for="comentario">Comentário</label>
+      <textarea id="comentario" name="comentario" placeholder="Escreva seu comentário..."></textarea>
+
+      <button type="submit">Enviar Avaliação</button>
+      <p class="mensagem" id="mensagem"></p>
+    </form>
+  </div>
+
+  <script>
+    // Captura o ID do profissional da URL
+    const profissionalId = window.location.pathname.split("/").pop();
+
+    const stars = document.querySelectorAll(".star");
+    const notaInput = document.getElementById("nota");
+
+    stars.forEach(star => {
+      star.addEventListener("click", () => {
+        const value = star.getAttribute("data-value");
+        notaInput.value = value;
+
+        stars.forEach(s => s.classList.remove("selected"));
+        for (let i = 0; i < value; i++) {
+          stars[i].classList.add("selected");
+        }
+      });
+    });
+
+    const form = document.getElementById("avaliarForm");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const data = {
+        nome: form.nome.value,
+        nota: form.nota.value,
+        comentario: form.comentario.value
+      };
+
+      const response = await fetch(`/avaliar/${profissionalId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+
+      if (response.ok) {
+        document.getElementById("mensagem").textContent = "✅ Obrigado pela sua avaliação!";
+        form.reset();
+        stars.forEach(s => s.classList.remove("selected"));
+        notaInput.value = 0;
+      } else {
+        document.getElementById("mensagem").textContent = "❌ Erro ao enviar avaliação.";
+        document.getElementById("mensagem").style.color = "red";
+      }
+    });
+  </script>
+</body>
+</html>

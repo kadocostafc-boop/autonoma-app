@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Página não encontrada • Autônoma.app</title>
+
+  <!-- SEO -->
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="canonical" href="https://autonomaapp.com.br/404.html">
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0b49c8">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
+  <!-- CSS global -->
+  <link rel="stylesheet" href="/css/app.css">
+
+  <!-- Open Graph (opcional, mas neutro) -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Autônoma.app">
+  <meta property="og:title" content="Página não encontrada • Autônoma.app">
+  <meta property="og:url" content="https://autonomaapp.com.br/404.html">
+  <meta property="og:image" content="https://autonomaapp.com.br/img/og-cover.png">
+  <meta property="og:description" content="A página que você tentou acessar não existe. Volte para a página inicial ou navegue pelo app.">
+
+  <style>
+    .notfound-hero{ text-align:center; padding:28px 16px }
+    .notfound-hero h1{ font-size:26px; margin:8px 0 }
+    .big-emoji{ font-size:72px; line-height:1 }
+    .grid-actions{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:12px }
+    .muted{ color:#64748b }
+  </style>
+</head>
+<body>
+  <header class="header" style="display:flex;align-items:center;gap:12px;padding:12px 16px">
+    <a href="/"><img src="/img/logo.png" alt="Autônoma.app" style="height:32px" onerror="this.style.display='none'"></a>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <a class="btn ghost" href="/">Início</a>
+      <a class="btn outline" href="/clientes.html">Buscar profissionais</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="card notfound-hero">
+      <div class="big-emoji">🔎</div>
+      <h1>Ops! Página não encontrada (404)</h1>
+      <p class="muted">A URL pode ter mudado ou nunca existiu. Você pode voltar para a página inicial ou ir direto para a busca.</p>
+      <div class="grid-actions">
+        <a class="btn" href="/">Ir para o início</a>
+        <a class="btn outline" href="/clientes.html">Encontrar profissional</a>
+        <a class="btn ghost" href="/cadastro.html">Sou profissional</a>
+      </div>
+      <p class="muted" style="margin-top:10px">Você será redirecionado em 8 segundos…</p>
+    </div>
+
+    <div class="card" style="text-align:center">
+      <div class="foot" style="justify-content:center">
+        <a href="/termos-de-uso.html">Termos de Uso</a><span>•</span>
+        <a href="/politica-de-privacidade.html">Privacidade</a><span>•</span>
+        <a href="/favoritos.html">Favoritos</a>
+      </div>
+      <p class="muted" style="margin-top:6px">Contato: <a href="mailto:contato@autonomaapp.com.br">contato@autonomaapp.com.br</a></p>
+    </div>
+  </main>
+
+  <script>
+    // SW (segue padrão do app)
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(()=>{}); }
+    // Redireciona após alguns segundos
+    setTimeout(()=>{ window.location.href = '/'; }, 8000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+# robots.txt — Autônoma.app
+# Indica para mecanismos de busca o que pode ou não ser indexado
+
+User-agent: *
+Allow: /
+
+# Sitemap principal
+Sitemap: https://autonomaapp.com.br/sitemap.xml
+
+# URLs principais que devem ser priorizadas
+Allow: /clientes.html
+Allow: /cadastro.html
+Allow: /favoritos.html
+Allow: /perfil.html
+
+# Bloqueios (não indexar páginas de admin ou APIs internas)
+Disallow: /admin.html
+Disallow: /admin
+Disallow: /api/
+Disallow: /uploads/

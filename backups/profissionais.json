@@ -1,0 +1,459 @@
+[
+  {
+    "id": 4,
+    "nome": "José Ricardo Costa",
+    "email": "kadocostafc@gmail.com",
+    "telefone": "5521964981800",
+    "whatsapp": "5521971891276",
+    "experiencia": "12 anos",
+    "cidade": "Rio de Janeiro",
+    "bairro": "Glória",
+    "endereco": "Rua Santo Amaro 108",
+    "servico": "Eventos",
+    "profissao": "fotografo",
+    "descricao": "Otimo fotografo, atencioso e muito profissional, eu indico",
+    "precoBase": "800,00",
+    "site": "",
+    "foto": "/uploads/1754799210823.jpeg",
+    "atendimentos": 0,
+    "avaliacoes": [
+      {
+        "autor": "Andreia",
+        "comentario": "Excelente profissional eu indico",
+        "nota": 5,
+        "data": "2025-08-12T04:43:29.089Z"
+      },
+      {
+        "autor": "Reinaldo",
+        "comentario": "Atencioso e profissional, muito bom",
+        "nota": 5,
+        "data": "2025-08-13T01:01:27.664Z"
+      }
+    ],
+    "verificado": true,
+    "createdAt": "2025-08-10T04:47:41.175Z",
+    "visitas": 22,
+    "chamadas": 4,
+    "suspenso": false,
+    "suspensoMotivo": "",
+    "visitsLog": [
+      {
+        "at": "2025-08-15T00:15:58.918Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T00:19:00.219Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T00:37:30.252Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T00:37:34.430Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T00:37:48.973Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T00:44:14.821Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T00:59:36.970Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T00:59:49.942Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T00:59:52.401Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T00:59:53.263Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T00:59:53.986Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T00:59:54.700Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T00:59:55.362Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T00:59:56.056Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T00:59:57.868Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T00:59:59.626Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T01:01:23.469Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T01:01:51.016Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T02:07:04.927Z",
+        "src": "unknown",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-16T23:34:36.219Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-16T23:34:42.245Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-16T23:56:32.397Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      }
+    ],
+    "callsLog": [
+      {
+        "at": "2025-08-15T00:16:16.672Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T00:19:03.568Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T00:38:27.083Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T01:02:01.318Z",
+        "src": "unknown",
+        "ua": ""
+      }
+    ],
+    "excluido": false,
+    "qrLog": [],
+    "suspensoEm": null,
+    "excluidoEm": null
+  },
+  {
+    "id": 5,
+    "createdAt": "2025-08-11T18:59:15.222Z",
+    "nome": "José Ricardo Costa",
+    "email": "kadocostafc@gmail.com",
+    "telefone": "5521964981800",
+    "whatsapp": "5521971891276",
+    "experiencia": "12 anos",
+    "cidade": "Rio de Janeiro",
+    "bairro": "Glória",
+    "endereco": "Rua Santo Amaro 108",
+    "servico": "Eventos",
+    "profissao": "fotografo",
+    "descricao": "Fotografo de casamento, festas, e esportes radicais",
+    "precoBase": "800,00",
+    "site": "",
+    "atendimentos": 0,
+    "foto": "/uploads/1754938755049-500880533.jpeg",
+    "avaliacoes": [],
+    "verificado": true,
+    "visitas": 0,
+    "chamadas": 0,
+    "suspenso": false,
+    "suspensoMotivo": "",
+    "visitsLog": [],
+    "callsLog": [],
+    "excluido": false,
+    "qrLog": [],
+    "suspensoEm": null,
+    "excluidoEm": null
+  },
+  {
+    "id": 6,
+    "createdAt": "2025-08-11T19:09:16.945Z",
+    "nome": "Jose Ricardo Ferreira da Costa",
+    "email": "kadurj2007@gmail.com",
+    "telefone": "5521964891800",
+    "whatsapp": "5521971891276",
+    "experiencia": "12 anos",
+    "cidade": "Rio de Janeiro",
+    "bairro": "Copacabana",
+    "endereco": "Rua Santo Amaro 108",
+    "servico": "Eventos",
+    "profissao": "Fotografo",
+    "descricao": "Fotografo de casamento, festas infantis e shows",
+    "precoBase": "150,00",
+    "site": "",
+    "atendimentos": 0,
+    "foto": "/uploads/1754939356899-481769848.jpeg",
+    "avaliacoes": [],
+    "verificado": true,
+    "visitas": 2,
+    "chamadas": 0,
+    "suspenso": false,
+    "suspensoMotivo": "",
+    "visitsLog": [
+      {
+        "at": "2025-08-15T02:07:20.898Z",
+        "src": "unknown",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-15T02:09:31.726Z",
+        "src": "unknown",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      }
+    ],
+    "callsLog": [],
+    "excluido": false,
+    "qrLog": [],
+    "suspensoEm": null,
+    "excluidoEm": null
+  },
+  {
+    "id": 7,
+    "createdAt": "2025-08-12T00:51:27.045Z",
+    "nome": "Jose Ricardo Ferreira da Costa",
+    "email": "kadurj2007@gmail.com",
+    "telefone": "5521964891800",
+    "whatsapp": "5521971891276",
+    "cidade": "Rio de Janeiro",
+    "bairro": "Copacabana",
+    "servico": "Eventos",
+    "profissao": "Fotografo",
+    "experiencia": "12 anos",
+    "precoBase": "150,00",
+    "site": "",
+    "endereco": "Rua Santo Amaro 108",
+    "descricao": "fotografo profissional, casamento, festas, congresso, eventos e shows",
+    "foto": "/uploads/1754959886966-527152442.jpeg",
+    "atendimentos": 0,
+    "avaliacoes": [],
+    "verificado": true,
+    "visitas": 4,
+    "chamadas": 0,
+    "suspenso": false,
+    "suspensoMotivo": "",
+    "visitsLog": [
+      {
+        "at": "2025-08-15T00:40:57.470Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T00:42:48.976Z",
+        "src": "unknown",
+        "ua": ""
+      },
+      {
+        "at": "2025-08-15T01:00:26.513Z",
+        "src": "unknown",
+        "ua": ""
+      }
+    ],
+    "callsLog": [],
+    "excluido": false,
+    "qrLog": [],
+    "suspensoEm": null,
+    "excluidoEm": null
+  },
+  {
+    "id": 8,
+    "createdAt": "2025-08-15T01:08:00.875Z",
+    "nome": "Carlos eduardo",
+    "email": "kadcostafc@gmail.com",
+    "telefone": "5521964891800",
+    "whatsapp": "5521964981800",
+    "cidade": "Rio de Janeiro",
+    "bairro": "Copacabana",
+    "servico": "Eventos",
+    "profissao": "Garson",
+    "experiencia": "1500",
+    "precoBase": "",
+    "site": "",
+    "endereco": "Rua Santo Amaro 108",
+    "descricao": "Atuo como garçom em vários eventos",
+    "foto": "/uploads/1755220080818-434777193.jpeg",
+    "atendimentos": 0,
+    "avaliacoes": [],
+    "visitas": 0,
+    "chamadas": 0,
+    "visitsLog": [],
+    "callsLog": [],
+    "suspenso": false,
+    "suspensoMotivo": "",
+    "suspensoEm": null,
+    "excluido": false,
+    "excluidoEm": null,
+    "verificado": true,
+    "qrLog": []
+  },
+  {
+    "id": 9,
+    "createdAt": "2025-08-15T03:52:53.444Z",
+    "nome": "Jose Ricardo Ferreira da Costa",
+    "email": "kadocostafc@gmail.com",
+    "telefone": "",
+    "whatsapp": "5521964981800",
+    "cidade": "Rio de Janeiro",
+    "bairro": "Catete",
+    "servico": "Outros",
+    "profissao": "ontador de moveis",
+    "experiencia": "5 amos",
+    "precoBase": "150,00",
+    "site": "",
+    "endereco": "Rua Santo Amaro 108",
+    "descricao": "Sou Organizado e procuro ser rapido e bem cuidadoso",
+    "lat": -22.9109692,
+    "lng": -43.1766046,
+    "foto": "/uploads/1755229973341-845827961.jpeg",
+    "atendimentos": 0,
+    "avaliacoes": [],
+    "visitas": 0,
+    "chamadas": 0,
+    "visitsLog": [],
+    "callsLog": [],
+    "qrLog": [],
+    "suspenso": false,
+    "suspensoMotivo": "",
+    "suspensoEm": null,
+    "excluido": false,
+    "excluidoEm": null,
+    "verificado": true
+  },
+  {
+    "id": 10,
+    "createdAt": "2025-08-15T21:03:02.707Z",
+    "nome": "Jose Ricardo Costa",
+    "email": "kadurj2007@gmail.com",
+    "telefone": "5521964981800",
+    "whatsapp": "5521964981800",
+    "cidade": "Rio de Janeiro",
+    "bairro": "Glória",
+    "servico": "Eventos",
+    "profissao": "fotografo",
+    "experiencia": "13 anos",
+    "precoBase": "800,00",
+    "site": "",
+    "endereco": "Rua santo Amaro 108",
+    "descricao": "profissional dedicado e com vasta experiencia no mercado, fotojornalismo, shows, eventos",
+    "lat": -22.9518132,
+    "lng": -43.1843926,
+    "foto": "/uploads/1755291782666-842196481.jpeg",
+    "atendimentos": 0,
+    "avaliacoes": [],
+    "visitas": 0,
+    "chamadas": 0,
+    "visitsLog": [],
+    "callsLog": [],
+    "qrLog": [],
+    "suspenso": false,
+    "suspensoMotivo": "",
+    "suspensoEm": null,
+    "excluido": false,
+    "excluidoEm": null,
+    "verificado": true
+  },
+  {
+    "id": 11,
+    "createdAt": "2025-08-16T17:57:11.645Z",
+    "nome": "José Ricardo Costa",
+    "email": "kadocostafc@gmail.com",
+    "telefone": "5521971891276",
+    "whatsapp": "5521964981800",
+    "cidade": "Rio de Janeiro",
+    "bairro": "Glória",
+    "servico": "Eventos",
+    "profissao": "fotografo",
+    "experiencia": "12 anos",
+    "precoBase": "800,00",
+    "site": "",
+    "endereco": "Rua Santo Amaro 108",
+    "descricao": "Profissional atento e caprichoso, área de atuação, eventos, shows, esportes",
+    "foto": "/uploads/1755367031432-386147413.jpeg",
+    "atendimentos": 0,
+    "avaliacoes": [
+      {
+        "autor": "Renata Santos",
+        "comentario": "Excelente fotografo eu intico",
+        "nota": 5,
+        "data": "2025-08-16T18:09:48.523Z"
+      }
+    ],
+    "visitas": 5,
+    "chamadas": 0,
+    "visitsLog": [
+      {
+        "at": "2025-08-16T22:13:18.916Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-16T22:13:29.675Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-19T16:47:59.358Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-19T16:48:13.572Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-19T17:13:57.674Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      }
+    ],
+    "callsLog": [],
+    "qrLog": [],
+    "suspenso": false,
+    "suspensoMotivo": "",
+    "suspensoEm": null,
+    "excluido": false,
+    "excluidoEm": null,
+    "verificado": true
+  }
+]

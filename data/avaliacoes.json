@@ -1,0 +1,6 @@
+[
+  { "id": 1, "profId": 1, "autor": "Carlos", "nota": 5, "comentario": "Excelente serviço!", "createdAt": "2025-01-12T12:00:00.000Z" },
+  { "id": 2, "profId": 1, "autor": "Fernanda", "nota": 4, "comentario": "Muito boa, recomendo.", "createdAt": "2025-01-15T15:00:00.000Z" },
+  { "id": 3, "profId": 2, "autor": "Paulo", "nota": 5, "comentario": "Resolveu meu problema rapidamente.", "createdAt": "2025-01-18T18:00:00.000Z" },
+  { "id": 4, "profId": 3, "autor": "Juliana", "nota": 4, "comentario": "Atendimento muito bom!", "createdAt": "2025-01-20T09:00:00.000Z" }
+]

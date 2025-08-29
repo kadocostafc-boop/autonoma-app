@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Meus Favoritos • Autônoma.app</title>
+
+  <!-- Canonical + SEO -->
+  <link rel="canonical" href="https://autonomaapp.com.br/favoritos.html">
+  <meta name="description" content="Perfis salvos neste dispositivo. Acesse rapidamente seus profissionais favoritos e compartilhe com amigos.">
+
+  <!-- PWA / Favicons -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0b49c8">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+
+  <!-- CSS global -->
+  <link rel="stylesheet" href="/css/app.css">
+
+  <style>
+    /* Cabeçalho */
+    .header{ display:flex; align-items:center; gap:12px; padding:12px 16px }
+    .header .logo{ height:32px }
+    .nav{ display:flex; gap:8px; margin-left:auto; flex-wrap:wrap }
+
+    /* Grid responsivo */
+    .grid{ display:grid; gap:12px; grid-template-columns:1fr; }
+    @media (min-width:720px){ .grid{ grid-template-columns:1fr 1fr; } }
+    @media (min-width:1100px){ .grid{ grid-template-columns:1fr 1fr 1fr; } }
+    @media (min-width:1400px){ .grid{ grid-template-columns:1fr 1fr 1fr 1fr; } }
+
+    /* Card */
+    .pro-card{
+      background:#fff; border:1px solid #e5e7eb; border-radius:16px; padding:14px;
+      display:flex; flex-direction:column; align-items:center; text-align:center; gap:10px;
+    }
+    .pro-photo{ width:92px; height:92px; border-radius:16px; object-fit:cover; border:1px solid #e5e7eb; }
+    .pro-name{ font-weight:800; }
+    .star{ color:#FFC107 }
+    .meta-row{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+    .pill-mini{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid #e5e7eb; background:#f8fafc; }
+    .actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+    .btn.icon{ display:inline-flex; align-items:center; gap:6px; }
+  </style>
+</head>
+<body>
+<header class="header" role="banner">
+  <a href="/"><img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display='none'"></a>
+  <nav class="nav" aria-label="Links">
+    <a class="btn ghost" href="/">Início</a>
+    <a class="btn outline" href="/top10.html">🏆 Top 10</a>
+    <a class="btn outline" href="/planos.html">💼 Planos</a>
+  </nav>
+</header>
+
+<div class="wrap">
+  <div class="card">
+    <h1 style="margin:0">Meus Favoritos</h1>
+    <p class="meta">Perfis salvos neste dispositivo para acesso rápido.</p>
+    <div class="row" style="gap:8px; flex-wrap:wrap">
+      <button id="btnShareAll" class="btn outline" type="button">🔗 Compartilhar lista</button>
+      <button id="btnClear" class="btn ghost" type="button">🗑️ Limpar todos</button>
+    </div>
+  </div>
+
+  <div id="list" class="grid" aria-live="polite"></div>
+  <div id="empty" class="card meta" style="display:none">Você ainda não adicionou favoritos.</div>
+
+  <!-- Rodapé organizado -->
+  <div class="card" style="text-align:center">
+    <div class="row" style="justify-content:center; gap:8px; flex-wrap:wrap">
+      <a class="btn ghost" href="/">Início</a>
+      <a class="btn ghost" href="/clientes.html">Buscar profissionais</a>
+      <a class="btn outline" href="/top10.html">🏆 Top 10</a>
+      <a class="btn outline" href="/planos.html">💼 Planos</a>
+      <a class="btn ghost" href="/termos-de-uso.html">Termos</a>
+      <a class="btn ghost" href="/politica-de-privacidade.html">Privacidade</a>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const list = document.getElementById('list');
+  const empty = document.getElementById('empty');
+  const BTN_SHARE_ALL = document.getElementById('btnShareAll');
+  const BTN_CLEAR = document.getElementById('btnClear');
+
+  const FKEY = 'autonoma_favs';
+  function getFavs(){ try{ return JSON.parse(localStorage.getItem(FKEY)||'[]'); }catch{ return []; } }
+  function setFavs(arr){ localStorage.setItem(FKEY, JSON.stringify(arr)); }
+
+  function removeFav(id){
+    const arr = getFavs();
+    const idx = arr.findIndex(x => Number(x.id)===Number(id));
+    if (idx>=0){ arr.splice(idx,1); setFavs(arr); }
+    render();
+  }
+
+  function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function estrelas(n){ return '★'.repeat(Math.round(n||0)) + '☆'.repeat(5-Math.round(n||0)); }
+
+  function render(){
+    const arr = getFavs();
+    if (!arr.length){ empty.style.display=''; list.innerHTML=''; return; }
+    empty.style.display='none';
+
+    list.innerHTML = arr.map(p=>{
+      const foto = p.foto || 'https://via.placeholder.com/200?text=Foto';
+      const local = p.local || '';
+      const serv = p.servico || '';
+      const rating = Number(p.rating||0);
+      const atend = (p.atendimentos!=null) ? Number(p.atendimentos) : null;
+      const dist  = (p.distanceKm!=null && isFinite(p.distanceKm)) ? `${Number(p.distanceKm).toFixed(1)} km` : null;
+      const wa    = p.whatsapp ? `https://wa.me/${p.whatsapp}?text=${encodeURIComponent('Olá, vi seu perfil no Autônoma.app. Podemos falar?')}` : '';
+
+      return `
+        <div class="pro-card" data-id="${p.id}">
+          <img class="pro-photo" src="${foto}" alt="Foto de ${esc(p.nome||'Profissional')}">
+          <div class="pro-name">${esc(p.nome||'Profissional')}</div>
+          <div class="meta">${esc(serv)}</div>
+          <div class="meta">${esc(local)}</div>
+          <div class="meta-row" style="margin-top:6px">
+            <span class="pill-mini">⭐ ${estrelas(rating)} ${rating?`(${rating.toFixed(1)})`:'(—)'}</span>
+            ${dist?`<span class="pill-mini">📍 ${dist}</span>`:''}
+            ${atend!=null?`<span class="pill-mini">🧰 ${atend} atend.</span>`:''}
+          </div>
+          <div class="actions">
+            <a class="btn" href="/profissional/${p.id}">Ver perfil</a>
+            ${wa?`<a class="btn outline" target="_blank" rel="noopener" href="${wa}">💬 WhatsApp</a>`:''}
+            <button class="btn icon btn-share" type="button">🔗 Recomendar</button>
+            <button class="btn ghost btn-remove" type="button">🗑️ Remover</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // liga eventos
+    list.querySelectorAll('.pro-card').forEach(card=>{
+      const id = Number(card.getAttribute('data-id'));
+      const btnShare = card.querySelector('.btn-share');
+      const btnRemove = card.querySelector('.btn-remove');
+
+      btnShare.addEventListener('click', async ()=>{
+        const name = card.querySelector('.pro-name')?.textContent || 'Profissional';
+        const meta = card.querySelectorAll('.meta');
+        const serv = meta[0]?.textContent || '';
+        const local = meta[1]?.textContent || '';
+        const url = location.origin + '/profissional/' + id;
+        const text = `Indicação no Autônoma: ${name} — ${serv} (${local}).`;
+        try{
+          if (navigator.share){
+            await navigator.share({ title:'Autônoma • '+name, text, url });
+          } else {
+            await navigator.clipboard.writeText(text+' '+url);
+            btnShare.textContent = '✅ Link copiado';
+            setTimeout(()=> btnShare.textContent = '🔗 Recomendar', 1600);
+          }
+        }catch(_){}
+      });
+
+      btnRemove.addEventListener('click', ()=>{
+        if (confirm('Remover este profissional dos favoritos?')) removeFav(id);
+      });
+    });
+  }
+
+  // Compartilhar todos
+  BTN_SHARE_ALL.addEventListener('click', async ()=>{
+    const arr = getFavs();
+    if (!arr.length){ alert('Você não tem favoritos ainda.'); return; }
+    const lines = arr.slice(0,20).map(p=>{
+      const name = p.nome || 'Profissional';
+      const serv = p.servico || '';
+      const local= p.local || '';
+      const url  = location.origin + '/profissional/' + p.id;
+      return `• ${name} — ${serv} (${local}) → ${url}`;
+    });
+    const text = `Minhas indicações no Autônoma:\n\n${lines.join('\n')}`;
+    try{
+      if (navigator.share){
+        await navigator.share({ title:'Autônoma • Meus favoritos', text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        BTN_SHARE_ALL.textContent = '✅ Lista copiada';
+        setTimeout(()=> BTN_SHARE_ALL.textContent = '🔗 Compartilhar lista', 1600);
+      }
+    }catch(_){}
+  });
+
+  // Limpar todos
+  BTN_CLEAR.addEventListener('click', ()=>{
+    if (!getFavs().length) return alert('Não há favoritos para limpar.');
+    if (confirm('Tem certeza que deseja limpar todos os favoritos deste dispositivo?')){
+      setFavs([]); render();
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

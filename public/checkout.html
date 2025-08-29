@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Checkout • Autônoma.app</title>
+
+  <!-- Meta/PWA básicos -->
+  <meta name="theme-color" content="#2563eb">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
+  <meta name="description" content="Pague com Pix ou Cartão no Autônoma.app. Transparência de taxas e repasse ao profissional.">
+
+  <link rel="stylesheet" href="/css/app.css">
+  <style>
+    .wrap-narrow{max-width:820px;margin:auto}
+    .grid2{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:960px){ .grid2{grid-template-columns:1.2fr .8fr} }
+    .box{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px}
+    .h{margin:.2rem 0}
+    .muted{color:#64748b}
+    .hr{height:1px;background:#e5e7eb;margin:10px 0}
+    .radio{display:flex;gap:10px;align-items:center;margin:6px 0}
+    .total{font-size:20px;font-weight:800}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;}
+    .qr{display:none;text-align:center}
+    .qr img{width:220px;height:220px;border-radius:12px;margin:10px auto;border:1px solid #e5e7eb}
+    .badge-plan{font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid #e5e7eb;background:#f1f5f9}
+    .warn{color:#b45309}
+    .err{color:#b91c1c}
+  </style>
+</head>
+<body>
+  <header class="header" role="banner">
+    <a href="/" aria-label="Início">
+      <img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display='none'">
+    </a>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <a class="btn ghost" href="/planos.html">Planos</a>
+      <a class="btn outline" href="/clientes.html">Encontrar profissional</a>
+    </div>
+  </header>
+
+  <main class="wrap wrap-narrow" role="main">
+    <div class="card">
+      <h1 class="mt-0">Checkout</h1>
+      <p class="meta">Pague com <strong>Pix</strong> ou <strong>Cartão</strong>. Mostramos as taxas com transparência antes de confirmar.</p>
+    </div>
+
+    <div class="grid2">
+      <!-- Coluna esquerda: formulário -->
+      <section class="box" aria-label="Detalhes e pagamento">
+        <h2 class="h">Detalhes</h2>
+        <p class="muted small" id="desc">—</p>
+
+        <div class="hr"></div>
+
+        <h3 class="h">Dados do cliente</h3>
+        <form id="form" novalidate>
+          <label for="nome">Nome</label>
+          <input id="nome" name="nome" type="text" placeholder="Seu nome" maxlength="80" required>
+
+          <label for="doc">CPF (somente números)</label>
+          <input id="doc" name="doc" inputmode="numeric" pattern="\\d{11}" maxlength="11" placeholder="Ex.: 12345678901" required>
+
+          <div class="hr"></div>
+
+          <h3 class="h">Forma de pagamento</h3>
+          <label class="radio">
+            <input type="radio" name="method" value="pix" checked>
+            <span>Pix <span class="muted small">(geramos QR na hora)</span></span>
+          </label>
+          <label class="radio">
+            <input type="radio" name="method" value="card">
+            <span>Cartão (crédito/débito) <span class="muted small">(processado pelo parceiro)</span></span>
+          </label>
+
+          <div id="cardFields" class="hidden" aria-hidden="true">
+            <label for="cardNumber">Número do cartão</label>
+            <input id="cardNumber" inputmode="numeric" placeholder="4111 1111 1111 1111" maxlength="19">
+            <div style="display:flex; gap:8px">
+              <div style="flex:1">
+                <label for="cardExp">Validade (MM/AA)</label>
+                <input id="cardExp" placeholder="12/28" maxlength="5">
+              </div>
+              <div style="flex:1">
+                <label for="cardCvv">CVV</label>
+                <input id="cardCvv" inputmode="numeric" placeholder="123" maxlength="4">
+              </div>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div id="fees" class="muted small">Calculando taxas…</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+            <span class="total">Total</span>
+            <span class="total" id="grand">—</span>
+          </div>
+
+          <div class="row" style="margin-top:12px;gap:8px;justify-content:flex-end">
+            <a href="/" class="btn ghost">Cancelar</a>
+            <button class="btn" id="payBtn" type="submit">Pagar agora</button>
+          </div>
+
+          <p id="msg" class="meta" style="margin-top:8px"></p>
+          <p id="err" class="err small" style="display:none;margin-top:6px"></p>
+        </form>
+
+        <!-- Bloco QR Pix -->
+        <div id="qrBlock" class="qr" aria-live="polite">
+          <h3 class="h">Escaneie o QR Pix</h3>
+          <img id="qrImg" alt="QR Code Pix">
+          <p class="small mono" id="pixCopiaCola"></p>
+          <button class="btn outline" id="copyPix" type="button">Copiar Pix copia e cola</button>
+          <p class="muted small" style="margin-top:8px">Após o pagamento, confirmamos automaticamente. Você também pode fechar esta página — enviaremos o status para o profissional.</p>
+        </div>
+      </section>
+
+      <!-- Coluna direita: resumo -->
+      <aside class="box" aria-label="Resumo do pedido">
+        <h2 class="h">Resumo</h2>
+        <div style="display:flex;gap:10px;align-items:center">
+          <img id="proFoto" src="/img/user.png" alt="" width="56" height="56" style="border-radius:12px;border:1px solid #e5e7eb">
+          <div style="min-width:0">
+            <div id="proNome" style="font-weight:800">Profissional</div>
+            <div class="muted small" id="proServico">—</div>
+            <div class="muted small" id="proCidade">—</div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div style="display:flex;justify-content:space-between">
+          <span>Valor base</span>
+          <span id="valBase">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span>Taxa do app <span class="muted small">(4%)</span></span>
+          <span id="feeApp">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span>Taxa do meio de pagamento</span>
+          <span id="feeAcq">—</span>
+        </div>
+        <div class="hr"></div>
+        <div style="display:flex;justify-content:space-between;font-weight:800">
+          <span>Total</span>
+          <span id="valTotal">—</span>
+        </div>
+
+        <p class="muted small" style="margin-top:10px">
+          <strong>Repasse ao profissional:</strong> o valor líquido entra na conta cadastrada conforme prazos do parceiro.
+        </p>
+
+        <div class="hr"></div>
+
+        <h3 class="h">Preferência do profissional</h3>
+        <p class="muted small" id="recebPref">—</p>
+        <p class="warn small" id="recebWarn" style="display:none">
+          Este profissional prefere receber diretamente. Se continuar no app, as taxas serão aplicadas.
+        </p>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="wrap">
+    <div class="foot">
+      <a href="/top10.html">Top 10</a>
+      <a href="/planos.html">Planos</a>
+      <a href="/clientes.html">Buscar</a>
+      <a href="/termos-de-uso.html">Termos</a>
+      <a href="/politica-de-privacidade.html">Privacidade</a>
+    </div>
+  </footer>
+
+  <script>
+  (function(){
+    // Utilidades
+    const $ = (id)=> document.getElementById(id);
+    const esc = (s)=> String(s||"");
+    const money = (v)=> isFinite(v) ? v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"}) : "—";
+    const onlyDigits = (v)=> String(v||"").replace(/\D/g,"");
+    const qs = new URLSearchParams(location.search);
+
+    // Parâmetros esperados na URL
+    const proId = Number(qs.get("proId")||"0");
+    const amount = Number(qs.get("amount")||"0"); // em reais (ex.: 120.50)
+    const title = qs.get("title") || "Pagamento de serviço";
+    const backTo = qs.get("back") || "/";
+
+    // Estado atual
+    let method = "pix";
+    let quote = null;       // retorno de /api/pay/quote
+    let pro = null;         // /api/profissional/:id (nome/foto/etc)
+    let receiveViaApp = true;
+
+    // Elementos
+    const form = $("form");
+    const err  = $("err");
+    const msg  = $("msg");
+    const fees = $("fees");
+    const grand= $("grand");
+    const cardFields = $("cardFields");
+    const qrBlock = $("qrBlock");
+    const qrImg = $("qrImg");
+    const pixCopiaCola = $("pixCopiaCola");
+    const copyPix = $("copyPix");
+
+    // Resumo
+    const proFoto = $("proFoto");
+    const proNome = $("proNome");
+    const proServico = $("proServico");
+    const proCidade = $("proCidade");
+    const valBase = $("valBase");
+    const feeApp = $("feeApp");
+    const feeAcq = $("feeAcq");
+    const valTotal = $("valTotal");
+    const recebPref = $("recebPref");
+    const recebWarn = $("recebWarn");
+    const desc = $("desc");
+
+    // Guardas iniciais
+    desc.textContent = title;
+    if (!proId || !isFinite(amount) || amount <= 0) {
+      err.style.display = "";
+      err.textContent = "Link de pagamento inválido. Volte e gere novamente.";
+      $("payBtn").disabled = true;
+      return;
+    }
+
+    // Carrega profissional
+    fetch("/api/profissional/"+proId)
+      .then(r=> r.ok ? r.json() : Promise.reject())
+      .then(js=>{
+        pro = js;
+        proFoto.src = pro.foto || "/img/user.png";
+        proNome.textContent = pro.nome || "Profissional";
+        proServico.textContent = pro.servico || "—";
+        proCidade.textContent = [pro.bairro, pro.cidade].filter(Boolean).join(" — ") || "—";
+        receiveViaApp = !!pro.receiveViaApp;
+        recebPref.textContent = receiveViaApp ? "Receber pelo aplicativo (Pix/Cartão)" : "Receber direto do cliente (fora do app)";
+        recebWarn.style.display = receiveViaApp ? "none" : "";
+      })
+      .catch(()=>{ /* segue mesmo assim */ });
+
+    // Cálculo de taxas (quote)
+    function refreshQuote(){
+      fees.textContent = "Calculando taxas…";
+      grand.textContent = "—";
+      valBase.textContent = money(amount);
+
+      const body = { proId, amount, method };
+      return fetch("/api/pay/quote",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify(body)
+      })
+      .then(r=> r.ok ? r.json() : Promise.reject(r))
+      .then(js=>{
+        quote = js;
+        // Campos: feeAppPercent, feeAcquirer, total
+        feeApp.textContent = money(js.feeAppValue ?? 0);
+        feeAcq.textContent = money(js.feeAcquirerValue ?? 0);
+        valTotal.textContent = money(js.total ?? amount);
+        grand.textContent = money(js.total ?? amount);
+        fees.textContent = `Taxas estimadas — App: ${js.feeAppPercent||4}% • Adquirente: ${js.feeAcquirerPercent||0}%`;
+      })
+      .catch(()=>{
+        // Fallback simples, só app 4%
+        const feeAppVal = +(amount * 0.04).toFixed(2);
+        const total = +(amount + feeAppVal).toFixed(2);
+        feeApp.textContent = money(feeAppVal);
+        feeAcq.textContent = money(0);
+        valTotal.textContent = money(total);
+        grand.textContent = money(total);
+        fees.textContent = "Taxas estimadas (fallback): App 4%.";
+      });
+    }
+
+    // Alterna método
+    document.querySelectorAll('input[name="method"]').forEach(el=>{
+      el.addEventListener("change", ()=>{
+        method = el.value;
+        const card = (method==="card");
+        cardFields.classList.toggle("hidden", !card);
+        cardFields.setAttribute("aria-hidden", String(!card));
+        qrBlock.style.display = "none";
+        refreshQuote();
+      });
+    });
+
+    refreshQuote();
+
+    // Submeter pagamento
+    form.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      err.style.display = "none"; err.textContent = "";
+      msg.textContent = "";
+
+      // Valida básicos
+      const nome = esc($("nome").value).trim();
+      const doc  = onlyDigits($("doc").value);
+      if (!nome || doc.length!==11){
+        err.style.display = "";
+        err.textContent = "Informe nome e CPF válidos (11 dígitos).";
+        return;
+      }
+      const card = (method==="card");
+      if (card){
+        const n = onlyDigits($("cardNumber").value);
+        const exp = ($("cardExp").value||"").trim();
+        const cvv = onlyDigits($("cardCvv").value);
+        if (n.length<13 || !/^\d{2}\/\d{2}$/.test(exp) || cvv.length<3){
+          err.style.display = "";
+          err.textContent = "Dados de cartão inválidos.";
+          return;
+        }
+      }
+
+      // Monta payload
+      const payload = {
+        proId, amount, method, title,
+        buyer:{ nome, cpf:doc },
+        card: card ? {
+          number: onlyDigits($("cardNumber").value),
+          exp: ($("cardExp").value||"").trim(),
+          cvv: onlyDigits($("cardCvv").value)
+        } : null
+      };
+
+      $("payBtn").disabled = true;
+
+      try{
+        const resp = await fetch("/api/pay/checkout",{
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!resp.ok){
+          throw new Error("Falha ao iniciar pagamento.");
+        }
+        const js = await resp.json();
+
+        // Fluxo Pix (stub: retorna {qrImage, copiaCola})
+        if (method==="pix" && js && (js.qrImage || js.copiaCola)){
+          qrBlock.style.display = "block";
+          if (js.qrImage) qrImg.src = js.qrImage;
+          pixCopiaCola.textContent = js.copiaCola || "";
+          copyPix.onclick = async ()=>{
+            try { await navigator.clipboard.writeText(js.copiaCola||""); copyPix.textContent="Copiado!"; setTimeout(()=>copyPix.textContent="Copiar Pix copia e cola",1500);} catch(_){}
+          };
+          msg.textContent = "Aguardando pagamento Pix…";
+          return;
+        }
+
+        // Fluxo cartão (stub: redirect para página do parceiro ou status direto)
+        if (method==="card"){
+          if (js.redirectUrl){
+            location.href = js.redirectUrl;
+            return;
+          }
+          msg.textContent = js.status ? ("Status: " + js.status) : "Pagamento enviado para processamento.";
+          return;
+        }
+
+        // Genérico
+        msg.textContent = "Pagamento iniciado.";
+      }catch(ex){
+        err.style.display = "";
+        err.textContent = (ex && ex.message) ? ex.message : "Erro ao iniciar pagamento.";
+      }finally{
+        $("payBtn").disabled = false;
+      }
+    });
+
+  })();
+  </script>
+</body>
+</html>

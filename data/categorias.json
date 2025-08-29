@@ -1,0 +1,135 @@
+{
+  "Construção & Reparos": [
+    "Pedreiro",
+    "Azulejista",
+    "Gesseiro",
+    "Marceneiro",
+    "Pintor",
+    "Impermeabilizador",
+    "Empreiteiro",
+    "Montador de Móveis",
+    "Instalador de Piso Laminado/Vinílico",
+    "Tuíleiro/Calheiro",
+    "Vidraceiro",
+    "Serralheiro",
+    "Soldador",
+    "Piscineiro"
+  ],
+  "Elétrica & Hidráulica": [
+    "Bombeiro Hidráulico",
+    "Encanador",
+    "Eletricista",
+    "Eletricista Residencial",
+    "Eletricista Automotivo",
+    "Instalador de TV",
+    "Instalador de Antena",
+    "Instalador de CFTV",
+    "Instalador de Cerca Elétrica",
+    "Instalador de Portão Automático",
+    "Ar Condicionado (Instalação/Manutenção)",
+    "Refrigeração Comercial",
+    "Técnico em Energia Solar"
+  ],
+  "Casa & Limpeza": [
+    "Serviços Gerais",
+    "Limpeza Residencial",
+    "Limpeza Comercial",
+    "Limpeza Pós-Obra",
+    "Personal Organizer",
+    "Organizadora Profissional"
+  ],
+  "Beleza & Bem-estar": [
+    "Cabeleireiro",
+    "Barbeiro",
+    "Manicure",
+    "Maquiadora",
+    "Esteticista",
+    "Penteados/Maquiagem",
+    "Consultor de Beleza",
+    "Personal Trainer",
+    "Educador Físico",
+    "Massagista"
+  ],
+  "Saúde": [
+    "Fisioterapeuta",
+    "Psicólogo",
+    "Nutricionista",
+    "Clínico Geral (Teleatendimento)",
+    "Terapeuta Ocupacional"
+  ],
+  "TI & Digital": [
+    "Técnico de Informática",
+    "Técnico de Internet/Roteadores",
+    "Técnico em Eletrônicos",
+    "Manutenção de Computadores/Notebook",
+    "Administrador de Redes",
+    "Desenvolvedor Front-end",
+    "Desenvolvedor Back-end",
+    "Desenvolvedor Full-stack",
+    "Programador Mobile",
+    "Web Designer",
+    "Designer Gráfico",
+    "Designer de Interiores",
+    "Gestor de Mídias Sociais",
+    "Publicitário/Copywriter",
+    "Revisor/Redator",
+    "Freelancer de Dados (SQL/ETL)",
+    "Freelancer de Vídeo",
+    "Consultor de TI"
+  ],
+  "Eventos & Arte": [
+    "Fotógrafo",
+    "DJ",
+    "Produtor de Eventos",
+    "Recreador Infantil",
+    "Animador",
+    "Garçom/Barman para Eventos",
+    "Ilustrador",
+    "Cantor"
+  ],
+  "Transporte & Logística": [
+    "Motorista Particular",
+    "Táxi/Transporte por App",
+    "Motoboy/Entrega",
+    "Bike Courier",
+    "Mudanças Leves"
+  ],
+  "Automotivo": [
+    "Mecânico Automotivo",
+    "Funilaria e Pintura Automotiva",
+    "Eletricista Automotivo",
+    "Vistoria/Detalhamento (Detailing)"
+  ],
+  "Jardins & Exteriores": [
+    "Jardineiro",
+    "Paisagista",
+    "Dedetizador"
+  ],
+  "Segurança & Instalação": [
+    "Instalador de CFTV",
+    "Instalador de Cerca Elétrica",
+    "Chaveiro"
+  ],
+  "Consultoria & Educação": [
+    "Professor Particular (Reforço)",
+    "Reforço Escolar",
+    "Consultor de Carreira",
+    "Atendimento ao Cliente",
+    "Assistente Administrativo",
+    "Agente de Viagens",
+    "Advogado",
+    "Engenheiro Civil (Autônomo)"
+  ],
+  "Escritório & Administração": [
+    "Assistente Administrativo",
+    "Atendimento ao Cliente",
+    "Almoxarife",
+    "Cobrador/Negociação"
+  ],
+  "Outros": [
+    "Artesão",
+    "Costureira",
+    "Tapeceiro/Estofador",
+    "Instalador de Cortina/Persiana"
+  ]
+}

@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title><%= (prof && prof.nome) ? prof.nome + " • Perfil" : "Perfil do profissional" %></title>
+  <meta name="theme-color" content="#2d6cdf">
+  <link rel="stylesheet" href="/css/app.css">
+  <style>
+    /* Visual refinado e responsivo (coeso com clientes/index) */
+    .header { display:flex; align-items:center; gap:12px; padding:12px 16px; }
+    .header .logo { height:32px; width:auto; display:block; }
+
+    .avatar-xl{ width:120px; height:120px; border-radius:999px; object-fit:cover; object-position:center; background:#f1f5f9; border:1px solid #e5e7eb; }
+    .stars{ color:#f6c000; letter-spacing:1px; }
+    .badge-verified{ font-size:12px; padding:2px 6px; border-radius:999px; background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; }
+    .badge-premium{ font-size:12px; padding:2px 6px; border-radius:999px; background:#fff7ed; color:#9a3412; border:1px solid #fed7aa; }
+
+    .grid{ display:grid; gap:12px; }
+    .grid-3{ grid-template-columns:1fr; }
+    @media (min-width:720px){ .grid-3{ grid-template-columns: 1fr 1fr 1fr; } }
+
+    .row-actions{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+
+    /* Modal QR */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px}
+    .modal .box{background:#fff;border-radius:16px;max-width:420px;width:100%;padding:16px;text-align:center}
+    .modal img{width:240px;height:240px;border-radius:8px;display:block;margin:12px auto}
+    .modal .meta{font-size:12px;color:#64748b}
+    .btn[disabled]{opacity:.55;cursor:not-allowed}
+
+    /* Lista de avaliações */
+    .review{ padding:10px 0; border-top:1px solid #e5e7eb; }
+    .review:first-child{ border-top:none; }
+  </style>
+</head>
+<body>
+  <%
+    // ===== Helpers/Derivados no template =====
+    function esc(s){ return (s??"").toString(); }
+    function starBar(r){ const n = Math.round(Number(r)||0); return "★".repeat(n) + "☆".repeat(5-n); }
+    function calcMedia(avs){
+      const ns = (avs||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
+      if (!ns.length) return 0;
+      return ns.reduce((a,b)=>a+b,0)/ns.length;
+    }
+    const perfil = prof || {};
+    const foto = perfil.foto || "https://via.placeholder.com/240?text=Foto";
+    const servicoTxt = (perfil.servico || perfil.profissao || "Serviço não informado");
+    const idadeTxt = perfil.idade ? `${perfil.idade} anos` : "";
+    const expTxt   = perfil.experiencia ? `${perfil.experiencia}` : "";
+    const localTxt = [perfil.bairro, perfil.cidade].filter(Boolean).join(" – ");
+    const media = calcMedia(perfil.avaliacoes);
+    const estrelas = starBar(media);
+    const qtdAvals = (perfil.avaliacoes||[]).length;
+
+    const baseMsg =
+`Olá, vi seu perfil no Autônoma.app.
+Sou de ${perfil.bairro || ""}${(perfil.bairro && perfil.cidade) ? " – " : ""}${perfil.cidade || ""} e preciso de ${servicoTxt}.
+Você consegue me atender?`;
+
+    const hasWa  = !!perfil.whatsapp;
+    const waHref = hasWa ? ("https://wa.me/" + perfil.whatsapp + "?text=" + encodeURIComponent(baseMsg)) : "";
+    const qrUrl  = hasWa ? ("https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=" + encodeURIComponent(waHref)) : "";
+    const ultimasAval = (perfil.avaliacoes||[]).slice(-3).reverse();
+  %>
+
+  <header class="header">
+    <a href="/" aria-label="Início"><img src="/img/logo.png" alt="Autônoma.app" class="logo" onerror="this.style.display='none'"></a>
+    <h1 style="font-size:18px;margin:0;">Perfil do profissional</h1>
+  </header>
+
+  <div class="wrap" style="max-width:980px;margin:0 auto;padding:12px 16px">
+    <!-- Card topo -->
+    <div class="card" style="text-align:center">
+      <img class="avatar-xl" src="<%= foto %>" alt="Foto de <%= esc(perfil.nome) %>" width="120" height="120"/>
+      <h2 style="margin:8px 0 0">
+        <%= esc(perfil.nome||"Profissional") %>
+        <% if (perfil.verificado) { %><span class="badge-verified">✅ Verificado</span><% } %>
+        <% if (perfil.plano === 'premium') { %> <span class="badge-premium">★ Premium</span><% } %>
+      </h2>
+      <div class="meta" style="margin-top:4px"><%= esc(servicoTxt) %></div>
+    </div>
+
+    <!-- Métricas e infos -->
+    <div class="grid grid-3">
+      <% if (idadeTxt){ %>
+        <div class="card section"><h2 style="margin:0 0 8px">Idade</h2><div><strong><%= esc(idadeTxt) %></strong></div></div>
+      <% } %>
+      <% if (expTxt){ %>
+        <div class="card section"><h2 style="margin:0 0 8px">Experiência</h2><div><strong><%= esc(expTxt) %></strong></div></div>
+      <% } %>
+      <% if (localTxt){ %>
+        <div class="card section"><h2 style="margin:0 0 8px">Local</h2><div><strong><%= esc(localTxt) %></strong></div></div>
+      <% } %>
+      <div class="card section"><h2 style="margin:0 0 8px">Atendimentos</h2><div><strong><%= String(perfil.atendimentos||0) %></strong></div></div>
+      <div class="card section"><h2 style="margin:0 0 8px">Avaliação</h2>
+        <div><strong><span class="stars"><%= estrelas %></span> <%= media ? "(" + media.toFixed(1) + ")" : "(—)" %> • <%= qtdAvals||0 %> comentário(s)</strong></div>
+      </div>
+      <% if (perfil.site){ %>
+        <div class="card section"><h2 style="margin:0 0 8px">Catálogo</h2><div><a class="btn outline" href="<%= esc(perfil.site) %>" target="_blank" rel="noopener">Abrir</a></div></div>
+      <% } %>
+    </div>
+
+    <!-- Ações -->
+    <div class="card">
+      <div class="row-actions">
+        <% if (hasWa){ %>
+          <a class="btn wa" id="btnWa" href="<%= waHref %>">💬 WhatsApp</a>
+          <button class="btn outline" id="btnQR" type="button">📱 Ver QR Code</button>
+        <% } else { %>
+          <button class="btn wa" id="btnWa" disabled title="WhatsApp não informado">💬 WhatsApp</button>
+          <button class="btn outline" id="btnQR" type="button" disabled title="QR indisponível (sem WhatsApp)">📱 Ver QR Code</button>
+        <% } %>
+        <button class="btn ghost" id="btnShare" type="button">🔗 Compartilhar</button>
+        <a class="btn ghost" href="/clientes.html">← Voltar à busca</a>
+        <a class="btn" href="/avaliar.html?id=<%= perfil.id %>">⭐ Avaliar este profissional</a>
+      </div>
+    </div>
+
+    <!-- Sobre -->
+    <% if (perfil.descricao){ %>
+      <div class="card">
+        <h2 style="margin:0 0 8px">Sobre</h2>
+        <p><%= esc(perfil.descricao) %></p>
+      </div>
+    <% } %>
+
+    <!-- Avaliações recentes -->
+    <div class="card" id="avaliacoes">
+      <h2 style="margin:0 0 8px">Avaliações recentes</h2>
+      <% if (ultimasAval.length){ %>
+        <% ultimasAval.forEach(function(a){ %>
+          <div class="review">
+            <div class="stars"><%= starBar(a.nota) %></div>
+            <p><%= esc(a.comentario || "") %></p>
+            <div class="meta"><%= esc(a.autor || "Cliente") %> • <%= new Date(a.data||Date.now()).toLocaleDateString("pt-BR") %></div>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <p class="meta">Ainda não há comentários.</p>
+      <% } %>
+      <div class="row-actions" style="margin-top:10px">
+        <a class="btn" href="/avaliar.html?id=<%= perfil.id %>">Escrever avaliação</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal QR -->
+  <div class="modal" id="qrModal" aria-hidden="true" role="dialog" aria-label="QR Code do WhatsApp">
+    <div class="box">
+      <h3>Escaneie para falar no WhatsApp</h3>
+      <% if (hasWa){ %>
+        <img id="qrImg" src="<%= qrUrl %>" alt="QR Code WhatsApp">
+      <% } else { %>
+        <p class="meta">WhatsApp não informado.</p>
+      <% } %>
+      <p class="meta">Abra a câmera do celular e aponte para o QR.</p>
+      <div id="qrError" class="meta" style="color:#b91c1c;display:none">Não foi possível carregar o QR Code. Use os botões abaixo.</div>
+      <% if (hasWa){ %>
+        <div class="row" style="justify-content:center;gap:8px;margin-top:8px">
+          <button class="btn" id="copyLink" type="button">Copiar link</button>
+          <a class="btn outline" id="openWeb" target="_blank" rel="noopener" href="<%= waHref %>">Abrir no WhatsApp Web</a>
+        </div>
+      <% } %>
+      <div class="row" style="justify-content:center;gap:8px;margin-top:12px">
+        <button class="btn" id="closeQR" type="button">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    const profId = <%= Number(perfil.id||0) %>;
+    const hasWa = <%= hasWa ? "true" : "false" %>;
+    const waHref = <%- JSON.stringify(waHref) %>;
+
+    // Track visita ao abrir
+    if (profId) fetch('/api/track/visit/' + profId + '?src=profile', {method:'POST'}).catch(()=>{});
+
+    const btnWa = document.getElementById('btnWa');
+    const btnQR = document.getElementById('btnQR');
+    const btnShare = document.getElementById('btnShare');
+    const modal = document.getElementById('qrModal');
+    const closeQR = document.getElementById('closeQR');
+    const qrImg = document.getElementById('qrImg');
+    const qrError = document.getElementById('qrError');
+    const copyLink = document.getElementById('copyLink');
+
+    function openModal(){ if (modal){ modal.style.display='flex'; } }
+    function closeModal(){ if (modal){ modal.style.display='none'; } }
+
+    if (btnWa && hasWa){
+      btnWa.addEventListener('click', function(){
+        if (profId) fetch('/api/track/call/' + profId + '?src=profile', {method:'POST'}).catch(()=>{});
+      });
+    }
+    if (btnQR){
+      btnQR.addEventListener('click', function(){
+        if (!hasWa){ alert('WhatsApp não informado pelo profissional.'); return; }
+        if (profId) fetch('/api/track/qr/' + profId + '?src=profile', {method:'POST'}).catch(()=>{});
+        openModal();
+      });
+    }
+    if (closeQR) closeQR.addEventListener('click', closeModal);
+    if (modal) modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+    if (qrImg){
+      qrImg.addEventListener('error', function(){
+        if (qrError) qrError.style.display = '';
+        qrImg.style.display = 'none';
+      });
+    }
+    if (copyLink){
+      copyLink.addEventListener('click', async function(){
+        try{
+          await navigator.clipboard.writeText(waHref);
+          copyLink.textContent = 'Copiado!';
+          setTimeout(()=> copyLink.textContent = 'Copiar link', 1800);
+        }catch(_){
+          alert('Não foi possível copiar. Copie manualmente: ' + waHref);
+        }
+      });
+    }
+    if (btnShare){
+      btnShare.addEventListener('click', async ()=>{
+        const url = window.location.href;
+        if (navigator.share){
+          try{ await navigator.share({ title: document.title, url }); } catch(_){}
+        } else {
+          try{
+            await navigator.clipboard.writeText(url);
+            btnShare.textContent = "Copiado!";
+            setTimeout(()=> btnShare.textContent = "🔗 Compartilhar", 1500);
+          }catch(_){ alert("Link: " + url); }
+        }
+      });
+    }
+  })();
+  </script>
+</body>
+</html>

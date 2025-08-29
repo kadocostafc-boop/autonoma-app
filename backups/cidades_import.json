@@ -1,0 +1,93 @@
+[
+  {
+    "cidade": "Rio de Janeiro/RJ",
+    "bairros": [
+      "Copacabana",
+      "Ipanema",
+      "Leblon",
+      "Botafogo",
+      "Flamengo",
+      "Barra da Tijuca",
+      "Tijuca",
+      "Madureira"
+    ]
+  },
+  {
+    "cidade": "São Paulo/SP",
+    "bairros": [
+      "Moema",
+      "Pinheiros",
+      "Vila Madalena",
+      "Jardins",
+      "Tatuapé",
+      "Itaquera",
+      "Santana",
+      "Liberdade"
+    ]
+  },
+  {
+    "cidade": "Belo Horizonte/MG",
+    "bairros": [
+      "Savassi",
+      "Funcionários",
+      "Pampulha",
+      "Centro",
+      "Barro Preto",
+      "Sion",
+      "Cidade Nova",
+      "Anchieta"
+    ]
+  },
+  {
+    "cidade": "Brasília/DF",
+    "bairros": [
+      "Asa Norte",
+      "Asa Sul",
+      "Lago Sul",
+      "Lago Norte",
+      "Sudoeste",
+      "Octogonal",
+      "Cruzeiro",
+      "Taguatinga"
+    ]
+  },
+  {
+    "cidade": "Fortaleza/CE",
+    "bairros": [
+      "Meireles",
+      "Aldeota",
+      "Centro",
+      "Praia de Iracema",
+      "Benfica",
+      "Varjota",
+      "Papicu",
+      "Cocó"
+    ]
+  },
+  {
+    "cidade": "Curitiba/PR",
+    "bairros": [
+      "Batel",
+      "Água Verde",
+      "Centro",
+      "Santa Felicidade",
+      "Portão",
+      "Cajuru",
+      "Boqueirão",
+      "Cabral"
+    ]
+  },
+  {
+    "cidade": "Salvador/BA",
+    "bairros": [
+      "Barra",
+      "Ondina",
+      "Rio Vermelho",
+      "Pituba",
+      "Itaigara",
+      "Brotas",
+      "Stiep",
+      "Stella Maris"
+    ]
+  }
+]

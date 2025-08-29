@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Perfil • Autônoma.app</title>
+
+  <!-- Canonical + SEO -->
+  <link rel="canonical" href="https://autonomaapp.com.br/perfil.html">
+  <meta name="description" content="Veja o perfil do profissional, avaliações, contato via WhatsApp e área de atendimento.">
+  <meta name="theme-color" content="#2d6cdf">
+
+  <!-- PWA / Icons -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="profile">
+  <meta property="og:site_name" content="Autônoma.app">
+  <meta property="og:title" content="Perfil • Autônoma.app">
+  <meta property="og:description" content="Profissional com contato direto por WhatsApp e avaliações reais.">
+  <meta property="og:image" content="/img/og-cover.png">
+  <meta property="og:url" content="https://autonomaapp.com.br/perfil.html">
+
+  <!-- CSS global -->
+  <link rel="stylesheet" href="/css/app.css">
+
+  <style>
+    /* Ajustes específicos desta página */
+    .header { display:flex; align-items:center; gap:12px; padding:12px 16px }
+    .header .logo { height:32px; width:auto; display:block }
+
+    .fav{margin-left:auto;cursor:pointer;border:none;background:transparent;font-size:22px;line-height:1}
+    .fav.active{color:#eab308}
+
+    .ok{border:1px solid #bbf7d0;background:#ecfccb;border-radius:12px;padding:10px;margin:12px 16px}
+    .star{color:#FFC107}
+    .avatar-xl{width:92px;height:92px;border-radius:999px;object-fit:cover;object-position:center;border:1px solid #e5e7eb}
+    .small{font-size:12px}
+    .badge{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid #e5e7eb; background:#f1f5f9; font-weight:600 }
+
+    /* Badges de plano */
+    .plan-badge{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid #e5e7eb; background:#f1f5f9; font-weight:800 }
+    .plan-badge.PREMIUM{ background:#fffbeb; border-color:#fbbf24 }
+    .plan-badge.PRO{ background:#eef2ff; border-color:#6366f1 }
+
+    /* Modal QR */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+    .modal .box{background:#fff;border-radius:16px;max-width:380px;width:100%;padding:16px;text-align:center}
+    .modal img{width:220px;height:220px;border-radius:8px;display:block;margin:12px auto}
+    .modal .meta{font-size:12px;color:#64748b}
+    .hidden{display:none}
+    .btn[disabled]{opacity:.55;cursor:not-allowed}
+  </style>
+</head>
+<body>
+<header class="header" role="banner">
+  <a href="/" aria-label="Início">
+    <img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display='none'">
+  </a>
+  <div style="margin-left:auto;display:flex;gap:8px">
+    <a class="btn ghost" href="/">Início</a>
+    <a class="btn outline" href="/favoritos.html">⭐ Meus Favoritos</a>
+  </div>
+</header>
+
+<main id="root" class="wrap" role="main">
+  <!-- mensagem de sucesso de avaliação -->
+  <div id="msgOk" class="ok" style="display:none">
+    <strong>✅ Avaliação enviada!</strong> <span class="meta">Obrigado por contribuir.</span>
+  </div>
+
+  <!-- Cabeçalho do perfil -->
+  <div class="card profile" id="head" aria-live="polite">
+    <img class="avatar-xl" id="foto" src="https://via.placeholder.com/200?text=Foto" alt="Foto" width="92" height="92"/>
+    <div style="min-width:0;flex:1">
+      <h1 id="nome" style="margin:4px 0 0">Profissional</h1>
+      <div class="meta" id="servico">Serviço</div>
+      <div class="meta" id="local">Local</div>
+    </div>
+    <button id="btnFav" class="fav" title="Favoritar" aria-pressed="false">★</button>
+  </div>
+
+  <!-- Ações primárias -->
+  <div class="card" id="acoes">
+    <div class="row" style="row-gap:10px">
+      <div><strong id="atend">0</strong><div class="meta">Atendimentos</div></div>
+      <div>
+        <strong><span class="star" id="stars">☆☆☆☆☆</span> <span id="media">(—)</span></strong>
+        <div class="meta"><span id="qtd">0</span> avaliação(ões)</div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:12px; flex-wrap:wrap; gap:8px">
+      <a class="btn wa" id="btnWa" target="_blank" rel="noopener">💬 WhatsApp</a>
+      <button class="btn outline" id="btnQR" type="button" aria-haspopup="dialog" disabled>📱 Ver QR Code</button>
+      <a class="btn outline" id="btnSite" target="_blank" rel="noopener">📂 Catálogo</a>
+      <a class="btn ghost" href="/clientes.html">← Voltar à busca</a>
+      <a class="btn ghost" href="/denunciar.html" id="btnDenunciar" rel="nofollow">🚩 Denunciar</a>
+    </div>
+    <p class="meta small" id="suspNote" style="display:none;color:#b91c1c;margin-top:6px">Este profissional está suspenso no momento.</p>
+  </div>
+
+  <!-- Sobre -->
+  <div class="card">
+    <h2>Sobre</h2>
+    <p class="meta" id="descricao">—</p>
+  </div>
+
+  <!-- Formulário de avaliação -->
+  <div class="card" id="avaliar" style="display:none">
+    <h2>Avaliar profissional</h2>
+    <form id="formAval" method="POST" style="margin-top:8px" novalidate>
+      <label for="autor">Seu nome (opcional)</label>
+      <input id="autor" name="autor" type="text" maxlength="80" placeholder="Ex.: Ana Souza"/>
+
+      <label for="nota">Nota *</label>
+      <select id="nota" name="nota" required>
+        <option value="">Selecione…</option>
+        <option value="5">5 — Excelente</option>
+        <option value="4">4 — Muito bom</option>
+        <option value="3">3 — Bom</option>
+        <option value="2">2 — Regular</option>
+        <option value="1">1 — Ruim</option>
+      </select>
+
+      <label for="comentario">Comentário *</label>
+      <textarea id="comentario" name="comentario" maxlength="600" placeholder="Conte sua experiência (mín. 5 caracteres)." required></textarea>
+
+      <div class="row" style="margin-top:10px">
+        <button class="btn" type="submit">Enviar avaliação</button>
+      </div>
+      <p id="err" class="meta" style="color:#b91c1c;display:none;margin-top:8px"></p>
+    </form>
+  </div>
+</main>
+
+<!-- Modal QR -->
+<div class="modal" id="qrModal" aria-hidden="true" role="dialog" aria-label="QR Code do WhatsApp">
+  <div class="box">
+    <h3>Escaneie para falar no WhatsApp</h3>
+    <img id="qrImg" src="" alt="QR Code WhatsApp" style="display:none">
+    <p class="meta">Abra a câmera do celular e aponte para o QR.</p>
+    <p id="qrError" class="meta hidden" style="color:#b91c1c">Não foi possível carregar o QR Code. Use os botões abaixo.</p>
+    <div class="row" style="justify-content:center;gap:8px;margin-top:8px">
+      <button class="btn" id="copyLink" type="button">Copiar link</button>
+      <a class="btn outline" id="openWeb" target="_blank" rel="noopener">Abrir no WhatsApp Web</a>
+    </div>
+    <div class="row" style="justify-content:center;gap:8px;margin-top:12px">
+      <button class="btn" id="closeQR" type="button">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===== Utilidades / seleção =====
+  const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  const qs = new URL(location.href).searchParams;
+  const byId = sel => document.getElementById(sel);
+
+  const $foto = byId('foto'), $nome = byId('nome'), $serv = byId('servico'), $local = byId('local');
+  const $btnFav = byId('btnFav'), $btnWa = byId('btnWa'), $btnQR = byId('btnQR'), $btnSite = byId('btnSite');
+  const $stars = byId('stars'), $media = byId('media'), $qtd = byId('qtd'), $atend = byId('atend');
+  const $msgOk = byId('msgOk'), $suspNote = byId('suspNote');
+  const $formAval = byId('formAval'), $avaliar = byId('avaliar'), $err = byId('err');
+
+  const $qrModal = byId('qrModal'), $qrImg = byId('qrImg'), $qrError = byId('qrError');
+  const $copyLink = byId('copyLink'), $openWeb = byId('openWeb'), $closeQR = byId('closeQR');
+
+  // ===== Helpers =====
+  const estrelas = n => {
+    const r = Math.round(Number(n)||0);
+    return '★'.repeat(r) + '☆'.repeat(5-r);
+  };
+  const getProfileId = () => {
+    if (qs.has('id')) return Number(qs.get('id'));
+    const m = location.pathname.match(/\/profissional\/(\d+)/);
+    return m ? Number(m[1]) : null;
+  };
+
+  // Favoritos
+  const favKey = 'autonoma.favs';
+  const loadFavs = ()=> { try{ return JSON.parse(localStorage.getItem(favKey)||'[]'); }catch{return []} };
+  const saveFavs = arr => { try{ localStorage.setItem(favKey, JSON.stringify(arr)); }catch{} };
+  const isFav = id => loadFavs().includes(id);
+  function toggleFav(id){
+    const arr = loadFavs();
+    const i = arr.indexOf(id);
+    if (i>=0) arr.splice(i,1); else arr.push(id);
+    saveFavs(arr);
+    refreshFavBtn(id);
+  }
+  function refreshFavBtn(id){
+    const active = isFav(id);
+    $btnFav.classList.toggle('active', active);
+    $btnFav.setAttribute('aria-pressed', active ? 'true' : 'false');
+    $btnFav.title = active ? 'Remover dos favoritos' : 'Favoritar';
+  }
+
+  // Badges
+  function planBadgeSpan(plan){
+    if (!plan) return '';
+    const cls = plan.toUpperCase()==='PREMIUM' ? 'plan-badge PREMIUM' :
+                plan.toUpperCase()==='PRO' ? 'plan-badge PRO' : 'plan-badge';
+    const txt = plan.toUpperCase()==='PREMIUM' ? 'Premium' :
+                plan.toUpperCase()==='PRO' ? 'Pro' : '';
+    return txt ? ` <span class="${cls}">${txt}</span>` : '';
+  }
+
+  // QR modal
+  function openQR(waLink){
+    try{
+      const qrURL = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(waLink);
+      $qrImg.src = qrURL;
+      $qrImg.style.display = '';
+      $qrError.classList.add('hidden');
+      $openWeb.href = waLink.replace('https://wa.me/','https://web.whatsapp.com/send?phone=').replace(/\?text=.*/,'');
+      $copyLink.onclick = async ()=> {
+        try{ await navigator.clipboard.writeText(waLink); $copyLink.textContent = 'Copiado!'; setTimeout(()=> $copyLink.textContent='Copiar link', 1500); }catch{}
+      };
+      $qrModal.style.display = 'flex';
+      $qrModal.setAttribute('aria-hidden','false');
+    }catch{
+      $qrImg.style.display = 'none';
+      $qrError.classList.remove('hidden');
+      $qrModal.style.display = 'flex';
+      $qrModal.setAttribute('aria-hidden','false');
+    }
+  }
+  function closeQR(){
+    $qrModal.style.display = 'none';
+    $qrModal.setAttribute('aria-hidden','true');
+  }
+
+  // ===== Boot =====
+  (async function init(){
+    const id = getProfileId();
+    if (!id){ location.href = '/clientes.html'; return; }
+
+    if (qs.get('ok')==='1'){ $msgOk.style.display=''; }
+
+    try{
+      const r = await fetch(`/api/profissional/${id}`);
+      if(!r.ok){ throw new Error('Perfil não encontrado'); }
+      const p = await r.json();
+
+      // Nome + badge
+      $nome.innerHTML = esc(p.nome || 'Profissional') + planBadgeSpan(p.badge||p.plano||'');
+
+      // Serviço / Local
+      $serv.textContent = p.servico || p.profissao || '—';
+      $local.textContent = [p.bairro, p.cidade].filter(Boolean).join(' – ') || '—';
+
+      // Foto
+      if (p.foto){ $foto.src = p.foto; $foto.alt = `Foto de ${p.nome||'profissional'}`; }
+
+      // Métricas
+      $atend.textContent = Number(p.atendimentos||0);
+      const notas = Array.isArray(p.avaliacoes)? p.avaliacoes : [];
+      $qtd.textContent = notas.length;
+      $media.textContent = '(' + (p.rating ? Number(p.rating).toFixed(1) : '—') + ')';
+      $stars.textContent = estrelas(p.rating||0);
+
+      // Suspensão
+      if (p.suspenso){ $suspNote.style.display = ''; }
+
+      // WhatsApp
+      const waNum = (p.whatsapp||'').replace(/\D/g,'');
+      const waTxt = `Olá ${p.nome?.split(' ')[0]||''}! Vi seu perfil no Autônoma.app e gostaria de um orçamento.`;
+      const waLink = waNum ? `https://wa.me/${waNum}?text=${encodeURIComponent(waTxt)}` : '';
+      if (waLink){
+        $btnWa.href = waLink;
+        $btnQR.disabled = false;
+        $btnQR.onclick = ()=> openQR(waLink);
+      } else {
+        $btnWa.classList.add('hidden');
+        $btnQR.disabled = true;
+      }
+
+      // Site/Catálogo
+      if (p.site){ $btnSite.href = p.site; } else { $btnSite.classList.add('hidden'); }
+
+      // Denunciar
+      const denHref = `/denunciar.html?id=${encodeURIComponent(id)}&nome=${encodeURIComponent(p.nome||'')}`;
+      const $den = document.getElementById('btnDenunciar');
+      if ($den) $den.href = denHref;
+
+      // Favoritos
+      refreshFavBtn(id);
+      $btnFav.onclick = ()=> toggleFav(id);
+
+      // Avaliação (exibe se canEvaluate === true)
+      if (p.canEvaluate){
+        $avaliar.style.display = '';
+        $formAval.action = `/profissional/${id}/avaliar`;
+        $formAval.addEventListener('submit', (e)=>{
+          const nota = Number((document.getElementById('nota').value||'').trim());
+          const cmt = (document.getElementById('comentario').value||'').trim();
+          if (!(nota>=1 && nota<=5) || cmt.length<5){
+            e.preventDefault();
+            $err.textContent = 'Por favor, preencha uma nota válida e um comentário com pelo menos 5 caracteres.';
+            $err.style.display = '';
+          }
+        });
+      } else {
+        $avaliar.style.display = 'none';
+      }
+
+      // Descrição
+      document.getElementById('descricao').textContent = p.descricao || '—';
+
+    }catch(e){
+      document.querySelector('#head').insertAdjacentHTML('afterend',
+        `<div class="card"><p class="meta" style="color:#b91c1c">Erro ao carregar perfil: ${esc(e.message||'falha de conexão')}.</p>
+         <a class="btn ghost" href="/clientes.html">← Voltar à busca</a></div>`);
+    }
+
+    // Fechar modal QR
+    $closeQR.addEventListener('click', closeQR);
+    $qrModal.addEventListener('click', (ev)=>{ if(ev.target===$qrModal) closeQR(); });
+    document.addEventListener('keydown', (ev)=>{ if(ev.key==='Escape') closeQR(); });
+  })();
+</script>
+</body>
+</html>

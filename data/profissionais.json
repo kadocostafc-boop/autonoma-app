@@ -1,0 +1,324 @@
+[
+  {
+    "id": 1,
+    "createdAt": "2025-08-01T12:00:00.000Z",
+    "nome": "Maria Souza",
+    "email": "maria.souza@example.com",
+    "telefone": "551133334444",
+    "whatsapp": "5511988887777",
+    "cidade": "Rio de Janeiro/RJ",
+    "bairro": "Copacabana",
+    "servico": "Eletricista",
+    "profissao": "",
+    "experiencia": "5 anos",
+    "precoBase": "Sob orçamento",
+    "site": "https://example.com/maria-eletricista",
+    "endereco": "Rua Exemplo, 123",
+    "descricao": "Eletricista residencial e predial. Instalações, troca de disjuntores, revisão completa e emergências.",
+    "lat": -22.971964,
+    "lng": -43.182544,
+    "foto": "/uploads/exemplo-maria.jpg",
+    "atendimentos": 23,
+    "avaliacoes": [
+      {
+        "autor": "João",
+        "comentario": "Resolveu rápido e foi muito atenciosa.",
+        "nota": 5,
+        "data": "2025-08-05T15:20:00.000Z"
+      },
+      {
+        "autor": "Ana",
+        "comentario": "Serviço excelente!",
+        "nota": 5,
+        "data": "2025-08-10T12:10:00.000Z"
+      }
+    ],
+    "visitas": 49,
+    "chamadas": 13,
+    "visitsLog": [
+      {
+        "at": "2025-08-27T20:15:07.939Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-27T20:15:10.813Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-27T20:18:01.393Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-27T20:28:20.044Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-27T21:18:41.762Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-27T22:19:12.569Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-27T22:19:19.461Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-27T22:20:21.302Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      }
+    ],
+    "callsLog": [
+      {
+        "at": "2025-08-27T21:19:01.817Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      }
+    ],
+    "qrLog": [],
+    "suspenso": false,
+    "suspensoMotivo": "",
+    "suspensoEm": null,
+    "excluido": false,
+    "excluidoEm": null,
+    "verificado": true,
+    "plano": "free",
+    "raioKm": 0,
+    "cidadesExtras": [],
+    "uber": {
+      "on": false,
+      "until": null,
+      "lastOnAt": null,
+      "monthlyUsed": 0,
+      "monthRef": "2025-08"
+    },
+    "radar": {
+      "on": false,
+      "until": null,
+      "lastOnAt": null,
+      "monthlyUsed": 0,
+      "monthRef": "2025-08"
+    },
+    "lastPos": {
+      "lat": null,
+      "lng": null,
+      "at": null
+    },
+    "receiveViaApp": false
+  },
+  {
+    "id": 2,
+    "createdAt": "2025-08-03T14:30:00.000Z",
+    "nome": "Carlos Lima",
+    "email": "carlos.lima@example.com",
+    "telefone": "",
+    "whatsapp": "5511977776666",
+    "cidade": "Rio de Janeiro/RJ",
+    "bairro": "Bonsucesso",
+    "servico": "Encanador",
+    "profissao": "",
+    "experiencia": "8 anos",
+    "precoBase": "R$ 120,00",
+    "site": "",
+    "endereco": "",
+    "descricao": "Encanador especializado em vazamentos, troca de registros, aquecedores e desentupimentos.",
+    "lat": -22.867152,
+    "lng": -43.250183,
+    "foto": "/uploads/exemplo-carlos.jpg",
+    "atendimentos": 54,
+    "avaliacoes": [
+      {
+        "autor": "Paula",
+        "comentario": "Pontual e honesto, recomendo.",
+        "nota": 4,
+        "data": "2025-08-12T10:00:00.000Z"
+      },
+      {
+        "autor": "Rafael",
+        "comentario": "Identificou o problema rápido.",
+        "nota": 5,
+        "data": "2025-08-18T09:45:00.000Z"
+      }
+    ],
+    "visitas": 83,
+    "chamadas": 26,
+    "visitsLog": [
+      {
+        "at": "2025-08-27T19:56:09.263Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-27T19:56:58.427Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-27T20:14:32.563Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-27T20:16:47.959Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-27T20:17:10.166Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-27T20:17:12.814Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-27T21:22:00.557Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-27T21:22:13.851Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-27T21:40:47.650Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-27T22:18:22.609Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      }
+    ],
+    "callsLog": [],
+    "qrLog": [],
+    "suspenso": false,
+    "suspensoMotivo": "",
+    "suspensoEm": null,
+    "excluido": false,
+    "excluidoEm": null,
+    "verificado": true,
+    "plano": "free",
+    "raioKm": 0,
+    "cidadesExtras": [],
+    "uber": {
+      "on": false,
+      "until": null,
+      "lastOnAt": null,
+      "monthlyUsed": 0,
+      "monthRef": "2025-08"
+    },
+    "radar": {
+      "on": false,
+      "until": null,
+      "lastOnAt": null,
+      "monthlyUsed": 0,
+      "monthRef": "2025-08"
+    },
+    "lastPos": {
+      "lat": null,
+      "lng": null,
+      "at": null
+    },
+    "receiveViaApp": false
+  },
+  {
+    "id": 3,
+    "createdAt": "2025-08-27T19:37:07.884Z",
+    "nome": "JOSE RICARDO FERREIRA DA COSTA",
+    "email": "kadocostafc@gmail.com",
+    "telefone": "5521971891276",
+    "whatsapp": "5521964981800",
+    "cidade": "Rio de Janeiro",
+    "bairro": "Botafogo",
+    "servico": "Fotógrafo",
+    "profissao": "Fotografo",
+    "experiencia": "13 anos",
+    "precoBase": "800,00",
+    "site": "",
+    "endereco": "R. São Clemente 55 404",
+    "descricao": "Profissional dedicado com 13 anos de experiência no mercado, cobertura de show, eventos, festas, fotojornalismo",
+    "foto": "/uploads/1756323427787-36629982.jpeg",
+    "atendimentos": 0,
+    "avaliacoes": [],
+    "visitas": 5,
+    "chamadas": 1,
+    "visitsLog": [
+      {
+        "at": "2025-08-27T19:37:08.478Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-27T21:41:20.601Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-27T22:17:33.197Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-28T19:11:59.135Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-28T19:12:31.091Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      }
+    ],
+    "callsLog": [
+      {
+        "at": "2025-08-28T19:12:36.221Z",
+        "src": "profile",
+        "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      }
+    ],
+    "qrLog": [],
+    "suspenso": false,
+    "suspensoMotivo": "",
+    "suspensoEm": null,
+    "excluido": false,
+    "excluidoEm": null,
+    "verificado": true,
+    "plano": "free",
+    "raioKm": 0,
+    "cidadesExtras": [],
+    "uber": {
+      "on": false,
+      "until": null,
+      "lastOnAt": null,
+      "monthlyUsed": 0,
+      "monthRef": "2025-08"
+    },
+    "radar": {
+      "on": false,
+      "until": null,
+      "lastOnAt": null,
+      "monthlyUsed": 0,
+      "monthRef": "2025-08"
+    },
+    "lastPos": {
+      "lat": null,
+      "lng": null,
+      "at": null
+    },
+    "receiveViaApp": false
+  }
+]
