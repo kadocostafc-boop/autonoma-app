@@ -1077,4 +1077,8 @@ function listenTry(port, tries){
     }
   });
 }
-listenTry(BASE_PORT, MAX_TRIES);
+// Quando rodar no Railway/Heroku, ele fornece a porta em process.env.PORT
+const PORT = process.env.PORT || BASE_PORT;
+app.listen(PORT, () => {
+  console.log(`✅ Autônoma.app rodando em http://localhost:${PORT} (PID ${process.pid})`);
+});
