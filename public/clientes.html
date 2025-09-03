@@ -21,7 +21,7 @@
   <meta property="og:image" content="https://autonomaapp.com.br/img/og-cover.png">
   <meta property="og:url" content="https://autonomaapp.com.br/clientes.html">
 
-  <link rel="stylesheet" href="/css/app.css?v=clients-2025-09-06c">
+  <link rel="stylesheet" href="/css/app.css?v=clients-2025-09-06d">
 
   <style>
     :root{
@@ -29,7 +29,6 @@
       --azul-brilho:#2D81FF;
       --azul-brilho-2:#1E6EF2;
       --cinza:#64748b;
-      --cinza-claro:#f1f5f9;
       --borda:#e5e7eb;
     }
 
@@ -48,8 +47,6 @@
       text-decoration:none; font-weight:800; font-size:14px;
     }
     .topbar-links .btn:hover{ filter:brightness(.97); }
-    .topbar-links .btn.ghost{ background:var(--azul-brilho); color:#fff; border:none; }
-    .topbar-links .btn.outline{ background:var(--azul-brilho); color:#fff; border:none; }
 
     /* ================= Bloco 1: HERO de busca ================= */
     .search-hero{
@@ -83,7 +80,7 @@
     .btn.ghost{ background:#fff; color:#0f172a; border:1px solid var(--borda) }
     .btn.dark{ background:var(--azul-escuro) }
 
-    /* ================= Resultados (cards estilo mock) ================= */
+    /* ================= Resultados (cards) ================= */
     .results-grid{ display:grid; gap:10px; grid-template-columns:1fr; }
     @media(min-width:720px){ .results-grid{ grid-template-columns:1fr 1fr } }
     @media(min-width:1060px){ .results-grid{ grid-template-columns:1fr 1fr 1fr } }
@@ -221,6 +218,18 @@
     const estrelas = (n)=>{ const r=Math.round((Number(n)||0)*2)/2; const f=Math.floor(r),h=(r%1!==0); return "★".repeat(f)+(h?"½":"")+"☆".repeat(5-f-(h?1:0)); };
     const kmFmt = (d)=> (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${Number(d).toFixed(d<10?1:0)} km`));
     const NO_STORE = { cache:'no-store' };
+    const HTTPS = location.protocol === 'https:';
+
+    // Só deixa fotos "reais"
+    function hasRealPhoto(u){
+      if(!u) return false;
+      const s = String(u).trim();
+      if(!s) return false;
+      const low = s.toLowerCase();
+      if (low.includes('icon-192') || low.includes('placeholder.com') || low.endsWith('.svg')) return false;
+      if (HTTPS && s.startsWith('http://')) return false; // evitar mixed content no mobile https
+      return true;
+    }
 
     // Haversine (fallback distância no front)
     function hav(lat1, lon1, lat2, lon2){
@@ -235,10 +244,12 @@
     let userLat=null, userLng=null, useGPS=false;
     let page=1, limit=20, total=0, acumulados=0;
     let lastQuery={ cidade:"", bairro:"", servico:"", minRating:"" };
+    let destaquesCache = [];
 
     // ---------- Autocomplete ----------
     async function fillCidades(){
-      try{ const r=await fetch('/api/geo/cidades', NO_STORE);
+      try{
+        const r=await fetch('/api/geo/cidades?ts='+Date.now(), NO_STORE);
         if(!r.ok) return;
         const js=await r.json();
         $('listaCidades').innerHTML=(js||[]).map(c=>`<option value="${esc(c)}">`).join('');
@@ -247,7 +258,7 @@
     async function loadBairrosDaCidade(cidadeVal){
       if(!cidadeVal) { $('listaBairros').innerHTML=''; return; }
       try{
-        const r = await fetch('/api/geo/bairros?cidade='+encodeURIComponent(cidadeVal), NO_STORE);
+        const r = await fetch('/api/geo/bairros?cidade='+encodeURIComponent(cidadeVal)+'&ts='+Date.now(), NO_STORE);
         if(!r.ok) return;
         const js = await r.json();
         $('listaBairros').innerHTML = (js||[]).map(b=>`<option value="${esc(b)}">`).join('');
@@ -256,12 +267,12 @@
     async function suggestBairros(q){
       const cid=$('cidade').value.trim();
       if(!cid||!q) return [];
-      const r=await fetch(`/api/geo/bairros/suggest?cidade=${encodeURIComponent(cid)}&q=${encodeURIComponent(q)}`, NO_STORE);
+      const r=await fetch(`/api/geo/bairros/suggest?cidade=${encodeURIComponent(cid)}&q=${encodeURIComponent(q)}&ts=${Date.now()}`, NO_STORE);
       return r.ok?(await r.json()):[];
     }
     async function suggestServicos(q){
       if(!q) return [];
-      const r=await fetch(`/api/geo/servicos/suggest?q=${encodeURIComponent(q)}`, NO_STORE);
+      const r=await fetch(`/api/geo/servicos/suggest?q=${encodeURIComponent(q)}&ts=${Date.now()}`, NO_STORE);
       return r.ok?(await r.json()):[];
     }
 
@@ -286,7 +297,7 @@
     }
     async function resolveCityByGPS(lat,lng){
       try{
-        const r=await fetch(`/api/geo/closest-city?lat=${lat}&lng=${lng}`, NO_STORE);
+        const r=await fetch(`/api/geo/closest-city?lat=${lat}&lng=${lng}&ts=${Date.now()}`, NO_STORE);
         const js=await r.json();
         if(js&&js.ok&&js.cidade){
           $('cidade').value=js.cidade;
@@ -326,7 +337,7 @@
     function hideTags(){ ['tagCidade','tagBairro','tagServico','tagRating'].forEach(id=>$(id).style.display='none'); }
     function resetResults(){ $('results').innerHTML=''; page=1; total=0; acumulados=0; $('paginacao').style.display='none'; $('contagem').textContent=''; }
 
-    // ---------- Busca ----------
+    // ---------- Cards ----------
     function cardHTML(p){
       const item = {
         id: p.id, nome: p.nome,
@@ -338,8 +349,9 @@
         distanceKm: (p.distanceKm ?? p.dist ?? p.distanciaKm ?? null),
         lat: p.lat, lng: p.lng
       };
+      if(!hasRealPhoto(item.foto)) return ''; // somente com foto real
 
-      // fallback distância
+      // fallback distância local
       if((item.distanceKm==null || !isFinite(item.distanceKm)) &&
          Number.isFinite(userLat) && Number.isFinite(userLng) &&
          Number.isFinite(item.lat) && Number.isFinite(item.lng)){
@@ -347,14 +359,14 @@
       }
 
       const dist = kmFmt(item.distanceKm);
-      const foto = item.foto ? esc(item.foto) : '/icons/icon-192.png';
+      const foto = esc(item.foto);
       const id = encodeURIComponent(item.id);
       const local = [item.bairro, item.cidade].filter(Boolean).join(' • ');
       const price = item.precoBase ? ('R$ '+String(item.precoBase).toString().replace('.',',')) : null;
 
       return `
         <article class="pro-card">
-          <img class="pro-avatar" src="${foto}" alt="Foto de ${esc(item.nome)}" loading="lazy" onerror="this.src='/icons/icon-192.png'">
+          <img class="pro-avatar" src="${foto}" alt="Foto de ${esc(item.nome)}" loading="lazy" onerror="this.style.display='none'">
           <div class="pro-main">
             <h3 class="pro-name">${esc(item.nome)}</h3>
             <div class="pro-sub">
@@ -364,14 +376,22 @@
             </div>
           </div>
           <div class="pro-right">
-            <span class="dist">${dist}</span>
-            ${price ? `<span class="price">${esc(price)}</span>`:''}
+            <span class="dist">Distância: ${dist}</span>
+            ${price ? `<span class="price">Valor: ${esc(price)}</span>`:''}
             <a class="btn" style="padding:6px 10px; font-size:13px; margin-top:4px" href="/profissional/${id}">Ver</a>
           </div>
         </article>
       `;
     }
 
+    function renderIntoGrid(gridId, items){
+      const grid = $(gridId);
+      const html = (items||[]).map(cardHTML).filter(Boolean).join('');
+      grid.innerHTML = html;
+      return html.length > 0;
+    }
+
+    // ---------- Busca principal ----------
     async function fetchProfissionais(isLoadMore=false){
       const params = new URLSearchParams();
       if(lastQuery.cidade) params.set('cidade', lastQuery.cidade);
@@ -384,28 +404,50 @@
         params.set('userLat', String(userLat));
         params.set('userLng', String(userLng));
       }
+      params.set('ts', String(Date.now())); // fura cache do SW
+
       try{
         $('loader').style.display='';
         const r = await fetch('/api/profissionais?'+params.toString(), NO_STORE);
+        if(!r.ok) throw new Error('bad status');
         const js = await r.json();
-        const items = js.items||[];
-        total = js.total||items.length;
-        renderResults(items, isLoadMore);
-        acumulados += items.length;
-        $('paginacao').style.display = (acumulados<total)?'':'none';
+        const items = Array.isArray(js.items) ? js.items : [];
+        total = Number(js.total||items.length)||0;
+
+        const grid = $('results');
+        const cards = items.map(cardHTML).filter(Boolean).join('');
+
+        if(isLoadMore && cards){
+          grid.insertAdjacentHTML('beforeend', cards);
+        }else{
+          if(cards){
+            grid.innerHTML = cards;
+          }else{
+            // sem resultados com foto real
+            grid.innerHTML = `<div class="card"><p class="meta">Nenhum profissional encontrado com os filtros atuais (com foto real).</p></div>`;
+            // fallback: tenta usar destaques em resultados se ainda não tem nada lá
+            if(destaquesCache.length){
+              const extra = destaquesCache.map(cardHTML).filter(Boolean).join('');
+              if(extra) grid.insertAdjacentHTML('beforeend', extra);
+            }
+          }
+        }
+
+        acumulados += (items||[]).length; // contagem baseada no retorno bruto
+        $('paginacao').style.display = (acumulados<total && items.length>0)?'':'none';
         $('contagem').textContent = (acumulados<total)? `${acumulados}/${total} exibidos` : '';
       }catch{
-        if(!isLoadMore) $('results').innerHTML = `<div class="card"><p class="err">Falha ao carregar resultados. Tente novamente.</p></div>`;
+        if(!isLoadMore){
+          $('results').innerHTML = `<div class="card"><p class="err">Falha ao carregar resultados. Tente novamente.</p></div>`;
+          // fallback duro: mostra destaques se existir cache
+          if(destaquesCache.length){
+            const extra = destaquesCache.map(cardHTML).filter(Boolean).join('');
+            if(extra) $('results').insertAdjacentHTML('beforeend', extra);
+          }
+        }
       }finally{
         $('loader').style.display='none';
       }
-    }
-
-    function renderResults(items, isLoadMore){
-      const grid = $('results');
-      const html = (items||[]).map(cardHTML).join('');
-      if(isLoadMore) grid.insertAdjacentHTML('beforeend', html);
-      else grid.innerHTML = html;
     }
 
     function applyStateTags(q){
@@ -436,24 +478,29 @@
     });
     document.getElementById('btnMais').addEventListener('click', ()=>{ if(acumulados < total){ page++; fetchProfissionais(true); } });
 
-    // ---------- Destaques ----------
+    // ---------- Destaques (também só com foto real) ----------
     async function loadDestaques(){
       const cont = $('destaques');
       const count = $('destCount');
       cont.innerHTML = `<div class="muted">Carregando destaques…</div>`;
       try{
-        let r = await fetch('/api/profissionais?featured=1&limit=6&sort=score&dir=desc', NO_STORE);
+        const ts = Date.now();
+        let r = await fetch('/api/profissionais?featured=1&limit=12&sort=score&dir=desc&ts='+ts, NO_STORE);
         let js = r.ok ? await r.json() : null;
         if(!js || !Array.isArray(js.items) || js.items.length===0){
-          r = await fetch('/api/profissionais?limit=6&sort=score&dir=desc', NO_STORE);
+          r = await fetch('/api/profissionais?limit=12&sort=score&dir=desc&ts='+(ts+1), NO_STORE);
           js = r.ok ? await r.json() : {items:[]};
         }
-        const arr = js.items || [];
+        const arr = (js.items||[]).filter(p=>hasRealPhoto(p.foto));
+        destaquesCache = arr.slice(); // guarda para fallback
         count.textContent = arr.length ? `${arr.length} selecionados` : '';
-        cont.innerHTML = arr.length ? arr.map(cardHTML).join('') : `<div class="muted">Sem destaques no momento.</div>`;
+        if(!renderIntoGrid('destaques', arr)){
+          cont.innerHTML = `<div class="muted">Sem destaques no momento.</div>`;
+        }
+
         // fallback mobile: se resultados vazios, usa destaques
         if($('results').children.length===0 && arr.length){
-          $('results').innerHTML = arr.map(cardHTML).join('');
+          renderIntoGrid('results', arr);
         }
       }catch{
         cont.innerHTML = `<div class="muted">Não foi possível carregar os destaques.</div>`;
@@ -476,10 +523,10 @@
       if(ser) $('servico').value=ser;
       if(mr) $('minRating').value=mr;
 
-      // 1) busca principal
+      // 1) destaques primeiro (para fallback já estar em cache)
+      await loadDestaques();
+      // 2) busca principal
       submitBusca();
-      // 2) destaques
-      loadDestaques();
     })();
   })();
   </script>
@@ -487,7 +534,7 @@
   <script>
     if ('serviceWorker' in navigator){
       window.addEventListener('load', ()=>{
-        navigator.serviceWorker.register('/sw.js?v=clients-2025-09-06c').catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=clients-2025-09-06d').catch(()=>{});
       });
     }
   </script>
