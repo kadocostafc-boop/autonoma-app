@@ -5,17 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Encontre profissionais • Autônoma.app</title>
 
-  <!-- SEO/PWA básicos -->
+  <!-- SEO/PWA -->
   <link rel="canonical" href="https://autonomaapp.com.br/clientes.html">
-  <meta name="description" content="Busque profissionais perto de você. Filtre por bairro e tipo de serviço. Veja distância, atendimentos e avaliações.">
+  <meta name="description" content="Busque profissionais perto de você. Filtre por bairro e tipo de serviço. Veja distância, preço, atendimentos e avaliações.">
   <link rel="manifest" href="/manifest.webmanifest">
-  <meta name="theme-color" content="#2563eb">
+  <meta name="theme-color" content="#0b1f63">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <!-- Favicons -->
   <link rel="icon" href="/favicon.ico">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
-  <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Autônoma.app">
   <meta property="og:title" content="Encontre profissionais">
@@ -23,63 +21,83 @@
   <meta property="og:image" content="https://autonomaapp.com.br/img/og-cover.png">
   <meta property="og:url" content="https://autonomaapp.com.br/clientes.html">
 
-  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/app.css?v=clients-2025-06-3">
 
   <style>
-    /* ===== Ajustes específicos desta página ===== */
+    :root{
+      --azul-escuro:#0b1f63;
+      --azul-brilho:#2D81FF;
+      --azul-brilho-2:#1E6EF2;
+      --cinza:#64748b;
+      --cinza-claro:#f1f5f9;
+      --borda:#e5e7eb;
+    }
     .wrap{max-width:1120px;margin:0 auto;padding:16px}
     .header{display:flex;align-items:center;gap:12px;padding:12px 16px}
     .header .logo{height:32px;width:auto;display:block}
     .topbar-links{ margin-left:auto; display:flex; gap:8px; flex-wrap:wrap }
 
-    .filters{ display:grid; gap:10px; grid-template-columns:1fr; }
-    @media(min-width:720px){ .filters{ grid-template-columns:1.2fr 1fr 1fr .8fr auto } }
+    /* ================= Bloco 1: HERO de busca ================= */
+    .search-hero{
+      background: linear-gradient(180deg, var(--azul-brilho) 0%, var(--azul-brilho-2) 100%);
+      color:#fff;
+      margin:0 0 14px 0;
+      padding: 20px 14px 16px;
+      border-radius:18px;
+      box-shadow: 0 10px 24px rgba(0,0,0,.10);
+    }
+    .search-hero h1{
+      margin:0 0 10px; font-size:26px; line-height:1.15; font-weight:900; letter-spacing:.2px;
+      text-shadow: 0 1px 0 #e8f0ff, 0 10px 24px rgba(0,0,0,.22);
+    }
+    .gps-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:8px 0 12px}
+    .gps-row .pill{background:#ffffff20; border:1px solid #ffffff40; color:#fff; padding:6px 10px; border-radius:12px}
+    .gps-row .muted{color:#e2ebff}
 
-    /* Grid de resultados */
-    .results-grid{ display:grid; gap:12px; grid-template-columns:1fr; }
+    .filters{
+      display:grid; gap:10px; grid-template-columns:1fr;
+      background:#fff; border:1px solid #ffffff40;
+      border-radius:14px; padding:12px;
+    }
+    @media(min-width:720px){ .filters{ grid-template-columns:1.2fr 1fr 1fr .8fr auto } }
+    .filters label{color:#0f172a; font-weight:700; font-size:13px}
+    .filters input, .filters select{
+      width:100%; border:1px solid var(--borda); border-radius:12px; padding:10px 12px;
+      background:#fff; color:#0f172a; outline:none;
+    }
+    .btn{ border:none; background:var(--azul-brilho); color:#fff; padding:11px 14px; border-radius:12px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; font-weight:800 }
+    .btn.ghost{ background:#fff; color:#0f172a; border:1px solid var(--borda) }
+    .btn.dark{ background:var(--azul-escuro) }
+
+    /* ================= Resultados (cards estilo mock) ================= */
+    .results-grid{ display:grid; gap:10px; grid-template-columns:1fr; }
     @media(min-width:720px){ .results-grid{ grid-template-columns:1fr 1fr } }
     @media(min-width:1060px){ .results-grid{ grid-template-columns:1fr 1fr 1fr } }
 
-    /* ===== Card do profissional (layout vertical, foto circular) ===== */
     .pro-card{
-      background:#fff; border:1px solid #e5e7eb; border-radius:16px; padding:14px;
-      display:flex; flex-direction:column; gap:10px;
-      transition: box-shadow .18s ease, transform .18s ease;
+      background:#fff; border:1px solid var(--borda); border-radius:16px; padding:10px 12px;
+      display:flex; align-items:center; gap:12px; box-shadow: 0 6px 16px rgba(0,0,0,.06);
+      transition:transform .16s ease, box-shadow .16s ease;
     }
-    .pro-card:hover{ box-shadow:0 8px 20px rgba(0,0,0,.06); transform:translateY(-2px) }
-    .pro-top{ display:flex; align-items:center; gap:12px }
-    .pro-avatar{
-      width:88px; height:88px; border-radius:999px; object-fit:cover;
-      border:1px solid #e5e7eb; background:#f8fafc;
-    }
-    .pro-info h3{ margin:0 0 2px; font-size:18px; line-height:1.2 }
-    .serv-local{ color:#64748b; font-size:14px }
-    .rating-row{ display:flex; align-items:center; gap:6px; font-size:14px }
-    .star{ color:#f59e0b; font-size:16px }
-    .stats-row{
-      display:flex; flex-wrap:wrap; gap:12px; font-size:13px; color:#64748b;
-    }
-    .distance{ font-variant-numeric:tabular-nums }
-    .pro-actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:6px; }
-    .btn.small{ padding:8px 12px; font-size:14px } /* botão pequeno, azul padrão .btn */
+    .pro-card:hover{ transform:translateY(-1px); box-shadow:0 10px 22px rgba(0,0,0,.09) }
+    .pro-avatar{ width:56px; height:56px; border-radius:999px; object-fit:cover; border:1px solid var(--borda); background:#f8fafc; flex:0 0 56px }
+    .pro-main{ flex:1 1 auto; min-width:0 }
+    .pro-name{ margin:0; font-size:16px; font-weight:900; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+    .pro-sub{ margin:2px 0 0; font-size:13px; color:var(--cinza) }
+    .pro-right{ text-align:right; min-width:90px; display:flex; flex-direction:column; gap:2px; align-items:flex-end }
+    .pro-right .dist{ font-size:13px; color:#0f172a; background:#eef2ff; border:1px solid #c7d2fe; border-radius:999px; padding:2px 8px }
+    .pro-right .price{ font-size:13px; color:#0f172a; background:#f1f5ff; border:1px solid #e0e7ff; border-radius:999px; padding:2px 8px }
+    .rating{ color:#f59e0b; font-size:13px; }
 
-    /* Badges de plano */
-    .badge{ display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid #e5e7eb; font-size:12px }
-    .badge-pro{ background:#eef2ff; border-color:#c7d2fe; color:#3730a3; font-weight:700 }
-    .badge-premium{ background:#fff7ed; border-color:#fed7aa; color:#9a3412; font-weight:700 }
-
-    .muted{ color:#64748b }
-    .subtle{ color:#94a3b8 }
-    .tag{ display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:4px 8px; border:1px solid #e5e7eb; border-radius:999px; background:#f8fafc }
+    .muted{ color:var(--cinza) }
+    .tag{ display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:4px 8px; border:1px solid var(--borda); border-radius:999px; background:#f8fafc }
     .loader{ display:none; font-size:14px }
-    .gps-ok{ color:#059669; }
-    .gps-warn{ color:#b45309; }
+    .gps-ok{ color:#22c55e } .gps-warn{ color:#f59e0b }
 
-    /* Texto de dica mais forte */
-    .dica-forte { color:#1e3a8a; font-weight:700; text-align:center }
-
-    /* Rodapé */
-    footer { padding: 28px 12px; background:#0b1f63; margin-top:16px }
+    .section-title{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .section-title h2{ margin:0; font-size:18px }
+    .card{ background:#fff; border:1px solid var(--borda); border-radius:16px; padding:14px; }
+    footer { padding: 28px 12px; background:var(--azul-escuro); margin-top:16px }
     .foot-links { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
     .foot-links a { color:#cde1ff; font-size:14px; text-decoration:none; }
     .foot-links a:hover { text-decoration:underline; }
@@ -95,23 +113,20 @@
       <a class="btn ghost" href="/">Início</a>
       <a class="btn ghost" href="/top10.html">🏆 Top 10</a>
       <a class="btn ghost" href="/planos.html">⭐ Planos</a>
-      <a class="btn outline" href="/painel_login.html">🔐 Entrar no Painel</a>
-      <a class="btn" href="/cadastro.html">➕ Cadastrar Profissional</a>
+      <a class="btn ghost" href="/painel_login.html">🔐 Entrar</a>
+      <a class="btn" href="/cadastro.html">➕ Cadastrar</a>
     </nav>
   </header>
 
   <main class="wrap" role="main">
-    <div class="card">
-      <h1 class="mt-0">Encontre profissionais</h1>
-      <p class="meta">
-        Deixe simples: escolha <strong>bairro</strong> e <strong>serviço</strong>.
-        Se permitir o GPS, mostramos quem está mais perto (com <span class="badge">Radar</span> ou endereço fixo).
-      </p>
+    <!-- ============ BLOCO 1: HERO DE BUSCA ============ -->
+    <section class="search-hero" aria-labelledby="hTitle">
+      <h1 id="hTitle">Encontre profissionais qualificados</h1>
 
       <!-- Preferências/GPS -->
-      <div class="row" style="gap:10px; align-items:center; flex-wrap:wrap; margin:8px 0 12px">
+      <div class="gps-row">
         <label class="pill" style="gap:8px">
-          <input id="useGPS" type="checkbox" />
+          <input id="useGPS" type="checkbox">
           Usar minha localização
         </label>
         <span id="gpsStatus" class="small muted">GPS desativado.</span>
@@ -144,20 +159,20 @@
           </select>
         </div>
         <div style="display:flex; gap:8px; align-items:flex-end">
-          <button class="btn" type="submit" id="btnBuscar">Buscar</button>
+          <button class="btn dark" type="submit" id="btnBuscar">Buscar</button>
           <button class="btn ghost" type="button" id="btnLimpar">Limpar</button>
         </div>
       </form>
 
-      <!-- Estado -->
-      <div class="row" style="margin-top:10px; align-items:center; gap:10px; flex-wrap:wrap">
+      <!-- Chips de estado -->
+      <div class="gps-row">
         <span class="tag" id="tagCidade" style="display:none"></span>
         <span class="tag" id="tagBairro" style="display:none"></span>
         <span class="tag" id="tagServico" style="display:none"></span>
         <span class="tag" id="tagRating" style="display:none"></span>
-        <span class="loader" id="loader">Carregando resultados…</span>
+        <span class="loader" id="loader">Carregando…</span>
       </div>
-    </div>
+    </section>
 
     <!-- Resultados -->
     <section id="results" class="results-grid" aria-live="polite"></section>
@@ -168,13 +183,16 @@
       <p id="contagem" class="small muted" style="margin-top:6px"></p>
     </div>
 
-    <!-- Dicas -->
-    <div class="card">
-      <p class="dica-forte">💡 Para ver mais detalhes, avaliações e favoritar/recomendar, abra o perfil do profissional.</p>
-    </div>
+    <!-- ============ BLOCO 2: DESTAQUES ============ -->
+    <section class="card" aria-labelledby="destaquesTitle">
+      <div class="section-title">
+        <h2 id="destaquesTitle">Profissionais em destaque</h2>
+        <small class="muted" id="destCount"></small>
+      </div>
+      <div id="destaques" class="results-grid" aria-live="polite"></div>
+    </section>
   </main>
 
-  <!-- Rodapé (links mantidos) -->
   <footer>
     <nav class="foot-links" aria-label="Links do rodapé">
       <a href="/termos.html">Termos</a>
@@ -195,37 +213,28 @@
     const kmFmt = (d)=> (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${Number(d).toFixed(d<10?1:0)} km`));
     const NO_STORE = { cache:'no-store' };
 
+    // Haversine (fallback distância no front)
+    function hav(lat1, lon1, lat2, lon2){
+      if([lat1,lon1,lat2,lon2].some(v=>!Number.isFinite(v))) return null;
+      const toRad = d=> d*Math.PI/180, R=6371;
+      const dLat = toRad(lat2-lat1), dLon=toRad(lon2-lon1);
+      const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+      return 2*R*Math.asin(Math.sqrt(a));
+    }
+
     // ---------- Estado ----------
     let userLat=null, userLng=null, useGPS=false;
     let page=1, limit=20, total=0, acumulados=0;
     let lastQuery={ cidade:"", bairro:"", servico:"", minRating:"" };
 
     // ---------- Autocomplete ----------
-    async function fillCidadesBase(){
-      try{
-        const r = await fetch('/api/geo/cidades', NO_STORE);
+    async function fillCidades(){
+      try{ const r=await fetch('/api/geo/cidades', NO_STORE);
         if(!r.ok) return;
-        const js = await r.json();
+        const js=await r.json();
         $('listaCidades').innerHTML=(js||[]).map(c=>`<option value="${esc(c)}">`).join('');
       }catch{}
     }
-
-    // cidades: sugestão dinâmica
-    async function suggestCidades(q){
-      if(!q) return [];
-      try{
-        const r = await fetch('/api/geo/cidades/suggest?q='+encodeURIComponent(q), NO_STORE);
-        return r.ok ? (await r.json()) : [];
-      }catch{ return []; }
-    }
-
-    async function suggestBairros(q){
-      const cid=$('cidade').value.trim();
-      if(!cid||!q) return [];
-      const r=await fetch(`/api/geo/bairros/suggest?cidade=${encodeURIComponent(cid)}&q=${encodeURIComponent(q)}`, NO_STORE);
-      return r.ok?(await r.json()):[];
-    }
-
     async function loadBairrosDaCidade(cidadeVal){
       if(!cidadeVal) { $('listaBairros').innerHTML=''; return; }
       try{
@@ -235,32 +244,27 @@
         $('listaBairros').innerHTML = (js||[]).map(b=>`<option value="${esc(b)}">`).join('');
       }catch{}
     }
-
+    async function suggestBairros(q){
+      const cid=$('cidade').value.trim();
+      if(!cid||!q) return [];
+      const r=await fetch(`/api/geo/bairros/suggest?cidade=${encodeURIComponent(cid)}&q=${encodeURIComponent(q)}`, NO_STORE);
+      return r.ok?(await r.json()):[];
+    }
     async function suggestServicos(q){
       if(!q) return [];
       const r=await fetch(`/api/geo/servicos/suggest?q=${encodeURIComponent(q)}`, NO_STORE);
       return r.ok?(await r.json()):[];
     }
 
-    // eventos inputs
-    $('cidade').addEventListener('input', async e=>{
-      const v = e.target.value.trim();
-      // cidades sugeridas
-      try{
-        const list = await suggestCidades(v);
-        $('listaCidades').innerHTML = list.map(c=>`<option value="${esc(c)}">`).join('');
-      }catch{}
-      // ao trocar a cidade, limpa e carrega bairros
-      $('bairro').value = '';
-      await loadBairrosDaCidade(v);
+    $('cidade').addEventListener('change', async e=>{
+      const v=e.target.value.trim();
+      $('bairro').value=''; await loadBairrosDaCidade(v);
     });
-
     $('bairro').addEventListener('input', async e=>{
       const v=e.target.value.trim();
       const list=await suggestBairros(v);
       $('listaBairros').innerHTML=list.map(b=>`<option value="${esc(b)}">`).join('');
     });
-
     $('servico').addEventListener('input', async e=>{
       const v=e.target.value.trim();
       const list=await suggestServicos(v);
@@ -271,7 +275,6 @@
     function isSecureForGeo(){
       return location.hostname==='localhost' || location.hostname==='127.0.0.1' || (window.isSecureContext===true);
     }
-
     async function resolveCityByGPS(lat,lng){
       try{
         const r=await fetch(`/api/geo/closest-city?lat=${lat}&lng=${lng}`, NO_STORE);
@@ -283,17 +286,14 @@
         }
       }catch{}
     }
-
     async function askGPS(){
       if(!isSecureForGeo()){
         $('gpsStatus').innerHTML='<span class="gps-warn">Para usar GPS, acesse via HTTPS ou localhost.</span>';
-        useGPS=false; $('useGPS').checked=false;
-        return;
+        useGPS=false; $('useGPS').checked=false; return;
       }
       if(!('geolocation' in navigator)){
         $('gpsStatus').textContent='Seu navegador não suporta geolocalização.';
-        useGPS=false; $('useGPS').checked=false;
-        return;
+        useGPS=false; $('useGPS').checked=false; return;
       }
       $('gpsStatus').textContent='Solicitando localização…';
       navigator.geolocation.getCurrentPosition(async pos=>{
@@ -306,7 +306,6 @@
         useGPS=false; $('useGPS').checked=false;
       }, {enableHighAccuracy:true,timeout:12000,maximumAge:30000});
     }
-
     $('useGPS').addEventListener('change', e=>{
       useGPS=!!e.target.checked;
       if(useGPS) askGPS();
@@ -314,19 +313,56 @@
     });
 
     // ---------- UI helpers ----------
-    function showLoader(on){ $('loader').style.display = on? '' : 'none'; }
     function showTag(id, txt){ const el=$(id); el.textContent=txt; el.style.display='inline-flex'; }
     function hideTags(){ ['tagCidade','tagBairro','tagServico','tagRating'].forEach(id=>$(id).style.display='none'); }
     function resetResults(){ $('results').innerHTML=''; page=1; total=0; acumulados=0; $('paginacao').style.display='none'; $('contagem').textContent=''; }
-    function applyStateTags(q){
-      hideTags();
-      if(q.cidade) showTag('tagCidade','Cidade: '+q.cidade);
-      if(q.bairro) showTag('tagBairro','Bairro: '+q.bairro);
-      if(q.servico) showTag('tagServico','Serviço: '+q.servico);
-      if(q.minRating) showTag('tagRating','Avaliação: '+q.minRating+'+');
-    }
 
     // ---------- Busca ----------
+    function cardHTML(p){
+      const item = {
+        id: p.id, nome: p.nome,
+        servico: p.servico || p.profissao || '',
+        bairro: p.bairro || '', cidade: p.cidade || '',
+        foto: p.foto || '',
+        rating: Number(p.rating||0), avaliacoes: Number(p.avaliacoes||0),
+        precoBase: p.precoBase || p.preco || null,
+        distanceKm: (p.distanceKm ?? p.dist ?? p.distanciaKm ?? null),
+        lat: p.lat, lng: p.lng
+      };
+
+      // fallback distância
+      if((item.distanceKm==null || !isFinite(item.distanceKm)) &&
+         Number.isFinite(userLat) && Number.isFinite(userLng) &&
+         Number.isFinite(item.lat) && Number.isFinite(item.lng)){
+        try{ item.distanceKm = hav(userLat,userLng,item.lat,item.lng); }catch{}
+      }
+
+      const dist = kmFmt(item.distanceKm);
+      const foto = item.foto ? esc(item.foto) : '/icons/icon-192.png';
+      const id = encodeURIComponent(item.id);
+      const local = [item.bairro, item.cidade].filter(Boolean).join(' • ');
+      const price = item.precoBase ? ('R$ '+String(item.precoBase).toString().replace('.',',')) : null;
+
+      return `
+        <article class="pro-card">
+          <img class="pro-avatar" src="${foto}" alt="Foto de ${esc(item.nome)}" loading="lazy" onerror="this.src='/icons/icon-192.png'">
+          <div class="pro-main">
+            <h3 class="pro-name">${esc(item.nome)}</h3>
+            <div class="pro-sub">
+              ${esc(item.servico||'')} • <span class="muted">${esc(local||'—')}</span>
+              <span class="rating"> ${estrelas(item.rating)} </span>
+              <span class="muted">(${item.avaliacoes})</span>
+            </div>
+          </div>
+          <div class="pro-right">
+            <span class="dist">${dist}</span>
+            ${price ? `<span class="price">${esc(price)}</span>`:''}
+            <a class="btn" style="padding:6px 10px; font-size:13px; margin-top:4px" href="/profissional/${id}">Ver</a>
+          </div>
+        </article>
+      `;
+    }
+
     async function fetchProfissionais(isLoadMore=false){
       const params = new URLSearchParams();
       if(lastQuery.cidade) params.set('cidade', lastQuery.cidade);
@@ -339,88 +375,38 @@
         params.set('userLat', String(userLat));
         params.set('userLng', String(userLng));
       }
-      showLoader(true);
       try{
+        $('loader').style.display='';
         const r = await fetch('/api/profissionais?'+params.toString(), NO_STORE);
         const js = await r.json();
-        total = js.total||0;
-        renderResults(js.items||[], isLoadMore);
-        acumulados += (js.items||[]).length;
-        if(acumulados < total){
-          $('paginacao').style.display='';
-          $('contagem').textContent=`${acumulados}/${total} exibidos`;
-        } else {
-          $('paginacao').style.display='none';
-        }
-      }catch(_){
+        const items = js.items||[];
+        total = js.total||items.length;
+        renderResults(items, isLoadMore);
+        acumulados += items.length;
+        $('paginacao').style.display = (acumulados<total)?'':'none';
+        $('contagem').textContent = (acumulados<total)? `${acumulados}/${total} exibidos` : '';
+      }catch{
         if(!isLoadMore) $('results').innerHTML = `<div class="card"><p class="err">Falha ao carregar resultados. Tente novamente.</p></div>`;
       }finally{
-        showLoader(false);
+        $('loader').style.display='none';
       }
     }
 
-    function badgeHTML(plano){
-      if((plano||'').toLowerCase()==='premium') return `<span class="badge badge-premium">PREMIUM</span>`;
-      if((plano||'').toLowerCase()==='pro') return `<span class="badge badge-pro">PRO</span>`;
-      return '';
-    }
-
-    // ===== Render =====
     function renderResults(items, isLoadMore){
       const grid = $('results');
-      const html = (items||[]).map((p)=>{
-        const item = {
-          id: p.id,
-          nome: p.nome,
-          servico: p.servico || p.profissao || '',
-          bairro: p.bairro || '',
-          cidade: p.cidade || '',
-          foto: p.foto || '',
-          whatsapp: p.whatsapp || '',
-          rating: Number(p.rating||0),
-          avaliacoes: Number(p.avaliacoes||0),
-          atendimentos: Number(p.atendimentos||0),
-          experienciaAnos: p.experienciaAnos || p.experiencia || 0,
-          chamadas: p.chamadas || 0,
-          visitas: p.visitas || 0,
-          precoBase: p.precoBase || p.preco || '',
-          site: p.site || p.catalogo || '',
-          distanceKm: (p.distanceKm ?? p.dist ?? p.distanciaKm ?? null),
-          plano: (p.plano||'').toLowerCase()
-        };
-        const dist = kmFmt(item.distanceKm);
-        const stars = estrelas(item.rating);
-        const local = [item.bairro, item.cidade].filter(Boolean).join(' – ');
-        const foto = item.foto ? esc(item.foto) : '/icons/icon-192.png';
-        const id = encodeURIComponent(item.id);
-        return `
-          <article class="pro-card">
-            <div class="pro-top">
-              <img class="pro-avatar" src="${foto}" alt="Foto de ${esc(item.nome)}" width="88" height="88" loading="lazy">
-              <div class="pro-info">
-                <h3>${esc(item.nome)} ${badgeHTML(item.plano)}</h3>
-                <div class="serv-local">${esc(item.servico)} • <span class="muted">${esc(local||'—')}</span></div>
-              </div>
-            </div>
-            <div class="rating-row">
-              <span class="star">${stars}</span>
-              <span class="muted">(${item.avaliacoes})</span>
-            </div>
-            <div class="stats-row">
-              <span class="muted">Atendimentos: <strong>${item.atendimentos}</strong></span>
-              <span class="muted distance">Distância: <strong>${dist}</strong></span>
-            </div>
-            <div class="pro-actions">
-              <a class="btn small btnPerfil" href="/profissional/${id}" aria-label="Ver perfil de ${esc(item.nome)}">Ver perfil</a>
-            </div>
-          </article>
-        `;
-      }).join('');
+      const html = (items||[]).map(cardHTML).join('');
       if(isLoadMore) grid.insertAdjacentHTML('beforeend', html);
-      else grid.innerHTML = html || `<div class="card"><p class="meta">Nenhum profissional encontrado com os filtros atuais.</p></div>`;
+      else grid.innerHTML = html;
     }
 
-    // ---------- Eventos ----------
+    function applyStateTags(q){
+      hideTags();
+      if(q.cidade) showTag('tagCidade','Cidade: '+q.cidade);
+      if(q.bairro) showTag('tagBairro','Bairro: '+q.bairro);
+      if(q.servico) showTag('tagServico','Serviço: '+q.servico);
+      if(q.minRating) showTag('tagRating','Avaliação: '+q.minRating+'+');
+    }
+
     function submitBusca(){
       lastQuery = {
         cidade: $('cidade').value.trim(),
@@ -433,24 +419,44 @@
       fetchProfissionais(false);
     }
 
-    $('formBusca').addEventListener('submit', (e)=>{ e.preventDefault(); submitBusca(); });
-
-    $('btnLimpar').addEventListener('click', async ()=>{
+    document.getElementById('formBusca').addEventListener('submit', (e)=>{ e.preventDefault(); submitBusca(); });
+    document.getElementById('btnLimpar').addEventListener('click', async ()=>{
       $('cidade').value=''; $('bairro').value=''; $('servico').value=''; $('minRating').value='';
-      hideTags();
-      resetResults();
-      // recarrega lista base de cidades (evita cache)
-      await fillCidadesBase();
-      fetchProfissionais(false);
+      hideTags(); resetResults();
+      await fillCidades(); fetchProfissionais(false);
     });
+    document.getElementById('btnMais').addEventListener('click', ()=>{ if(acumulados < total){ page++; fetchProfissionais(true); } });
 
-    $('btnMais').addEventListener('click', ()=>{ if(acumulados < total){ page++; fetchProfissionais(true); } });
+    // ---------- Destaques ----------
+    async function loadDestaques(){
+      const cont = $('destaques');
+      const count = $('destCount');
+      cont.innerHTML = `<div class="muted">Carregando destaques…</div>`;
+      try{
+        let r = await fetch('/api/profissionais?featured=1&limit=6&sort=score&dir=desc', NO_STORE);
+        let js = r.ok ? await r.json() : null;
+        if(!js || !Array.isArray(js.items) || js.items.length===0){
+          r = await fetch('/api/profissionais?limit=6&sort=score&dir=desc', NO_STORE);
+          js = r.ok ? await r.json() : {items:[]};
+        }
+        const arr = js.items || [];
+        count.textContent = arr.length ? `${arr.length} selecionados` : '';
+        cont.innerHTML = arr.length ? arr.map(cardHTML).join('') : `<div class="muted">Sem destaques no momento.</div>`;
+        // fallback mobile
+        if($('results').children.length===0 && arr.length){
+          $('results').innerHTML = arr.map(cardHTML).join('');
+        }
+      }catch{
+        cont.innerHTML = `<div class="muted">Não foi possível carregar os destaques.</div>`;
+      }
+    }
 
     // ---------- Boot ----------
     (async function init(){
-      await fillCidadesBase();
+      // atualizar SW em celulares teimosos
+      if('serviceWorker' in navigator){ try{ const regs=await navigator.serviceWorker.getRegistrations(); regs.forEach(r=>r.update()); }catch{} }
+      await fillCidades();
 
-      // querystring inicial
       const u=new URL(location.href);
       const cid=u.searchParams.get('cidade')||'';
       const bai=u.searchParams.get('bairro')||'';
@@ -459,11 +465,22 @@
       if(cid) { $('cidade').value=cid; await loadBairrosDaCidade(cid); }
       if(bai) $('bairro').value=bai;
       if(ser) $('servico').value=ser;
-      if(mr)  $('minRating').value=mr;
+      if(mr) $('minRating').value=mr;
 
+      // 1) busca principal
       submitBusca();
+      // 2) destaques
+      loadDestaques();
     })();
   })();
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator){
+      window.addEventListener('load', ()=>{
+        navigator.serviceWorker.register('/sw.js?v=clients-2025-09-06b').catch(()=>{});
+      });
+    }
   </script>
 </body>
 </html>
