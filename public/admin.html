@@ -34,7 +34,6 @@
     .namecell{ display:flex; align-items:center; gap:8px; min-width:220px }
     .rating-low{ color:#b91c1c; font-weight:600 }
     .status-pill{ font-size:12px; padding:2px 6px; border-radius:999px; border:1px solid #fecaca; background:#fee2e2; color:#991b1b }
-
     /* Canvas responsivo com alta definição */
     .chart-canvas{ width:100%; height:280px; display:block; }
     @media (min-width:920px){ #chartPie, #chartBars { height:240px; } }
@@ -51,7 +50,7 @@
     .den-actions .btn{ padding:6px 8px; }
     .den-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px; }
 
-    /* ===== NOVO: badges de plano ===== */
+    /* ===== Badges de plano ===== */
     .plan-badge{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid #e5e7eb; background:#f1f5f9; font-weight:800; margin-left:6px }
     .plan-badge.PRO{ background:#eef2ff; border-color:#6366f1 }
     .plan-badge.PREMIUM{ background:#fffbeb; border-color:#fbbf24 }
@@ -104,7 +103,7 @@
       <div class="row" style="margin-top:10px">
         <button id="btnRecompute" class="btn outline">Recalcular verificações</button>
         <a id="btnCSV" class="btn" href="/api/admin/export/csv" target="_blank" rel="noopener">Exportar CSV</a>
-        <!-- OPCIONAL: atalhos one-click (mantém seu export/csv com filtros) -->
+        <!-- Atalhos de export -->
         <a class="btn ghost" href="/api/admin/export?what=profissionais" target="_blank" rel="noopener">Profissionais CSV</a>
         <a class="btn ghost" href="/api/admin/export?what=metrics" target="_blank" rel="noopener">Métricas CSV</a>
       </div>
@@ -167,7 +166,6 @@
           <tbody id="tbody"></tbody>
         </table>
       </div>
-
       <div class="row" style="justify-content:space-between; margin-top:10px">
         <div class="meta" id="listInfo">—</div>
         <div class="row">
@@ -176,7 +174,6 @@
           <button id="next" class="btn ghost">»</button>
         </div>
       </div>
-
       <p id="errList" class="meta warn" style="display:none">Erro ao carregar lista.</p>
     </div>
 
@@ -196,7 +193,6 @@
             <input id="d_q" class="input" placeholder="Buscar por motivo/descrição/ID prof.">
             <button id="d_go" class="btn">Filtrar</button>
           </div>
-
           <div style="overflow:auto; max-height:420px">
             <table class="table" id="tabDen">
               <thead>
@@ -212,7 +208,6 @@
               <tbody id="tbodyDen"></tbody>
             </table>
           </div>
-
           <div class="row" style="justify-content:space-between; margin-top:10px">
             <div class="meta" id="denInfo">—</div>
             <div class="row">
@@ -221,10 +216,8 @@
               <button id="d_next" class="btn ghost">»</button>
             </div>
           </div>
-
           <p id="errDen" class="meta warn" style="display:none">Erro ao carregar denúncias.</p>
         </div>
-
         <div>
           <div class="den-card">
             <h3 style="margin:0 0 6px">Resumo</h3>
@@ -234,7 +227,7 @@
       </div>
     </div>
 
-    <!-- NOVO: Pagamentos (últimos) -->
+    <!-- Pagamentos (últimos) -->
     <div class="panel" style="margin-top:12px">
       <div class="row" style="justify-content:space-between;align-items:center">
         <h2 style="margin:6px 0 12px">Pagamentos (últimos)</h2>
@@ -306,13 +299,16 @@
       return ctx;
     }
 
-    // ===== Charts =====
+    // ===== Charts (sem libs) =====
     function drawLineChart(cv, series, labels){
       const ctx = deviceScaleCanvas(cv); if (!ctx) return;
       const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
       ctx.clearRect(0,0,W,H);
+
+      // axes
       ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo(40,10); ctx.lineTo(40,H-30); ctx.lineTo(W-10,H-30); ctx.stroke();
+
       const max = Math.max(1, ...series.flat());
       const scaleY = (H-40)/max;
       const stepX = (W-60)/Math.max(1, labels.length-1);
@@ -330,6 +326,7 @@
         const grad = ctx.createLinearGradient(0,10,0,H-30);
         grad.addColorStop(0, colors[si] + 'cc');
         grad.addColorStop(1, colors[si] + '11');
+
         ctx.beginPath();
         data.forEach((v,i)=>{
           const x=40 + i*stepX;
@@ -360,10 +357,12 @@
         off += ctx.measureText(legends[i]).width + 54;
       }
     }
+
     function drawPie(cv, vals){
       const ctx = deviceScaleCanvas(cv); if (!ctx) return;
       const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
       ctx.clearRect(0,0,W,H);
+
       const sum = vals.reduce((a,b)=>a+b,0) || 1;
       const cx=W/2, cy=H/2, r=Math.min(W,H)*0.36, inner=r*0.58;
       const colors=['#10b981','#e5e7eb'];
@@ -379,10 +378,12 @@
       ctx.font='12px system-ui'; ctx.fillStyle='#334155';
       ctx.fillText(vals[0] + ' de ' + (vals[0]+vals[1]), cx, cy+14);
     }
+
     function drawBars(cv, labels, values){
       const ctx = deviceScaleCanvas(cv); if (!ctx) return;
       const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
       ctx.clearRect(0,0,W,H);
+
       const max = Math.max(1, ...values);
       const axisL = 40, axisB = 30;
       const bw = Math.max(16, (W-axisL-20)/Math.max(1, labels.length) - 10);
@@ -402,6 +403,7 @@
         ctx.fillStyle=grad;
         ctx.fillRect(x, (H-axisB)-h, bw, h);
 
+        // labels
         ctx.save();
         ctx.translate(x + bw/2, H-10);
         ctx.rotate(-Math.PI/4);
@@ -421,7 +423,7 @@
     });
 
     function paintCharts(m){
-      const labels = (m.timeseries?.days||[]).map(d=>d.date.slice(5));
+      const labels = (m.timeseries?.days||[]).map(d=> (d.date||'').slice(5));
       const visits = (m.timeseries?.days||[]).map(d=>d.visits||0);
       const calls  = (m.timeseries?.days||[]).map(d=>d.calls||0);
       const sign   = (m.timeseries?.days||[]).map(d=>d.signups||0);
@@ -431,8 +433,8 @@
       const vN = m.verified?.no  || 0;
       drawPie(cPie, [vY, vN]);
 
-      const labs = (m.top?.servicos||[]).map(x=>x.name);
-      const vals = (m.top?.servicos||[]).map(x=>x.value);
+      const labs = (m.top?.servicos||[]).map(x=> String(x.name||''));
+      const vals = (m.top?.servicos||[]).map(x=> Number(x.value||0));
       drawBars(cBars, labs, vals);
     }
 
@@ -462,13 +464,14 @@
       finally{ btnRecompute.disabled=false; }
     });
 
-    // ====== Lista ======
+    // ====== Lista de profissionais ======
     async function loadCidades(){
       try{
         const list = await apiJSON('/api/geo/cidades');
-        dlCidades.innerHTML = (list||[]).map(c=>`<option value="${c}">`).join('');
+        dlCidades.innerHTML = (list||[]).map(c=>`<option value="${escapeHtml(c)}">`).join('');
       }catch{}
     }
+
     function updateCSVLink(){
       const qs = new URLSearchParams({
         q: f_q.value.trim(),
@@ -547,13 +550,14 @@
               <button class="btn outline" data-act="restaurar" data-id="${p.id}">Restaurar</button>
             ` : `
               ${p.suspenso ? `<button class="btn outline" data-act="ativar" data-id="${p.id}">Ativar</button>`
-                           : `<button class="btn outline" data-act="suspender" data-id="${p.id}">Suspender</button>`}
+                            : `<button class="btn outline" data-act="suspender" data-id="${p.id}">Suspender</button>`}
               <button class="btn ghost" data-act="excluir" data-id="${p.id}">Excluir</button>
             `}
             <a class="btn" href="/profissional/${p.id}" target="_blank" rel="noopener">Abrir</a>
           </td>
         </tr>`;
       }).join('');
+
       listInfo.textContent = `Total: ${data.total} • Página ${data.page}/${data.pages}`;
       PAGES = data.pages;
       pageInfo.textContent = `${data.page}/${data.pages}`;
@@ -601,18 +605,20 @@
         errDen.style.display='';
       }
     }
+
     function renderDenuncias(data){
       const items = data.items||[];
       tbodyDen.innerHTML = items.map(d=>{
         const when = (d.createdAt||'').replace('T',' ').slice(0,16);
         const prof = d.profissional || {};
         const status = String(d.status||'aberta');
-        const chip = `<span class="chip ${status}">${status.replace('_',' ')}</span>`;
+        const chip = `<span class="chip ${status}">${escapeHtml(status.replace('_',' '))}</span>`;
+        const profIdText = prof.id ? ('#'+ String(prof.id)) : '';
         return `<tr>
           <td>${d.id}</td>
-          <td><span class="meta">${when}</span></td>
+          <td><span class="meta">${escapeHtml(when)}</span></td>
           <td>
-            <div>${prof.id ? `#${prof.id}` : ''} ${prof.nome ? escapeHtml(prof.nome) : ''}</div>
+            <div>${profIdText} ${prof.nome ? escapeHtml(prof.nome) : ''}</div>
             <div class="meta">${escapeHtml(prof.cidade||'')} • ${escapeHtml(prof.bairro||'')}</div>
           </td>
           <td>${escapeHtml(d.motivo||'—')}</td>
@@ -624,6 +630,7 @@
           </td>
         </tr>`;
       }).join('');
+
       denInfo.textContent = `Total: ${data.total} • Página ${data.page}/${data.pages}`;
       D_PAGES = data.pages;
       d_pageInfo.textContent = `${data.page}/${data.pages}`;
@@ -639,20 +646,21 @@
         });
       });
     }
+
     d_prev.addEventListener('click', ()=>{ if (D_PAGE>1) loadDenuncias(D_PAGE-1); });
     d_next.addEventListener('click', ()=>{ if (D_PAGE<D_PAGES) loadDenuncias(D_PAGE+1); });
     d_go.addEventListener('click', ()=> loadDenuncias(1));
 
-    // ===== NOVO: Pagamentos (últimos) =====
+    // ===== Pagamentos (últimos) =====
     function moneyBR(v){
       const n = Number(v||0);
       return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
     function renderPayment(p){
-      const id   = escapeHtml(p.id||'—');
+      const id   = escapeHtml(String(p.id||'—'));
       const pro  = escapeHtml(String(p.proId||'—'));
-      const meth = escapeHtml((p.method||'').toUpperCase());   // PIX|CARD
-      const st   = escapeHtml(p.status||'—');                  // paid|pending|refunded|failed|expired
+      const meth = escapeHtml(String(p.method||'').toUpperCase());   // PIX|CARD
+      const st   = escapeHtml(String(p.status||'—'));                // paid|pending|...
       const gross= moneyBR(p.amount);
       const fees = moneyBR(p.fees);
       const net  = moneyBR(p.net);
@@ -661,12 +669,9 @@
         <div class="kpi" style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
           <div>
             <div><strong>Pagamento #${id}</strong> — Pro #${pro}</div>
-            <div class="meta">Data: ${when}</div>
+            <div class="meta">Data: ${escapeHtml(when)}</div>
             <div class="row" style="margin-top:6px">
-              <span class="badge">Método
-<span class="badge">Método
-                <strong>${meth}</strong>
-              </span>
+              <span class="badge">Método <strong>${meth}</strong></span>
               <span class="badge">Status <strong>${st}</strong></span>
             </div>
           </div>
@@ -678,7 +683,6 @@
         </div>
       `;
     }
-
     async function loadPayments(){
       try{
         const arr = await apiJSON('/api/admin/payments?limit=10');

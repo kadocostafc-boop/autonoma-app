@@ -11,12 +11,10 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#2563eb">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-
   <!-- Favicons -->
   <link rel="icon" href="/favicon.ico">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
-
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Autônoma.app">
@@ -26,28 +24,68 @@
   <meta property="og:url" content="https://autonomaapp.com.br/clientes.html">
 
   <link rel="stylesheet" href="/css/app.css">
+
   <style>
-    /* Ajustes específicos desta página */
+    /* ===== Ajustes específicos desta página ===== */
+    .wrap{max-width:1120px;margin:0 auto;padding:16px}
+    .header{display:flex;align-items:center;gap:12px;padding:12px 16px}
+    .header .logo{height:32px;width:auto;display:block}
+    .topbar-links{ margin-left:auto; display:flex; gap:8px; flex-wrap:wrap }
+
     .filters{ display:grid; gap:10px; grid-template-columns:1fr; }
     @media(min-width:720px){ .filters{ grid-template-columns:1.2fr 1fr 1fr .8fr auto } }
+
+    /* Grid de resultados */
     .results-grid{ display:grid; gap:12px; grid-template-columns:1fr; }
     @media(min-width:720px){ .results-grid{ grid-template-columns:1fr 1fr } }
     @media(min-width:1060px){ .results-grid{ grid-template-columns:1fr 1fr 1fr } }
-    .pro-card{ cursor:pointer }
+
+    /* ===== Card do profissional (layout vertical, foto circular) ===== */
+    .pro-card{
+      background:#fff; border:1px solid #e5e7eb; border-radius:16px; padding:14px;
+      display:flex; flex-direction:column; gap:10px;
+      transition: box-shadow .18s ease, transform .18s ease;
+    }
+    .pro-card:hover{ box-shadow:0 8px 20px rgba(0,0,0,.06); transform:translateY(-2px) }
+    .pro-top{ display:flex; align-items:center; gap:12px }
+    .pro-avatar{
+      width:88px; height:88px; border-radius:999px; object-fit:cover;
+      border:1px solid #e5e7eb; background:#f8fafc;
+    }
+    .pro-info h3{ margin:0 0 2px; font-size:18px; line-height:1.2 }
+    .serv-local{ color:#64748b; font-size:14px }
+    .rating-row{ display:flex; align-items:center; gap:6px; font-size:14px }
+    .star{ color:#f59e0b; font-size:16px }
+    .stats-row{
+      display:flex; flex-wrap:wrap; gap:12px; font-size:13px; color:#64748b;
+    }
+    .distance{ font-variant-numeric:tabular-nums }
+    .pro-actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:6px; }
+    .btn.small{ padding:8px 12px; font-size:14px } /* botão pequeno, azul padrão .btn */
+
+    /* Badges de plano */
+    .badge{ display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid #e5e7eb; font-size:12px }
     .badge-pro{ background:#eef2ff; border-color:#c7d2fe; color:#3730a3; font-weight:700 }
     .badge-premium{ background:#fff7ed; border-color:#fed7aa; color:#9a3412; font-weight:700 }
-    .distance{ font-variant-numeric:tabular-nums }
+
     .muted{ color:#64748b }
     .subtle{ color:#94a3b8 }
-    .topbar-links{ margin-left:auto; display:flex; gap:8px; flex-wrap:wrap }
     .tag{ display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:4px 8px; border:1px solid #e5e7eb; border-radius:999px; background:#f8fafc }
     .loader{ display:none; font-size:14px }
     .gps-ok{ color:#059669; }
     .gps-warn{ color:#b45309; }
+
+    /* Texto de dica mais forte */
+    .dica-forte { color:#1e3a8a; font-weight:700; text-align:center }
+
+    /* Rodapé */
+    footer { padding: 28px 12px; background:#0b1f63; margin-top:16px }
+    .foot-links { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
+    .foot-links a { color:#cde1ff; font-size:14px; text-decoration:none; }
+    .foot-links a:hover { text-decoration:underline; }
   </style>
 </head>
 <body>
-
   <!-- Header -->
   <header class="header" role="banner">
     <a href="/" aria-label="Início">
@@ -65,7 +103,10 @@
   <main class="wrap" role="main">
     <div class="card">
       <h1 class="mt-0">Encontre profissionais</h1>
-      <p class="meta">Deixe simples: escolha <strong>bairro</strong> e <strong>serviço</strong>. Se permitir o GPS, mostramos quem está mais perto (com <span class="badge">Radar</span> ou endereço fixo).</p>
+      <p class="meta">
+        Deixe simples: escolha <strong>bairro</strong> e <strong>serviço</strong>.
+        Se permitir o GPS, mostramos quem está mais perto (com <span class="badge">Radar</span> ou endereço fixo).
+      </p>
 
       <!-- Preferências/GPS -->
       <div class="row" style="gap:10px; align-items:center; flex-wrap:wrap; margin:8px 0 12px">
@@ -129,147 +170,185 @@
 
     <!-- Dicas -->
     <div class="card">
-      <p class="small subtle">Dica: para ver mais detalhes, avaliações e favoritar/recomendar, abra o perfil do profissional.</p>
-      <div class="foot">
-        <a href="/cadastro.html">Cadastrar meu perfil</a> ·
-        <a href="/favoritos.html">Meus Favoritos</a> ·
-        <a href="/top10.html">Top 10</a> ·
-        <a href="/planos.html">Planos</a>
-      </div>
+      <p class="dica-forte">💡 Para ver mais detalhes, avaliações e favoritar/recomendar, abra o perfil do profissional.</p>
     </div>
   </main>
+
+  <!-- Rodapé (links mantidos) -->
+  <footer>
+    <nav class="foot-links" aria-label="Links do rodapé">
+      <a href="/termos.html">Termos</a>
+      <a href="/privacidade.html">Privacidade</a>
+      <a href="/top10.html">Top 10</a>
+      <a href="/planos.html">Planos</a>
+      <a href="/politica-de-seguranca.html">Segurança</a>
+      <a href="/favoritos.html">Favoritos</a>
+    </nav>
+  </footer>
 
   <script>
   (function(){
     // ---------- Utils ----------
     const $ = (id)=> document.getElementById(id);
     const esc = (s)=> String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-    const estrelas = (n)=> {
-      const r = Math.round((Number(n)||0)*2)/2; // meia estrela se quiser no futuro
-      const full = Math.floor(r), half = (r%1!==0);
-      return "★".repeat(full) + (half?"½":"") + "☆".repeat(5-full-(half?1:0));
-    };
-    const kmFmt = (d)=> (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${d.toFixed(d<10?1:0)} km`));
+    const estrelas = (n)=>{ const r=Math.round((Number(n)||0)*2)/2; const f=Math.floor(r),h=(r%1!==0); return "★".repeat(f)+(h?"½":"")+"☆".repeat(5-f-(h?1:0)); };
+    const kmFmt = (d)=> (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${Number(d).toFixed(d<10?1:0)} km`));
+    const NO_STORE = { cache:'no-store' };
 
     // ---------- Estado ----------
-    let userLat = null, userLng = null, useGPS = false;
-    let page = 1, limit = 20, total = 0, acumulados = 0;
-    let lastQuery = { cidade:"", bairro:"", servico:"", minRating:"" };
+    let userLat=null, userLng=null, useGPS=false;
+    let page=1, limit=20, total=0, acumulados=0;
+    let lastQuery={ cidade:"", bairro:"", servico:"", minRating:"" };
 
     // ---------- Autocomplete ----------
-    async function fillCidades(){
+    async function fillCidadesBase(){
       try{
-        const r = await fetch('/api/geo/cidades');
+        const r = await fetch('/api/geo/cidades', NO_STORE);
+        if(!r.ok) return;
         const js = await r.json();
-        const dl = $('listaCidades');
-        dl.innerHTML = (js||[]).map(c=>`<option value="${esc(c)}">`).join('');
+        $('listaCidades').innerHTML=(js||[]).map(c=>`<option value="${esc(c)}">`).join('');
       }catch{}
     }
-    async function suggestBairros(q){
-      const cid = $('cidade').value.trim();
-      if(!cid || !q) return [];
-      const r = await fetch(`/api/geo/bairros/suggest?cidade=${encodeURIComponent(cid)}&q=${encodeURIComponent(q)}`);
-      return r.ok ? (await r.json()) : [];
+
+    // cidades: sugestão dinâmica
+    async function suggestCidades(q){
+      if(!q) return [];
+      try{
+        const r = await fetch('/api/geo/cidades/suggest?q='+encodeURIComponent(q), NO_STORE);
+        return r.ok ? (await r.json()) : [];
+      }catch{ return []; }
     }
+
+    async function suggestBairros(q){
+      const cid=$('cidade').value.trim();
+      if(!cid||!q) return [];
+      const r=await fetch(`/api/geo/bairros/suggest?cidade=${encodeURIComponent(cid)}&q=${encodeURIComponent(q)}`, NO_STORE);
+      return r.ok?(await r.json()):[];
+    }
+
+    async function loadBairrosDaCidade(cidadeVal){
+      if(!cidadeVal) { $('listaBairros').innerHTML=''; return; }
+      try{
+        const r = await fetch('/api/geo/bairros?cidade='+encodeURIComponent(cidadeVal), NO_STORE);
+        if(!r.ok) return;
+        const js = await r.json();
+        $('listaBairros').innerHTML = (js||[]).map(b=>`<option value="${esc(b)}">`).join('');
+      }catch{}
+    }
+
     async function suggestServicos(q){
       if(!q) return [];
-      const r = await fetch(`/api/geo/servicos/suggest?q=${encodeURIComponent(q)}`);
-      return r.ok ? (await r.json()) : [];
+      const r=await fetch(`/api/geo/servicos/suggest?q=${encodeURIComponent(q)}`, NO_STORE);
+      return r.ok?(await r.json()):[];
     }
-    // simples: a cada blur/change a gente atualiza datalist
-    $('bairro').addEventListener('input', async (e)=>{
+
+    // eventos inputs
+    $('cidade').addEventListener('input', async e=>{
       const v = e.target.value.trim();
-      const list = await suggestBairros(v);
-      $('listaBairros').innerHTML = list.map(b=>`<option value="${esc(b)}">`).join('');
-    });
-    $('servico').addEventListener('input', async (e)=>{
-      const v = e.target.value.trim();
-      const list = await suggestServicos(v);
-      $('listaServicos').innerHTML = list.map(s=>`<option value="${esc(s)}">`).join('');
+      // cidades sugeridas
+      try{
+        const list = await suggestCidades(v);
+        $('listaCidades').innerHTML = list.map(c=>`<option value="${esc(c)}">`).join('');
+      }catch{}
+      // ao trocar a cidade, limpa e carrega bairros
+      $('bairro').value = '';
+      await loadBairrosDaCidade(v);
     });
 
-    // ---------- GPS / Cidade automática ----------
+    $('bairro').addEventListener('input', async e=>{
+      const v=e.target.value.trim();
+      const list=await suggestBairros(v);
+      $('listaBairros').innerHTML=list.map(b=>`<option value="${esc(b)}">`).join('');
+    });
+
+    $('servico').addEventListener('input', async e=>{
+      const v=e.target.value.trim();
+      const list=await suggestServicos(v);
+      $('listaServicos').innerHTML=list.map(s=>`<option value="${esc(s)}">`).join('');
+    });
+
+    // ---------- GPS ----------
+    function isSecureForGeo(){
+      return location.hostname==='localhost' || location.hostname==='127.0.0.1' || (window.isSecureContext===true);
+    }
+
     async function resolveCityByGPS(lat,lng){
       try{
-        const r = await fetch(`/api/geo/closest-city?lat=${lat}&lng=${lng}`);
-        const js = await r.json();
-        if(js && js.ok && js.cidade){
-          $('cidade').value = js.cidade;
-          showTag('tagCidade', 'Cidade: ' + js.cidade);
+        const r=await fetch(`/api/geo/closest-city?lat=${lat}&lng=${lng}`, NO_STORE);
+        const js=await r.json();
+        if(js&&js.ok&&js.cidade){
+          $('cidade').value=js.cidade;
+          showTag('tagCidade','Cidade: '+js.cidade);
+          await loadBairrosDaCidade(js.cidade);
         }
       }catch{}
     }
+
     async function askGPS(){
-      if(!('geolocation' in navigator)) { $('gpsStatus').textContent = 'Seu navegador não suporta geolocalização.'; return; }
-      $('gpsStatus').textContent = 'Solicitando localização…';
-      navigator.geolocation.getCurrentPosition(async (pos)=>{
-        userLat = pos.coords.latitude;
-        userLng = pos.coords.longitude;
-        $('gpsStatus').innerHTML = '<span class="gps-ok">Localização ativada.</span>';
-        if(!$('cidade').value.trim()){
-          await resolveCityByGPS(userLat,userLng);
-        }
-        // dispara busca auto se já tem algum filtro
-        if(useGPS && ( $('bairro').value || $('servico').value )){
-          submitBusca();
-        }
-      }, (err)=>{
-        $('gpsStatus').innerHTML = '<span class="gps-warn">Não foi possível obter a localização.</span>';
-        useGPS = false;
-        $('useGPS').checked = false;
-      }, { enableHighAccuracy:true, timeout:12000, maximumAge:30000 });
+      if(!isSecureForGeo()){
+        $('gpsStatus').innerHTML='<span class="gps-warn">Para usar GPS, acesse via HTTPS ou localhost.</span>';
+        useGPS=false; $('useGPS').checked=false;
+        return;
+      }
+      if(!('geolocation' in navigator)){
+        $('gpsStatus').textContent='Seu navegador não suporta geolocalização.';
+        useGPS=false; $('useGPS').checked=false;
+        return;
+      }
+      $('gpsStatus').textContent='Solicitando localização…';
+      navigator.geolocation.getCurrentPosition(async pos=>{
+        userLat=pos.coords.latitude; userLng=pos.coords.longitude;
+        $('gpsStatus').innerHTML='<span class="gps-ok">Localização ativada.</span>';
+        if(!$('cidade').value.trim()) await resolveCityByGPS(userLat,userLng);
+        if(useGPS && ( $('bairro').value || $('servico').value )) submitBusca();
+      }, _=>{
+        $('gpsStatus').innerHTML='<span class="gps-warn">Não foi possível obter a localização.</span>';
+        useGPS=false; $('useGPS').checked=false;
+      }, {enableHighAccuracy:true,timeout:12000,maximumAge:30000});
     }
-    $('useGPS').addEventListener('change', (e)=>{
-      useGPS = !!e.target.checked;
+
+    $('useGPS').addEventListener('change', e=>{
+      useGPS=!!e.target.checked;
       if(useGPS) askGPS();
-      else { $('gpsStatus').textContent = 'GPS desativado.'; userLat=null; userLng=null; }
+      else { $('gpsStatus').textContent='GPS desativado.'; userLat=null; userLng=null; }
     });
 
     // ---------- UI helpers ----------
     function showLoader(on){ $('loader').style.display = on? '' : 'none'; }
-    function showTag(id, txt){ const el=$(id); el.textContent = txt; el.style.display='inline-flex'; }
-    function hideTags(){ ['tagCidade','tagBairro','tagServico','tagRating'].forEach(id=>{ $(id).style.display='none'; }); }
-    function resetResults(){
-      $('results').innerHTML = '';
-      page = 1; total = 0; acumulados = 0;
-      $('paginacao').style.display='none';
-      $('contagem').textContent='';
-    }
+    function showTag(id, txt){ const el=$(id); el.textContent=txt; el.style.display='inline-flex'; }
+    function hideTags(){ ['tagCidade','tagBairro','tagServico','tagRating'].forEach(id=>$(id).style.display='none'); }
+    function resetResults(){ $('results').innerHTML=''; page=1; total=0; acumulados=0; $('paginacao').style.display='none'; $('contagem').textContent=''; }
     function applyStateTags(q){
       hideTags();
-      if(q.cidade) showTag('tagCidade', 'Cidade: ' + q.cidade);
-      if(q.bairro) showTag('tagBairro', 'Bairro: ' + q.bairro);
-      if(q.servico) showTag('tagServico', 'Serviço: ' + q.servico);
-      if(q.minRating) showTag('tagRating', 'Avaliação: ' + q.minRating + '+');
+      if(q.cidade) showTag('tagCidade','Cidade: '+q.cidade);
+      if(q.bairro) showTag('tagBairro','Bairro: '+q.bairro);
+      if(q.servico) showTag('tagServico','Serviço: '+q.servico);
+      if(q.minRating) showTag('tagRating','Avaliação: '+q.minRating+'+');
     }
 
     // ---------- Busca ----------
     async function fetchProfissionais(isLoadMore=false){
       const params = new URLSearchParams();
       if(lastQuery.cidade) params.set('cidade', lastQuery.cidade);
-      if(lastQuery.bairro) params.set('bairro', lastQuery.bairro);
+      if(lastQuery.bairro)  params.set('bairro', lastQuery.bairro);
       if(lastQuery.servico) params.set('servico', lastQuery.servico);
       if(lastQuery.minRating) params.set('minRating', lastQuery.minRating);
-      params.set('sort','score');
-      params.set('dir','desc');
-      params.set('page', String(page));
-      params.set('limit', String(limit));
+      params.set('sort','score'); params.set('dir','desc');
+      params.set('page', String(page)); params.set('limit', String(limit));
       if(useGPS && userLat!=null && userLng!=null){
         params.set('userLat', String(userLat));
         params.set('userLng', String(userLng));
       }
-
       showLoader(true);
       try{
-        const r = await fetch('/api/profissionais?'+params.toString());
+        const r = await fetch('/api/profissionais?'+params.toString(), NO_STORE);
         const js = await r.json();
         total = js.total||0;
         renderResults(js.items||[], isLoadMore);
         acumulados += (js.items||[]).length;
-
         if(acumulados < total){
           $('paginacao').style.display='';
-          $('contagem').textContent = `${acumulados}/${total} exibidos`;
+          $('contagem').textContent=`${acumulados}/${total} exibidos`;
         } else {
           $('paginacao').style.display='none';
         }
@@ -281,37 +360,62 @@
     }
 
     function badgeHTML(plano){
-      if(plano==='premium') return `<span class="badge badge-premium">PREMIUM</span>`;
-      if(plano==='pro') return `<span class="badge badge-pro">PRO</span>`;
+      if((plano||'').toLowerCase()==='premium') return `<span class="badge badge-premium">PREMIUM</span>`;
+      if((plano||'').toLowerCase()==='pro') return `<span class="badge badge-pro">PRO</span>`;
       return '';
     }
 
+    // ===== Render =====
     function renderResults(items, isLoadMore){
       const grid = $('results');
-      const map = (p)=> {
-        const dist = kmFmt(p.distanceKm);
-        const rating = Number(p.rating||0);
-        const stars = estrelas(rating);
-        const aval = Number(p.avaliacoes||0);
-        const atend = Number(p.atendimentos||0);
-        const local = [p.bairro||'', p.cidade||''].filter(Boolean).join(' – ');
+      const html = (items||[]).map((p)=>{
+        const item = {
+          id: p.id,
+          nome: p.nome,
+          servico: p.servico || p.profissao || '',
+          bairro: p.bairro || '',
+          cidade: p.cidade || '',
+          foto: p.foto || '',
+          whatsapp: p.whatsapp || '',
+          rating: Number(p.rating||0),
+          avaliacoes: Number(p.avaliacoes||0),
+          atendimentos: Number(p.atendimentos||0),
+          experienciaAnos: p.experienciaAnos || p.experiencia || 0,
+          chamadas: p.chamadas || 0,
+          visitas: p.visitas || 0,
+          precoBase: p.precoBase || p.preco || '',
+          site: p.site || p.catalogo || '',
+          distanceKm: (p.distanceKm ?? p.dist ?? p.distanciaKm ?? null),
+          plano: (p.plano||'').toLowerCase()
+        };
+        const dist = kmFmt(item.distanceKm);
+        const stars = estrelas(item.rating);
+        const local = [item.bairro, item.cidade].filter(Boolean).join(' – ');
+        const foto = item.foto ? esc(item.foto) : '/icons/icon-192.png';
+        const id = encodeURIComponent(item.id);
         return `
-          <article class="pro-card" tabindex="0" role="link" aria-label="Abrir perfil de ${esc(p.nome)}" onclick="location.href='/perfil.html?id=${p.id}'" onkeypress="if(event.key==='Enter'){location.href='/perfil.html?id=${p.id}'}">
-            <img src="${p.foto ? esc(p.foto) : 'https://via.placeholder.com/140x140?text=Foto'}" alt="Foto de ${esc(p.nome)}" width="72" height="72" loading="lazy">
-            <div class="pro-info">
-              <h3>${esc(p.nome)} ${badgeHTML(p.plano)}</h3>
-              <div class="meta">${esc(p.servico||'')} • <span class="muted">${esc(local||'—')}</span></div>
-              <div class="meta">
-                <span class="star">${stars}</span>
-                <span class="muted">(${aval})</span> ·
-                <span class="muted">Atendimentos: <strong>${atend}</strong></span> ·
-                <span class="muted distance">Distância: <strong>${dist}</strong></span>
+          <article class="pro-card">
+            <div class="pro-top">
+              <img class="pro-avatar" src="${foto}" alt="Foto de ${esc(item.nome)}" width="88" height="88" loading="lazy">
+              <div class="pro-info">
+                <h3>${esc(item.nome)} ${badgeHTML(item.plano)}</h3>
+                <div class="serv-local">${esc(item.servico)} • <span class="muted">${esc(local||'—')}</span></div>
               </div>
+            </div>
+            <div class="rating-row">
+              <span class="star">${stars}</span>
+              <span class="muted">(${item.avaliacoes})</span>
+            </div>
+            <div class="stats-row">
+              <span class="muted">Atendimentos: <strong>${item.atendimentos}</strong></span>
+              <span class="muted distance">Distância: <strong>${dist}</strong></span>
+            </div>
+            <div class="pro-actions">
+              <a class="btn small btnPerfil" href="/profissional/${id}" aria-label="Ver perfil de ${esc(item.nome)}">Ver perfil</a>
             </div>
           </article>
         `;
-      };
-      const html = (items||[]).map(map).join('');
+      }).join('');
       if(isLoadMore) grid.insertAdjacentHTML('beforeend', html);
       else grid.innerHTML = html || `<div class="card"><p class="meta">Nenhum profissional encontrado com os filtros atuais.</p></div>`;
     }
@@ -328,41 +432,35 @@
       resetResults();
       fetchProfissionais(false);
     }
+
     $('formBusca').addEventListener('submit', (e)=>{ e.preventDefault(); submitBusca(); });
-    $('btnLimpar').addEventListener('click', ()=>{
-      $('cidade').value = '';
-      $('bairro').value = '';
-      $('servico').value = '';
-      $('minRating').value = '';
+
+    $('btnLimpar').addEventListener('click', async ()=>{
+      $('cidade').value=''; $('bairro').value=''; $('servico').value=''; $('minRating').value='';
       hideTags();
       resetResults();
+      // recarrega lista base de cidades (evita cache)
+      await fillCidadesBase();
       fetchProfissionais(false);
     });
-    $('btnMais').addEventListener('click', ()=>{
-      if(acumulados < total){ page++; fetchProfissionais(true); }
-    });
+
+    $('btnMais').addEventListener('click', ()=>{ if(acumulados < total){ page++; fetchProfissionais(true); } });
 
     // ---------- Boot ----------
     (async function init(){
-      await fillCidades();
+      await fillCidadesBase();
 
-      // Se veio cidade/serviço via URL, mantemos
-      const u = new URL(location.href);
-      const cid = u.searchParams.get('cidade') || '';
-      const bai = u.searchParams.get('bairro') || '';
-      const ser = u.searchParams.get('servico') || '';
-      const mr  = u.searchParams.get('minRating') || '';
-      if(cid) $('cidade').value = cid;
-      if(bai) $('bairro').value = bai;
-      if(ser) $('servico').value = ser;
-      if(mr)  $('minRating').value = mr;
+      // querystring inicial
+      const u=new URL(location.href);
+      const cid=u.searchParams.get('cidade')||'';
+      const bai=u.searchParams.get('bairro')||'';
+      const ser=u.searchParams.get('servico')||'';
+      const mr =u.searchParams.get('minRating')||'';
+      if(cid) { $('cidade').value=cid; await loadBairrosDaCidade(cid); }
+      if(bai) $('bairro').value=bai;
+      if(ser) $('servico').value=ser;
+      if(mr)  $('minRating').value=mr;
 
-      // Tenta GPS leve (opt-in) se não houver cidade definida
-      if(!cid){
-        // deixe o checkbox desmarcado; o usuário opta
-      }
-
-      // Primeira carga
       submitBusca();
     })();
   })();

@@ -106,7 +106,7 @@
       "until": null,
       "lastOnAt": null,
       "monthlyUsed": 0,
-      "monthRef": "2025-08"
+      "monthRef": "2025-09"
     },
     "lastPos": {
       "lat": null,
@@ -226,7 +226,7 @@
       "until": null,
       "lastOnAt": null,
       "monthlyUsed": 0,
-      "monthRef": "2025-08"
+      "monthRef": "2025-09"
     },
     "lastPos": {
       "lat": null,
@@ -254,7 +254,7 @@
     "foto": "/uploads/1756323427787-36629982.jpeg",
     "atendimentos": 0,
     "avaliacoes": [],
-    "visitas": 5,
+    "visitas": 8,
     "chamadas": 1,
     "visitsLog": [
       {
@@ -281,6 +281,18 @@
         "at": "2025-08-28T19:12:31.091Z",
         "src": "profile",
         "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+      },
+      {
+        "at": "2025-08-30T21:03:55.462Z",
+        "ip": "::1"
+      },
+      {
+        "at": "2025-09-01T21:32:33.043Z",
+        "ip": "::1"
+      },
+      {
+        "at": "2025-09-02T20:32:29.057Z",
+        "ip": "::1"
       }
     ],
     "callsLog": [
@@ -312,7 +324,7 @@
       "until": null,
       "lastOnAt": null,
       "monthlyUsed": 0,
-      "monthRef": "2025-08"
+      "monthRef": "2025-09"
     },
     "lastPos": {
       "lat": null,
@@ -320,5 +332,196 @@
       "at": null
     },
     "receiveViaApp": false
+  },
+  {
+    "id": 4,
+    "createdAt": "2025-09-01T05:42:47.608Z",
+    "nome": "José Ricardo Costa",
+    "email": "kadocostafc@gmail.com",
+    "telefone": "5521964981800",
+    "whatsapp": "5521971891276",
+    "cidade": "Rio de Janeiro",
+    "bairro": "Glória",
+    "servico": "Montador de móveis",
+    "profissao": "Fotografo",
+    "experiencia": "12 anos",
+    "precoBase": "200,00",
+    "site": "",
+    "endereco": "Rua Santo Amaro 108",
+    "descricao": "Profissional excente",
+    "foto": "/uploads/1756705367173-546076439.jpeg",
+    "atendimentos": 0,
+    "avaliacoes": [],
+    "visitas": 0,
+    "chamadas": 0,
+    "visitsLog": [],
+    "callsLog": [],
+    "qrLog": [],
+    "suspenso": false,
+    "suspensoMotivo": "",
+    "suspensoEm": null,
+    "excluido": false,
+    "excluidoEm": null,
+    "plano": "free",
+    "raioKm": 0,
+    "cidadesExtras": [],
+    "uber": {
+      "on": false,
+      "until": null,
+      "lastOnAt": null,
+      "monthlyUsed": 0,
+      "monthRef": "2025-09"
+    },
+    "radar": {
+      "on": false,
+      "until": null,
+      "lastOnAt": null,
+      "monthlyUsed": 0,
+      "monthRef": "2025-09"
+    },
+    "lastPos": {
+      "lat": null,
+      "lng": null,
+      "at": null
+    },
+    "receiveViaApp": false,
+    "verificado": true
+  },
+  {
+    "id": 5,
+    "createdAt": "2025-09-01T14:53:07.371Z",
+    "nome": "Ricardo Costa",
+    "email": "kadocostafc@gmail.com",
+    "telefone": "",
+    "whatsapp": "5521964981800",
+    "cidade": "Rio de Janeiro",
+    "bairro": "Glória",
+    "servico": "Montador de móveis",
+    "profissao": "",
+    "experiencia": "4 anos",
+    "precoBase": "200,00",
+    "site": "",
+    "endereco": "Rua Santo Amaro 108",
+    "descricao": "Profissional dedicado, trabalho rápido e com efizcaz",
+    "foto": "/uploads/1756738387317-166841865.jpeg",
+    "atendimentos": 0,
+    "avaliacoes": [],
+    "visitas": 0,
+    "chamadas": 0,
+    "visitsLog": [],
+    "callsLog": [],
+    "qrLog": [],
+    "suspenso": false,
+    "suspensoMotivo": "",
+    "suspensoEm": null,
+    "excluido": false,
+    "excluidoEm": null,
+    "plano": "free",
+    "raioKm": 0,
+    "cidadesExtras": [],
+    "uber": {
+      "on": false,
+      "until": null,
+      "lastOnAt": null,
+      "monthlyUsed": 0,
+      "monthRef": "2025-09"
+    },
+    "radar": {
+      "on": false,
+      "until": null,
+      "lastOnAt": null,
+      "monthlyUsed": 0,
+      "monthRef": "2025-09"
+    },
+    "lastPos": {
+      "lat": null,
+      "lng": null,
+      "at": null
+    },
+    "receiveViaApp": false,
+    "verificado": true
+  },
+  {
+    "id": 6,
+    "createdAt": "2025-09-01T21:39:37.282Z",
+    "nome": "Fernando Lima",
+    "email": "fernandolima.foto@gmail.com",
+    "telefone": "",
+    "whatsapp": "5521989772814",
+    "cidade": "Rio de Janeiro",
+    "bairro": "São Conrado",
+    "servico": "Vigia",
+    "profissao": "Porteiro",
+    "experiencia": "12 anos",
+    "precoBase": "150,00",
+    "site": "",
+    "endereco": "Estrada da Gavea 558",
+    "descricao": "Excelente profissional dedicado e atencioso",
+    "foto": "/uploads/1756762776922-457869581.jpg",
+    "atendimentos": 0,
+    "avaliacoes": [],
+    "visitas": 7,
+    "chamadas": 0,
+    "visitsLog": [
+      {
+        "at": "2025-09-01T21:53:01.641Z",
+        "ip": "::1"
+      },
+      {
+        "at": "2025-09-01T21:55:12.386Z",
+        "ip": "::1"
+      },
+      {
+        "at": "2025-09-01T22:31:50.394Z",
+        "ip": "::1"
+      },
+      {
+        "at": "2025-09-02T20:33:13.932Z",
+        "ip": "::1"
+      },
+      {
+        "at": "2025-09-02T20:41:24.153Z",
+        "ip": "::1"
+      },
+      {
+        "at": "2025-09-02T20:42:29.787Z",
+        "ip": "::1"
+      },
+      {
+        "at": "2025-09-02T20:42:47.202Z",
+        "ip": "::1"
+      }
+    ],
+    "callsLog": [],
+    "qrLog": [],
+    "suspenso": false,
+    "suspensoMotivo": "",
+    "suspensoEm": null,
+    "excluido": false,
+    "excluidoEm": null,
+    "plano": "free",
+    "raioKm": 0,
+    "cidadesExtras": [],
+    "uber": {
+      "on": false,
+      "until": null,
+      "lastOnAt": null,
+      "monthlyUsed": 0,
+      "monthRef": "2025-09"
+    },
+    "radar": {
+      "on": false,
+      "until": null,
+      "lastOnAt": null,
+      "monthlyUsed": 0,
+      "monthRef": "2025-09"
+    },
+    "lastPos": {
+      "lat": null,
+      "lng": null,
+      "at": null
+    },
+    "receiveViaApp": false,
+    "verificado": true
   }
 ]

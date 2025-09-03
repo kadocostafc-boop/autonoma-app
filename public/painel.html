@@ -1,4 +1,3 @@
-<!-- public/painel.html (FINAL) -->
 <!doctype html>
 <html lang="pt-BR">
 <head>
@@ -45,431 +44,432 @@
   </style>
 </head>
 <body>
-<header class="header">
-  <a href="/" aria-label="Início"><img src="/img/logo.png" alt="Autônoma.app" class="logo" onerror="this.style.display='none'"></a>
-  <div class="home">
-    <a class="btn ghost" href="/">Início</a>
-    <a class="btn outline" href="/painel_login.html">Trocar conta</a>
-    <a class="btn outline" href="/admin">Admin</a>
-  </div>
-</header>
-
-<main class="wrap-max">
-  <div id="flash" class="panel" style="display:none"></div>
-
-  <div class="grid">
-    <!-- Coluna esquerda -->
-    <div class="panel">
-      <div class="row" style="justify-content:space-between;align-items:center">
-        <div class="row">
-          <img id="foto" class="avatar" alt="Foto">
-          <div>
-            <h1 id="nome" style="margin:0">—</h1>
-            <div class="meta" id="servico">—</div>
-            <div class="meta"><span id="local">—</span> • <span id="plano">FREE</span></div>
-          </div>
-        </div>
-        <div class="row">
-          <a id="btnPerfilPub" class="btn" target="_blank" rel="noopener">Ver meu perfil público</a>
-          <a id="btnPreview" class="btn ghost" target="_blank" rel="noopener">Como os clientes me veem</a>
-        </div>
-      </div>
-
-      <div class="divider"></div>
-
-      <div class="grid2">
-        <!-- Radar -->
-        <div class="panel">
-          <h2 style="margin-top:0">Radar (receba clientes por proximidade)</h2>
-          <div class="row">
-            <button id="radarToggle" class="btn">Ligar Radar</button>
-            <span id="radarStatus" class="pill">Desligado</span>
-          </div>
-          <div class="row" style="margin-top:8px">
-            <label for="autoOff">Auto-desligar em:</label>
-            <select id="autoOff">
-              <option value="">—</option>
-              <option value="2">2h</option>
-              <option value="4">4h</option>
-              <option value="6">6h</option>
-              <option value="8">8h</option>
-            </select>
-            <button id="saveAutoOff" class="btn inline">Salvar</button>
-          </div>
-          <p class="hint" id="radarHint">Dica: no plano Free o Radar pode ficar limitado. Planos PRO/PREMIUM ampliam seus limites.</p>
-        </div>
-
-        <!-- Raio & cidades -->
-        <div class="panel">
-          <h2 style="margin-top:0">Área de atendimento</h2>
-          <div>
-            <label for="raio">Raio (km)</label>
-            <input type="range" id="raio" min="0" max="50" step="1" value="0">
-            <div class="row">
-              <div class="pill">Raio atual: <strong id="raioVal">0 km</strong></div>
-              <button id="raioSave" class="btn inline">Salvar raio</button>
-            </div>
-            <p class="hint" id="raioHint">No plano Free, o raio pode ser 0 km (somente bairro). PRO: até 30 km • PREMIUM: até 50 km.</p>
-          </div>
-
-          <div class="divider"></div>
-
-          <div>
-            <label for="cidadeExtra">Adicionar cidades extras</label>
-            <div class="row">
-              <input id="cidadeExtra" class="input" placeholder="Ex.: Niterói/RJ" list="dl-cidades">
-              <datalist id="dl-cidades"></datalist>
-              <button id="addCidade" class="btn inline">Adicionar</button>
-            </div>
-            <div id="cidadesList" class="list" style="margin-top:8px"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="grid2" style="margin-top:12px">
-        <!-- Preferências de pagamento -->
-        <div class="panel">
-          <h2 style="margin-top:0">Pagamentos</h2>
-          <div class="row">
-            <label class="row" style="gap:6px">
-              <input id="receiveViaApp" type="checkbox"> Receber pelo app (Pix/Cartão)
-            </label>
-            <span class="pill" id="payMode">Direto com o cliente</span>
-          </div>
-          <p class="hint">Ao ativar, seus clientes podem pagar pelo app. Taxas: <strong id="feesInfo">4% do app</strong> + taxas do cartão (se usar cartão). Prazo e repasse podem variar conforme o adquirente.</p>
-          <div class="row">
-            <button id="savePayPrefs" class="btn inline">Salvar preferência</button>
-            <a class="btn ghost" href="/planos.html">Ver planos</a>
-          </div>
-        </div>
-
-        <!-- Plano -->
-        <div class="panel">
-          <h2 style="margin-top:0">Plano</h2>
-          <div class="row">
-            <span id="badgePlano" class="plan-badge">FREE</span>
-            <span class="meta" id="planoDesc">Recursos básicos.</span>
-          </div>
-          <div class="row" style="margin-top:8px">
-            <button id="toPro" class="btn">Upgrade para PRO</button>
-            <button id="toPremium" class="btn outline">Upgrade para PREMIUM</button>
-            <button id="toFree" class="btn ghost ghost-danger">Voltar ao FREE</button>
-          </div>
-          <p class="hint">Upgrade/downgrade prepara um checkout (quando o gateway estiver ativo).</p>
-        </div>
-      </div>
-
-      <div class="panel" style="margin-top:12px">
-        <h2 style="margin:0 0 8px">Meu perfil</h2>
-        <form id="formPerfil" class="grid2" novalidate>
-          <div>
-            <label>Nome</label>
-            <input id="p_nome" class="input" maxlength="80" required>
-            <label style="margin-top:6px">Descrição</label>
-            <textarea id="p_desc" class="input" maxlength="600" rows="6"></textarea>
-            <label style="margin-top:6px">Preço base (opcional)</label>
-            <input id="p_preco" class="input" placeholder="Ex.: R$ 120,00 / Sob orçamento">
-          </div>
-          <div>
-            <label>Site/Catálogo (opcional)</label>
-            <input id="p_site" class="input" placeholder="https://">
-            <label style="margin-top:6px">Nova foto (JPG/PNG até 3MB)</label>
-            <input id="p_foto" type="file" accept="image/*">
-            <div class="row" style="margin-top:10px">
-              <button class="btn" type="submit">Salvar dados</button>
-              <a id="openWhats" class="btn outline" target="_blank" rel="noopener">Abrir WhatsApp</a>
-            </div>
-            <p id="perfilMsg" class="meta" style="display:none"></p>
-          </div>
-        </form>
-      </div>
+  <header class="header">
+    <a href="/" aria-label="Início">
+      <img src="/img/logo.png" alt="Autônoma.app" class="logo" onerror="this.style.display='none'">
+    </a>
+    <div class="home">
+      <a class="btn ghost" href="/">Início</a>
+      <a class="btn outline" href="/painel_login.html">Trocar conta</a>
+      <!-- ❌ Removido botão Admin -->
+      <a class="btn outline" href="/painel/logout">Sair</a>
     </div>
+  </header>
 
-    <!-- Coluna direita -->
-    <aside class="panel">
-      <h2 style="margin-top:0">Resumo</h2>
-      <div class="grid2">
-        <div class="stat"><div class="meta">Visitas</div><strong id="m_vis">—</strong></div>
-        <div class="stat"><div class="meta">Chamadas</div><strong id="m_calls">—</strong></div>
-        <div class="stat"><div class="meta">Avaliações</div><strong id="m_aval">—</strong></div>
-        <div class="stat"><div class="meta">Nota média</div><strong id="m_rate">—</strong></div>
+  <main class="wrap-max">
+    <div id="flash" class="panel" style="display:none"></div>
+
+    <div class="grid">
+      <!-- Coluna esquerda -->
+      <div class="panel">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <div class="row">
+            <img id="foto" class="avatar" alt="Foto">
+            <div>
+              <h1 id="nome" style="margin:0">—</h1>
+              <div class="meta" id="servico">—</div>
+              <div class="meta"><span id="local">—</span> • <span id="plano">FREE</span></div>
+            </div>
+          </div>
+          <div class="row">
+            <a id="btnPerfilPub" class="btn" target="_blank" rel="noopener">Ver meu perfil público</a>
+            <a id="btnPreview" class="btn ghost" target="_blank" rel="noopener">Como os clientes me veem</a>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="grid2">
+          <!-- Radar -->
+          <div class="panel">
+            <h2 style="margin-top:0">Radar (receba clientes por proximidade)</h2>
+            <div class="row">
+              <button id="radarToggle" class="btn">Ligar Radar</button>
+              <span id="radarStatus" class="pill">Desligado</span>
+            </div>
+            <div class="row" style="margin-top:8px">
+              <label for="autoOff">Auto-desligar em:</label>
+              <select id="autoOff">
+                <option value="">—</option>
+                <option value="2">2h</option>
+                <option value="4">4h</option>
+                <option value="6">6h</option>
+                <option value="8">8h</option>
+              </select>
+              <button id="saveAutoOff" class="btn inline">Salvar</button>
+            </div>
+            <p class="hint" id="radarHint">Dica: no plano Free o Radar pode ficar limitado. Planos PRO/PREMIUM ampliam seus limites.</p>
+          </div>
+
+          <!-- Raio & cidades -->
+          <div class="panel">
+            <h2 style="margin-top:0">Área de atendimento</h2>
+            <div>
+              <label for="raio">Raio (km)</label>
+              <input type="range" id="raio" min="0" max="50" step="1" value="0">
+              <div class="row">
+                <div class="pill">Raio atual: <strong id="raioVal">0 km</strong></div>
+                <button id="raioSave" class="btn inline">Salvar raio</button>
+              </div>
+              <p class="hint" id="raioHint">No plano Free, o raio pode ser 0 km (somente bairro). PRO: até 30 km • PREMIUM: até 50 km.</p>
+            </div>
+            <div class="divider"></div>
+            <div>
+              <label for="cidadeExtra">Adicionar cidades extras</label>
+              <div class="row">
+                <input id="cidadeExtra" class="input" placeholder="Ex.: Niterói/RJ" list="dl-cidades">
+                <datalist id="dl-cidades"></datalist>
+                <button id="addCidade" class="btn inline">Adicionar</button>
+              </div>
+              <div id="cidadesList" class="list" style="margin-top:8px"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid2" style="margin-top:12px">
+          <!-- Preferências de pagamento -->
+          <div class="panel">
+            <h2 style="margin-top:0">Pagamentos</h2>
+            <div class="row">
+              <label class="row" style="gap:6px">
+                <input id="receiveViaApp" type="checkbox"> Receber pelo app (Pix/Cartão)
+              </label>
+              <span class="pill" id="payMode">Direto com o cliente</span>
+            </div>
+            <p class="hint">Ao ativar, seus clientes podem pagar pelo app. Taxas: <strong id="feesInfo">4% do app</strong> + taxas do cartão (se usar cartão).</p>
+            <div class="row">
+              <button id="savePayPrefs" class="btn inline">Salvar preferência</button>
+              <a class="btn ghost" href="/planos.html">Ver planos</a>
+            </div>
+          </div>
+
+          <!-- Plano -->
+          <div class="panel">
+            <h2 style="margin-top:0">Plano</h2>
+            <div class="row">
+              <span id="badgePlano" class="plan-badge">FREE</span>
+              <span class="meta" id="planoDesc">Recursos básicos.</span>
+            </div>
+            <div class="row" style="margin-top:8px">
+              <button id="toPro" class="btn">Upgrade para PRO</button>
+              <button id="toPremium" class="btn outline">Upgrade para PREMIUM</button>
+              <button id="toFree" class="btn ghost ghost-danger">Voltar ao FREE</button>
+            </div>
+            <p class="hint">Os botões de plano são ilustrativos até o gateway real.</p>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:12px">
+          <h2 style="margin:0 0 8px">Meu perfil</h2>
+          <form id="formPerfil" class="grid2" novalidate>
+            <div>
+              <label>Nome</label>
+              <input id="p_nome" class="input" maxlength="80" required>
+              <label style="margin-top:6px">Descrição</label>
+              <textarea id="p_desc" class="input" maxlength="600" rows="6"></textarea>
+              <label style="margin-top:6px">Preço base (opcional)</label>
+              <input id="p_preco" class="input" placeholder="Ex.: R$ 120,00 / Sob orçamento">
+            </div>
+            <div>
+              <label>Site/Catálogo (opcional)</label>
+              <input id="p_site" class="input" placeholder="https://">
+              <label style="margin-top:6px">Nova foto (JPG/PNG até 3MB)</label>
+              <input id="p_foto" type="file" accept="image/*">
+              <div class="row" style="margin-top:10px">
+                <button class="btn" type="submit">Salvar dados</button>
+                <a id="openWhats" class="btn outline" target="_blank" rel="noopener">Abrir WhatsApp</a>
+              </div>
+              <p id="perfilMsg" class="meta" style="display:none"></p>
+            </div>
+          </form>
+        </div>
       </div>
-      <div class="divider"></div>
-      <h3>QR do WhatsApp</h3>
-      <div class="center"><div id="qrBox" class="qr center">—</div></div>
-      <div class="row center" style="margin-top:8px">
-        <button id="copyWa" class="btn inline">Copiar link</button>
-        <a id="openWa" class="btn inline" target="_blank" rel="noopener">Abrir Web</a>
-      </div>
-      <p class="hint" style="margin-top:8px">Compartilhe o QR no seu Instagram/Stories para receber contatos diretos.</p>
 
-      <div class="divider"></div>
-      <h3>Exportar</h3>
-      <div class="row">
-        <a id="expCSV" class="btn ghost" href="/api/painel/export.csv" target="_blank" rel="noopener">Minhas métricas (.csv)</a>
-      </div>
-    </aside>
-  </div>
-</main>
+      <!-- Coluna direita -->
+      <aside class="panel">
+        <h2 style="margin-top:0">Resumo</h2>
+        <div class="grid2">
+          <div class="stat"><div class="meta">Visitas</div><strong id="m_vis">—</strong></div>
+          <div class="stat"><div class="meta">Chamadas</div><strong id="m_calls">—</strong></div>
+          <div class="stat"><div class="meta">Avaliações</div><strong id="m_aval">—</strong></div>
+          <div class="stat"><div class="meta">Nota média</div><strong id="m_rate">—</strong></div>
+        </div>
 
-<script>
-(function(){
-  const $ = sel => document.querySelector(sel);
-  const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-  const money = v => Number(v||0).toLocaleString('pt-BR', {minimumFractionDigits:2,maximumFractionDigits:2});
+        <div class="divider"></div>
 
-  const flash = (msg, type='ok')=>{
-    const box = $('#flash');
-    box.style.display='';
-    box.className = 'panel ' + (type==='ok'?'ok':'warn');
-    box.innerHTML = esc(msg);
-    setTimeout(()=>{ box.style.display='none'; }, 3200);
-  };
+        <h3>QR do WhatsApp</h3>
+        <div class="center"><div id="qrBox" class="qr center">—</div></div>
+        <div class="row center" style="margin-top:8px">
+          <button id="copyWa" class="btn inline">Copiar link</button>
+          <a id="openWa" class="btn inline" target="_blank" rel="noopener">Abrir Web</a>
+        </div>
+        <p class="hint" style="margin-top:8px">Compartilhe o QR no seu Instagram/Stories para receber contatos diretos.</p>
 
-  async function apiJSON(url, opt){
-    const r = await fetch(url, { cache:'no-store', ...(opt||{}) });
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    return r.json();
-  }
-  async function postJSON(url, body){
-    const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{}) });
-    if (!r.ok) throw new Error('HTTP '+r.status);
-    return r.json();
-  }
+        <div class="divider"></div>
 
-  // Estado carregado do servidor
-  let ME=null;
+        <h3>Exportar</h3>
+        <div class="row">
+          <a id="expCSV" class="btn ghost" href="#" onclick="alert('Export do painel ainda não habilitado.');return false;">Minhas métricas (.csv)</a>
+        </div>
+      </aside>
+    </div>
+  </main>
 
-  function setPlanBadges(plano){
-    const el = $('#plano'); const badge = $('#badgePlano'); const d = $('#planoDesc');
-    const p = String(plano||'free').toLowerCase();
-    let text='FREE', cls='plan-badge', desc='Recursos básicos.';
-    if (p==='pro'){ text='PRO'; cls='plan-badge PRO'; desc='Mais alcance, recursos extras e Radar ampliado.'; }
-    if (p==='premium'){ text='PREMIUM'; cls='plan-badge PREMIUM'; desc='Máximo alcance, Radar ilimitado e prioridade nas buscas.'; }
-    el.textContent = text;
-    badge.textContent = text;
-    badge.className = cls;
-    d.textContent = desc;
-  }
+  <script>
+  (function(){
+    // ========== Utilidades ==========
+    const $ = sel => document.querySelector(sel);
+    const esc = s => String(s||"")
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    const flash = (msg, type='ok')=>{
+      const box = $('#flash');
+      box.style.display='';
+      box.className = 'panel ' + (type==='ok'?'ok':'warn');
+      box.innerHTML = msg;
+      setTimeout(()=>{ box.style.display='none'; }, 3200);
+    };
 
-  function paintHeader(me){
-    $('#nome').textContent = me.nome || '—';
-    $('#servico').textContent = (me.servico || me.profissao || '—');
-    $('#local').textContent = [me.bairro, me.cidade].filter(Boolean).join(' • ') || '—';
-    setPlanBadges(me.plano);
-    const foto = me.foto || 'https://via.placeholder.com/160?text=Foto';
-    const img = $('#foto'); img.src = foto; img.alt = 'Foto de '+(me.nome||'Profissional');
-    $('#btnPerfilPub').href = '/profissional/'+me.id;
-    $('#btnPreview').href = '/perfil.html?id='+me.id;
-    if (me.whatsapp){
-      const d = me.whatsapp.replace(/\D/g,'');
-      const link = 'https://wa.me/'+d;
-      $('#openWhats').href = link;
-      $('#openWa').href = link;
-      $('#copyWa').onclick = async ()=>{ try{ await navigator.clipboard.writeText(link); flash('Link do WhatsApp copiado!'); }catch{ flash('Não foi possível copiar.', 'warn'); } };
-      // QR (se o back expõe /api/qr?phone=)
-      const qri = document.createElement('img');
-      qri.alt='QR do WhatsApp'; qri.width=160; qri.height=160; qri.style.display='block';
-      qri.src = '/api/qr?phone='+encodeURIComponent(d);
-      qri.onerror = ()=>{ $('#qrBox').textContent='QR indisponível'; };
-      $('#qrBox').innerHTML=''; $('#qrBox').appendChild(qri);
+    // -------- Token: pega ?token= uma vez e guarda; usa Authorization: Bearer --------
+    function getToken(){
+      try{
+        const u = new URL(location.href);
+        const t = u.searchParams.get('token');
+        if (t){
+          localStorage.setItem('auth_token', t);
+          history.replaceState({}, '', location.pathname);
+        }
+      }catch{}
+      try{ return localStorage.getItem('auth_token') || ''; }catch{ return ''; }
     }
-  }
+    const AUTH_TOKEN = getToken();
 
-  function paintMetrics(me){
-    $('#m_vis').textContent = String(me.visitas||0);
-    $('#m_calls').textContent = String(me.chamadas||0);
-    const avals = Array.isArray(me.avaliacoes)? me.avaliacoes : [];
-    $('#m_aval').textContent = String(avals.length);
-    const notas = avals.map(a=>Number(a.nota)).filter(n=>n>=1 && n<=5);
-    const media = notas.length ? (notas.reduce((a,b)=>a+b,0)/notas.length) : 0;
-    $('#m_rate').textContent = media ? media.toFixed(2) : '—';
-  }
-
-  function paintRadar(me){
-    const on = !!(me.radar && me.radar.on);
-    $('#radarToggle').textContent = on ? 'Desligar Radar' : 'Ligar Radar';
-    $('#radarStatus').textContent = on ? 'Ligado' : 'Desligado';
-    $('#radarStatus').style.background = on ? '#ecfccb' : '#f1f5f9';
-    $('#radarStatus').style.borderColor = on ? '#bbf7d0' : '#e5e7eb';
-    $('#radarHint').textContent = me.plano==='free'
-      ? 'Seu plano atual limita o Radar. Faça upgrade para estender tempo e alcance.'
-      : 'Radar ativo melhora seu posicionamento para clientes próximos.';
-  }
-
-  function paintArea(me){
-    const r = Number(me.raioKm||0);
-    $('#raio').value = String(Math.min(50, Math.max(0, r)));
-    $('#raioVal').textContent = r+' km';
-    // Dica conforme plano
-    const hint = me.plano==='premium' ? 'Seu plano permite até 50 km.'
-               : me.plano==='pro' ? 'Seu plano permite até 30 km.'
-               : 'No plano Free, o raio pode ser 0 km (somente bairro).';
-    $('#raioHint').textContent = hint;
-
-    const box = $('#cidadesList');
-    box.innerHTML = '';
-    const extras = Array.isArray(me.cidadesExtras) ? me.cidadesExtras : [];
-    extras.forEach((c,i)=>{
-      const div = document.createElement('div');
-      div.className = 'chip';
-      div.innerHTML = esc(c) + ' <button title="Remover">✕</button>';
-      div.querySelector('button').onclick = async ()=>{
-        try{
-          const list = extras.filter((_,idx)=> idx!==i);
-          await postJSON('/api/painel/cidades', { action:'set', list });
-          flash('Cidade removida.');
-          await reload();
-        }catch{ flash('Falha ao remover cidade.', 'warn'); }
-      };
-      box.appendChild(div);
-    });
-  }
-
-  function paintPayPrefs(me){
-    const via = !!me.receiveViaApp;
-    $('#receiveViaApp').checked = via;
-    $('#payMode').textContent = via ? 'Pelo aplicativo' : 'Direto com o cliente';
-    // Exibe a taxa configurada no servidor se veio no payload
-    if (me.fees && typeof me.fees.cardPercent==='number'){
-      $('#feesInfo').textContent = `${me.fees.cardPercent}% do app`;
+    async function apiJSON(url, opt){
+      const r = await fetch(url, {
+        method: (opt && opt.method) || 'GET',
+        headers: { 'Authorization':'Bearer '+AUTH_TOKEN, ...(opt&&opt.headers||{}) },
+        cache:'no-store',
+        ...(opt||{})
+      });
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return r.json();
     }
-  }
+    async function postJSON(url, body){
+      const r = await fetch(url, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+AUTH_TOKEN },
+        body: JSON.stringify(body||{})
+      });
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return r.json();
+    }
 
-  function paintProfileForm(me){
-    $('#p_nome').value = me.nome || '';
-    $('#p_desc').value = me.descricao || '';
-    $('#p_preco').value = me.precoBase || '';
-    $('#p_site').value = me.site || '';
-  }
+    // ========= Estado / Pintura =========
+    let ME = null;
 
-  async function loadCidadesOnce(){
-    try{
-      const js = await apiJSON('/api/geo/cidades');
-      $('#dl-cidades').innerHTML = (js||[]).map(c=>`<option value="${esc(c)}">`).join('');
-    }catch{}
-  }
+    function setPlanBadges(plano){
+      const el = $('#plano'); const badge = $('#badgePlano'); const d = $('#planoDesc');
+      const p = String(plano||'free').toLowerCase();
+      let text='FREE', cls='plan-badge', desc='Recursos básicos.';
+      if (p==='pro'){ text='PRO'; cls='plan-badge PRO'; desc='Mais alcance, recursos extras e Radar ampliado.'; }
+      if (p==='premium'){ text='PREMIUM'; cls='plan-badge PREMIUM'; desc='Máximo alcance, Radar ilimitado e prioridade nas buscas.'; }
+      el.textContent = text;
+      if (badge){ badge.textContent = text; badge.className = cls; }
+      if (d){ d.textContent = desc; }
+    }
 
-  // ===== Ações =====
-  $('#radarToggle').addEventListener('click', async ()=>{
-    try{
-      await postJSON('/api/painel/radar/toggle', {});
-      flash('Radar atualizado.');
-      await reload();
-    }catch{ flash('Falha ao acionar Radar.', 'warn'); }
-  });
-  $('#saveAutoOff').addEventListener('click', async ()=>{
-    try{
-      const h = ($('#autoOff').value||'').trim();
-      await postJSON('/api/painel/radar/autooff', { hours: h? Number(h): null });
-      flash('Auto-desligar salvo.');
-      await reload();
-    }catch{ flash('Falha ao salvar auto-desligar.', 'warn'); }
-  });
-
-  $('#raio').addEventListener('input', (e)=>{
-    $('#raioVal').textContent = e.target.value + ' km';
-  });
-  $('#raioSave').addEventListener('click', async ()=>{
-    try{
-      await postJSON('/api/painel/raio', { raioKm: Number($('#raio').value||0) });
-      flash('Raio atualizado.');
-      await reload();
-    }catch{ flash('Falha ao salvar raio.', 'warn'); }
-  });
-
-  $('#addCidade').addEventListener('click', async ()=>{
-    const c = ($('#cidadeExtra').value||'').trim();
-    if(!c) return;
-    try{
-      await postJSON('/api/painel/cidades', { action:'add', cidade: c });
-      $('#cidadeExtra').value='';
-      flash('Cidade adicionada.');
-      await reload();
-    }catch{ flash('Falha ao adicionar cidade.', 'warn'); }
-  });
-
-  $('#savePayPrefs').addEventListener('click', async ()=>{
-    try{
-      const receiveViaApp = !!$('#receiveViaApp').checked;
-      await postJSON('/api/painel/payment-prefs', { receiveViaApp });
-      flash('Preferência de pagamento salva.');
-      await reload();
-    }catch{ flash('Não foi possível salvar as preferências.', 'warn'); }
-  });
-
-  // Plano — stubs de upgrade/downgrade
-  $('#toPro').addEventListener('click', async ()=>{
-    try{
-      const r = await postJSON('/api/planos/prepare', { plan:'pro' });
-      if (r && r.checkoutUrl) location.href = r.checkoutUrl;
-      else flash('Plano PRO preparado (aguardando gateway real).');
-    }catch{ flash('Falha ao preparar upgrade PRO.', 'warn'); }
-  });
-  $('#toPremium').addEventListener('click', async ()=>{
-    try{
-      const r = await postJSON('/api/planos/prepare', { plan:'premium' });
-      if (r && r.checkoutUrl) location.href = r.checkoutUrl;
-      else flash('Plano PREMIUM preparado (aguardando gateway real).');
-    }catch{ flash('Falha ao preparar upgrade PREMIUM.', 'warn'); }
-  });
-  $('#toFree').addEventListener('click', async ()=>{
-    try{
-      await postJSON('/api/planos/downgrade', { plan:'free' });
-      flash('Voltamos seu plano para FREE.');
-      await reload();
-    }catch{ flash('Falha ao voltar para FREE.', 'warn'); }
-  });
-
-  // Perfil (upload de foto + dados simples)
-  $('#formPerfil').addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    try{
-      const nome = $('#p_nome').value.trim();
-      const descricao = $('#p_desc').value.trim();
-      const precoBase = $('#p_preco').value.trim();
-      const site = $('#p_site').value.trim();
-
-      // Se há arquivo, envia com multipart; senão, JSON puro
-      const file = $('#p_foto').files[0];
-      if (file){
-        const fd = new FormData();
-        fd.append('nome', nome);
-        fd.append('descricao', descricao);
-        fd.append('precoBase', precoBase);
-        fd.append('site', site);
-        fd.append('foto', file);
-        const r = await fetch('/api/painel/update', { method:'POST', body: fd });
-        if (!r.ok) throw new Error('HTTP '+r.status);
-        await r.json();
-      } else {
-        await postJSON('/api/painel/update', { nome, descricao, precoBase, site });
+    function paintHeader(me){
+      $('#nome').textContent = me.nome || '—';
+      $('#servico').textContent = (me.servico || me.profissao || '—');
+      $('#local').textContent = [me.bairro, me.cidade].filter(Boolean).join(' • ') || '—';
+      setPlanBadges(me.plano);
+      const foto = me.foto || 'https://via.placeholder.com/160?text=Foto';
+      const img = $('#foto'); img.src = foto; img.alt = 'Foto de '+(me.nome||'Profissional');
+      if (typeof me.id !== 'undefined') {
+        $('#btnPerfilPub').href = '/profissional/'+ String(me.id);
+        $('#btnPreview').href = '/perfil.html?id=' + encodeURIComponent(me.id);
       }
-      $('#perfilMsg').style.display='';
-      $('#perfilMsg').textContent='Salvo com sucesso!';
-      $('#perfilMsg').className='meta ok';
-      flash('Perfil salvo.');
-      await reload();
-    }catch(err){
-      $('#perfilMsg').style.display='';
-      $('#perfilMsg').textContent='Falha ao salvar.';
-      $('#perfilMsg').className='meta warn';
-      flash('Falha ao salvar perfil.', 'warn');
+      if (me.whatsapp){
+        const d = String(me.whatsapp).replace(/\D/g,'');
+        const link = 'https://wa.me/' + d;
+        $('#openWhats').href = link;
+        $('#openWa').href = link;
+        $('#copyWa').onclick = async ()=>{
+          try{ await navigator.clipboard.writeText(link); flash('Link do WhatsApp copiado!'); }
+          catch{ flash('Não foi possível copiar.', 'warn'); }
+        };
+        // QR (fallback se o back não tiver /api/qr)
+        const qri = document.createElement('img');
+        qri.alt='QR do WhatsApp'; qri.width=160; qri.height=160; qri.style.display='block';
+        qri.src = '/api/qr?phone='+encodeURIComponent(d);
+        qri.onerror = ()=>{ $('#qrBox').textContent='QR indisponível'; };
+        $('#qrBox').innerHTML=''; $('#qrBox').appendChild(qri);
+      }
     }
-  });
 
-  async function reload(){
-    try{
-      const me = await apiJSON('/api/painel/me');
-      ME = me || {};
-      paintHeader(ME);
-      paintMetrics(ME);
-      paintRadar(ME);
-      paintArea(ME);
-      paintPayPrefs(ME);
-      paintProfileForm(ME);
-    }catch(e){
-      // se não logado, volta pro login do painel
-      location.href = '/painel_login.html';
+    function paintMetrics(me){
+      $('#m_vis').textContent = String(me.visitas||0);
+      $('#m_calls').textContent = String(me.chamadas||0);
+      const avals = Array.isArray(me.avaliacoes)? me.avaliacoes : [];
+      $('#m_aval').textContent = String(avals.length);
+      const notas = avals.map(a=>Number(a.nota)).filter(n=>n>=1 && n<=5);
+      const media = notas.length ? (notas.reduce((a,b)=>a+b,0)/notas.length) : 0;
+      $('#m_rate').textContent = media ? media.toFixed(2) : '—';
     }
+
+    function paintRadar(me){
+      const on = !!(me.radar && me.radar.on);
+      $('#radarToggle').textContent = on ? 'Desligar Radar' : 'Ligar Radar';
+      $('#radarStatus').textContent = on ? 'Ligado' : 'Desligado';
+      $('#radarStatus').style.background = on ? '#ecfccb' : '#f1f5f9';
+      $('#radarStatus').style.borderColor = on ? '#bbf7d0' : '#e5e7eb';
+      $('#radarHint').textContent = (String(me.plano).toLowerCase()==='free')
+        ? 'Seu plano atual limita o Radar. Faça upgrade para estender tempo e alcance.'
+        : 'Radar ativo melhora seu posicionamento para clientes próximos.';
+    }
+
+    function paintArea(me){
+      const r = Number(me.raioKm||0);
+      $('#raio').value = String(Math.min(50, Math.max(0, r)));
+      $('#raioVal').textContent = r+' km';
+      const hint = (String(me.plano).toLowerCase()==='premium') ? 'Seu plano permite até 50 km.'
+           : (String(me.plano).toLowerCase()==='pro') ? 'Seu plano permite até 30 km.'
+           : 'No plano Free, o raio pode ser 0 km (somente bairro).';
+      $('#raioHint').textContent = hint;
+
+      const box = $('#cidadesList');
+      box.innerHTML = '';
+      const extras = Array.isArray(me.cidadesExtras) ? me.cidadesExtras : [];
+      extras.forEach((c,i)=>{
+        const div = document.createElement('div');
+        div.className = 'chip';
+        div.innerHTML = esc(c) + ' <button title="Remover">✕</button>';
+        div.querySelector('button').onclick = async ()=>{
+          try{
+            const list = extras.filter((_,idx)=> idx!==i);
+            await postJSON('/api/painel/settings', { cidadesExtras: list });
+            flash('Cidade removida.');
+            await reload();
+          }catch{ flash('Falha ao remover cidade.', 'warn'); }
+        };
+        box.appendChild(div);
+      });
+    }
+
+    function paintPayPrefs(me){
+      const via = !!me.receiveViaApp;
+      $('#receiveViaApp').checked = via;
+      $('#payMode').textContent = via ? 'Pelo aplicativo' : 'Direto com o cliente';
+      if (me.fees && typeof me.fees.cardPercent==='number'){
+        $('#feesInfo').textContent = `${me.fees.cardPercent}% do app`;
+      }
+    }
+
+    function paintProfileForm(me){
+      $('#p_nome').value = me.nome || '';
+      $('#p_desc').value = me.descricao || '';
+      $('#p_preco').value = me.precoBase || '';
+      $('#p_site').value = me.site || '';
+    }
+
+    async function loadCidadesOnce(){
+      try{
+        const js = await apiJSON('/api/geo/cidades');
+        $('#dl-cidades').innerHTML = (js||[]).map(c=>`<option value="${esc(c)}">`).join('');
+      }catch{}
+    }
+
+    // ===== Ações (alinhadas ao server.js) =====
+    $('#radarToggle').addEventListener('click', async ()=>{
+      try{
+        const onNow = ($('#radarStatus').textContent||'').toLowerCase()==='ligado';
+        await postJSON('/api/painel/radar', { on: !onNow });
+        flash('Radar atualizado.');
+        await reload();
+      } catch{ flash('Falha ao acionar Radar.', 'warn'); }
+    });
+
+    $('#saveAutoOff').addEventListener('click', async ()=>{
+      try{
+        const h = ($('#autoOff').value||'').trim();
+        if (!h){ await postJSON('/api/painel/radar', { on:true, durationHours: null }); }
+        else { await postJSON('/api/painel/radar', { on:true, durationHours: Number(h) }); }
+        flash('Auto-desligar salvo.');
+        await reload();
+      }catch{ flash('Falha ao salvar auto-desligar.', 'warn'); }
+    });
+
+    $('#raio').addEventListener('input', (e)=>{ $('#raioVal').textContent = e.target.value + ' km'; });
+
+    $('#raioSave').addEventListener('click', async ()=>{
+      try{
+        await postJSON('/api/painel/settings', { raioKm: Number($('#raio').value||0) });
+        flash('Raio atualizado.');
+        await reload();
+      }catch{ flash('Falha ao salvar raio.', 'warn'); }
+    });
+
+    $('#addCidade').addEventListener('click', async ()=>{
+      const c = ($('#cidadeExtra').value||'').trim();
+      if(!c) return;
+      try{
+        const list = Array.isArray(ME.cidadesExtras)? [...ME.cidadesExtras] : [];
+        if (!list.includes(c)) list.push(c);
+        await postJSON('/api/painel/settings', { cidadesExtras: list });
+        $('#cidadeExtra').value='';
+        flash('Cidade adicionada.');
+        await reload();
+      }catch{ flash('Falha ao adicionar cidade.', 'warn'); }
+    });
+
+    $('#savePayPrefs').addEventListener('click', async ()=>{
+      try{
+        const receiveViaApp = !!$('#receiveViaApp').checked;
+        await postJSON('/api/painel/settings', { receiveViaApp });
+        flash('Preferência de pagamento salva.');
+        await reload();
+      }catch{ flash('Não foi possível salvar as preferências.', 'warn'); }
+    });
+
+    // Plano — placeholders
+    $('#toPro').addEventListener('click', async ()=>{ flash('Upgrade PRO: aguardando gateway real.'); });
+    $('#toPremium').addEventListener('click', async ()=>{ flash('Upgrade PREMIUM: aguardando gateway real.'); });
+    $('#toFree').addEventListener('click', async ()=>{ flash('Downgrade para FREE: aguardando backend.'); });
+
+    // Perfil (placeholder até existir endpoint /api/painel/update)
+    $('#formPerfil').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      $('#perfilMsg').style.display='';
+      $('#perfilMsg').textContent='Salvar perfil: backend ainda não disponível.';
+      $('#perfilMsg').className='meta warn';
+      flash('Endpoint de atualização de perfil não está disponível no servidor atual.', 'warn');
+    });
+
+    // ===== Reload principal =====
+    async function reload(){
+      try{
+        const me = await apiJSON('/api/painel/me');
+        ME = me || {};
+        paintHeader(ME);
+        paintMetrics(ME);
+        paintRadar(ME);
+        paintArea(ME);
+        paintPayPrefs(ME);
+        paintProfileForm(ME);
+      }catch(e){
+        // Evita loop para login — mostra aviso e mantém na página
+        const box = $('#flash');
+        box.style.display='';
+        box.className='panel warn';
+        box.innerHTML = 'Sua sessão não foi reconhecida.<br>Abra <a href="/painel_login.html">/painel_login.html</a>, faça login com o mesmo WhatsApp (tente a variação com/sem 55) e volte.';
+      }
+    }
+
+    (async function init(){
+      await loadCidadesOnce();
+      await reload();
+    })();
+  })();
+  </script>
+</body>
+</html>
