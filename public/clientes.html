@@ -21,7 +21,7 @@
   <meta property="og:image" content="https://autonomaapp.com.br/img/og-cover.png">
   <meta property="og:url" content="https://autonomaapp.com.br/clientes.html">
 
-  <link rel="stylesheet" href="/css/app.css?v=clients-2025-09-06d">
+  <link rel="stylesheet" href="/css/app.css?v=clients-2025-09-06e">
 
   <style>
     :root{
@@ -212,7 +212,6 @@
 
   <script>
   (function(){
-    // ---------- Utils ----------
     const $ = (id)=> document.getElementById(id);
     const esc = (s)=> String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
     const estrelas = (n)=>{ const r=Math.round((Number(n)||0)*2)/2; const f=Math.floor(r),h=(r%1!==0); return "★".repeat(f)+(h?"½":"")+"☆".repeat(5-f-(h?1:0)); };
@@ -220,18 +219,17 @@
     const NO_STORE = { cache:'no-store' };
     const HTTPS = location.protocol === 'https:';
 
-    // Só deixa fotos "reais"
+    // aceita foto "real" (https ou /uploads). Se http, não é carregável em https.
     function hasRealPhoto(u){
       if(!u) return false;
       const s = String(u).trim();
       if(!s) return false;
       const low = s.toLowerCase();
       if (low.includes('icon-192') || low.includes('placeholder.com') || low.endsWith('.svg')) return false;
-      if (HTTPS && s.startsWith('http://')) return false; // evitar mixed content no mobile https
-      return true;
+      if (HTTPS && low.startsWith('http://')) return false;
+      return (low.startsWith('https://') || low.startsWith('/uploads/'));
     }
 
-    // Haversine (fallback distância no front)
     function hav(lat1, lon1, lat2, lon2){
       if([lat1,lon1,lat2,lon2].some(v=>!Number.isFinite(v))) return null;
       const toRad = d=> d*Math.PI/180, R=6371;
@@ -240,13 +238,11 @@
       return 2*R*Math.asin(Math.sqrt(a));
     }
 
-    // ---------- Estado ----------
     let userLat=null, userLng=null, useGPS=false;
     let page=1, limit=20, total=0, acumulados=0;
     let lastQuery={ cidade:"", bairro:"", servico:"", minRating:"" };
     let destaquesCache = [];
 
-    // ---------- Autocomplete ----------
     async function fillCidades(){
       try{
         const r=await fetch('/api/geo/cidades?ts='+Date.now(), NO_STORE);
@@ -291,7 +287,6 @@
       $('listaServicos').innerHTML=list.map(s=>`<option value="${esc(s)}">`).join('');
     });
 
-    // ---------- GPS ----------
     function isSecureForGeo(){
       return location.hostname==='localhost' || location.hostname==='127.0.0.1' || (window.isSecureContext===true);
     }
@@ -332,13 +327,11 @@
       else { $('gpsStatus').textContent='GPS desativado.'; userLat=null; userLng=null; }
     });
 
-    // ---------- UI helpers ----------
     function showTag(id, txt){ const el=$(id); el.textContent=txt; el.style.display='inline-flex'; }
     function hideTags(){ ['tagCidade','tagBairro','tagServico','tagRating'].forEach(id=>$(id).style.display='none'); }
     function resetResults(){ $('results').innerHTML=''; page=1; total=0; acumulados=0; $('paginacao').style.display='none'; $('contagem').textContent=''; }
 
-    // ---------- Cards ----------
-    function cardHTML(p){
+    function cardHTMLBase(p){
       const item = {
         id: p.id, nome: p.nome,
         servico: p.servico || p.profissao || '',
@@ -349,7 +342,6 @@
         distanceKm: (p.distanceKm ?? p.dist ?? p.distanciaKm ?? null),
         lat: p.lat, lng: p.lng
       };
-      if(!hasRealPhoto(item.foto)) return ''; // somente com foto real
 
       // fallback distância local
       if((item.distanceKm==null || !isFinite(item.distanceKm)) &&
@@ -358,15 +350,17 @@
         try{ item.distanceKm = hav(userLat,userLng,item.lat,item.lng); }catch{}
       }
 
+      // escolha da foto: tenta usar; se não carregar, some a imagem mas mantém o card
+      const fotoSrc = item.foto ? esc(item.foto) : '/icons/icon-192.png';
       const dist = kmFmt(item.distanceKm);
-      const foto = esc(item.foto);
       const id = encodeURIComponent(item.id);
       const local = [item.bairro, item.cidade].filter(Boolean).join(' • ');
       const price = item.precoBase ? ('R$ '+String(item.precoBase).toString().replace('.',',')) : null;
 
       return `
         <article class="pro-card">
-          <img class="pro-avatar" src="${foto}" alt="Foto de ${esc(item.nome)}" loading="lazy" onerror="this.style.display='none'">
+          <img class="pro-avatar" src="${fotoSrc}" alt="Foto de ${esc(item.nome)}"
+               loading="lazy" onerror="this.style.display='none'">
           <div class="pro-main">
             <h3 class="pro-name">${esc(item.nome)}</h3>
             <div class="pro-sub">
@@ -384,14 +378,19 @@
       `;
     }
 
-    function renderIntoGrid(gridId, items){
+    // versão com filtro "foto real"
+    function cardHTMLIfReal(p){
+      if(!hasRealPhoto(p.foto)) return '';
+      return cardHTMLBase(p);
+    }
+
+    function renderIntoGrid(gridId, items, {onlyReal=false}={}){
       const grid = $(gridId);
-      const html = (items||[]).map(cardHTML).filter(Boolean).join('');
+      const html = (items||[]).map(onlyReal?cardHTMLIfReal:cardHTMLBase).filter(Boolean).join('');
       grid.innerHTML = html;
       return html.length > 0;
     }
 
-    // ---------- Busca principal ----------
     async function fetchProfissionais(isLoadMore=false){
       const params = new URLSearchParams();
       if(lastQuery.cidade) params.set('cidade', lastQuery.cidade);
@@ -404,7 +403,7 @@
         params.set('userLat', String(userLat));
         params.set('userLng', String(userLng));
       }
-      params.set('ts', String(Date.now())); // fura cache do SW
+      params.set('ts', String(Date.now()));
 
       try{
         $('loader').style.display='';
@@ -415,33 +414,34 @@
         total = Number(js.total||items.length)||0;
 
         const grid = $('results');
-        const cards = items.map(cardHTML).filter(Boolean).join('');
+
+        // 1) tenta “apenas com foto real”
+        let cards = items.map(cardHTMLIfReal).filter(Boolean).join('');
+        if(!cards){
+          // 2) se não sobrou nada, relaxa o filtro para não sumir no celular
+          cards = items.map(cardHTMLBase).filter(Boolean).join('');
+        }
 
         if(isLoadMore && cards){
           grid.insertAdjacentHTML('beforeend', cards);
         }else{
-          if(cards){
-            grid.innerHTML = cards;
-          }else{
-            // sem resultados com foto real
-            grid.innerHTML = `<div class="card"><p class="meta">Nenhum profissional encontrado com os filtros atuais (com foto real).</p></div>`;
-            // fallback: tenta usar destaques em resultados se ainda não tem nada lá
-            if(destaquesCache.length){
-              const extra = destaquesCache.map(cardHTML).filter(Boolean).join('');
-              if(extra) grid.insertAdjacentHTML('beforeend', extra);
-            }
+          grid.innerHTML = cards || `<div class="card"><p class="meta">Nenhum profissional encontrado com os filtros atuais.</p></div>`;
+          if(!cards && destaquesCache.length){
+            const extra = destaquesCache.map(cardHTMLIfReal).filter(Boolean).join('') ||
+                          destaquesCache.map(cardHTMLBase).filter(Boolean).join('');
+            if(extra) grid.insertAdjacentHTML('beforeend', extra);
           }
         }
 
-        acumulados += (items||[]).length; // contagem baseada no retorno bruto
+        acumulados += (items||[]).length;
         $('paginacao').style.display = (acumulados<total && items.length>0)?'':'none';
         $('contagem').textContent = (acumulados<total)? `${acumulados}/${total} exibidos` : '';
       }catch{
         if(!isLoadMore){
           $('results').innerHTML = `<div class="card"><p class="err">Falha ao carregar resultados. Tente novamente.</p></div>`;
-          // fallback duro: mostra destaques se existir cache
           if(destaquesCache.length){
-            const extra = destaquesCache.map(cardHTML).filter(Boolean).join('');
+            const extra = destaquesCache.map(cardHTMLIfReal).filter(Boolean).join('') ||
+                          destaquesCache.map(cardHTMLBase).filter(Boolean).join('');
             if(extra) $('results').insertAdjacentHTML('beforeend', extra);
           }
         }
@@ -478,7 +478,6 @@
     });
     document.getElementById('btnMais').addEventListener('click', ()=>{ if(acumulados < total){ page++; fetchProfissionais(true); } });
 
-    // ---------- Destaques (também só com foto real) ----------
     async function loadDestaques(){
       const cont = $('destaques');
       const count = $('destCount');
@@ -491,25 +490,25 @@
           r = await fetch('/api/profissionais?limit=12&sort=score&dir=desc&ts='+(ts+1), NO_STORE);
           js = r.ok ? await r.json() : {items:[]};
         }
-        const arr = (js.items||[]).filter(p=>hasRealPhoto(p.foto));
-        destaquesCache = arr.slice(); // guarda para fallback
+        const arr = js.items||[];
+        destaquesCache = arr.slice();
         count.textContent = arr.length ? `${arr.length} selecionados` : '';
-        if(!renderIntoGrid('destaques', arr)){
-          cont.innerHTML = `<div class="muted">Sem destaques no momento.</div>`;
+
+        if(!renderIntoGrid('destaques', arr, {onlyReal:true})){
+          if(!renderIntoGrid('destaques', arr, {onlyReal:false})){
+            cont.innerHTML = `<div class="muted">Sem destaques no momento.</div>`;
+          }
         }
 
-        // fallback mobile: se resultados vazios, usa destaques
         if($('results').children.length===0 && arr.length){
-          renderIntoGrid('results', arr);
+          renderIntoGrid('results', arr, {onlyReal:true}) || renderIntoGrid('results', arr, {onlyReal:false});
         }
       }catch{
         cont.innerHTML = `<div class="muted">Não foi possível carregar os destaques.</div>`;
       }
     }
 
-    // ---------- Boot ----------
     (async function init(){
-      // força atualização do SW em celulares
       if('serviceWorker' in navigator){ try{ const regs=await navigator.serviceWorker.getRegistrations(); regs.forEach(r=>r.update()); }catch{} }
       await fillCidades();
 
@@ -523,10 +522,8 @@
       if(ser) $('servico').value=ser;
       if(mr) $('minRating').value=mr;
 
-      // 1) destaques primeiro (para fallback já estar em cache)
-      await loadDestaques();
-      // 2) busca principal
-      submitBusca();
+      await loadDestaques();   // carrega destaques primeiro (para fallback)
+      submitBusca();           // depois a busca principal
     })();
   })();
   </script>
@@ -534,7 +531,7 @@
   <script>
     if ('serviceWorker' in navigator){
       window.addEventListener('load', ()=>{
-        navigator.serviceWorker.register('/sw.js?v=clients-2025-09-06d').catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=clients-2025-09-06e').catch(()=>{});
       });
     }
   </script>
