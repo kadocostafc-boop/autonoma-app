@@ -1,8 +1,8 @@
-// sw.js — Autônoma.app (v21)
+// sw.js — Autônoma.app (v22)
 // Estratégia: network-first p/ estáticos, network-only p/ APIs.
 // Garante Response sempre válido e nunca intercepta POST/PUT etc.
 
-const VERSION = 'v21';
+const VERSION = 'v22';
 const CACHE_NAME = 'autonoma-' + VERSION;
 
 const CORE = [
