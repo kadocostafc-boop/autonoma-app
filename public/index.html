@@ -9,7 +9,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/css/app.css?v=home-2025-09-07h">
+  <link rel="stylesheet" href="/css/app.css?v=home-2025-09-07r"/>
 
   <style>
     :root{
@@ -19,9 +19,9 @@
       --txt:#0f172a;
     }
 
-    /* ===== Base ===== */
+    /* ===== Base / layout ===== */
     html, body { height:100%; margin:0; background:var(--azul-escuro); }
-    body { display:flex; }
+    body{ display:flex; }
     .page{ min-height:100vh; display:flex; flex-direction:column; }
     @supports (min-height:100svh){ .page{ min-height:100svh; } }
     @supports (min-height:100dvh){ .page{ min-height:100dvh; } }
@@ -41,50 +41,70 @@
     }
     .btn-enter:hover{ background:#ffffff18; }
 
-    /* ===== Hero ===== */
+    /* ===== Hero (cobre toda a largura) ===== */
     .hero{
       flex:1;
-      display:flex; align-items:center;
+      display:flex; align-items:center; justify-content:center;
       background:linear-gradient(180deg, var(--azul) 0%, var(--azul-2) 100%);
       color:#fff; text-align:center;
-      padding: clamp(24px, 5vw, 40px) 16px;
-      margin-top:-1px;
+      padding: clamp(20px, 5vw, 48px) clamp(16px, 6vw, 48px);
+      margin-top:-1px;   /* gruda no header sem filete */
+      min-height: clamp(520px, 82dvh, 760px);
     }
-    .hero-inner{ max-width:960px; margin:0 auto; width:100%; }
+    /* em telas largas, garante altura visual equilibrada entre header/hero/footer */
+    @media (min-width:1024px){
+      .hero{ min-height: calc(100dvh - 56px - 96px); }
+    }
 
-    /* ===== Título 3D — MAIOR e com “depth” forte ===== */
+    .hero-inner{
+      width:100%;
+      max-width:1100px;   /* + largo no desktop */
+      margin:0 auto;
+    }
+
+    /* ===== Título 3D – mais forte em desktop ===== */
     .brand-3d{
-      font-size:clamp(64px, 15vw, 120px);   /* >> maior que os botões */
+      font-size:clamp(64px, 14vw, 150px);   /* MAIOR no desktop */
       font-weight:900;
       line-height:1.06;
       letter-spacing:.2px;
       color:#fff;
-      /* camadas: brilho, sombra média e sombra longa para “saltar” */
       text-shadow:
         0 1px 0 #f7faff,
         0 2px 0 #ecf3ff,
         0 3px 0 #e1ecff,
         0 4px 0 #d6e5ff,
-        0 6px 12px rgba(0,0,0,.30),
-        0 14px 26px rgba(0,0,0,.42),
-        0 28px 54px rgba(0,0,0,.55),
-        0 0 28px rgba(180,205,255,.35);
+        0 8px 16px rgba(0,0,0,.30),
+        0 18px 34px rgba(0,0,0,.44),
+        0 36px 66px rgba(0,0,0,.58),
+        0 0 32px rgba(175,205,255,.38);
       margin:0 0 14px;
-      /* leve perspectiva + “pull out” */
-      transform: perspective(900px) translateZ(14px);
+      transform: perspective(900px) translateZ(16px);
+    }
+    @media (min-width:1024px){
+      .brand-3d{
+        text-shadow:
+          0 1px 0 #ffffff,
+          0 3px 0 #e9f1ff,
+          0 6px 12px rgba(0,0,0,.35),
+          0 22px 42px rgba(0,0,0,.52),
+          0 48px 96px rgba(0,0,0,.62),
+          0 0 42px rgba(160,200,255,.42);
+        transform: perspective(900px) translateZ(24px); /* “salta” mais */
+      }
     }
 
     .slogan{
-      margin:8px auto 16px;
-      font-size:clamp(14px, 3.4vw, 18px);
+      margin:10px auto 18px;
+      font-size:clamp(14px, 2.8vw, 20px);
       line-height:1.45;
       opacity:.95;
-      max-width:760px;
+      max-width:860px;
     }
 
     .ctas{
       display:flex; flex-direction:column; align-items:center;
-      gap:10px; margin:10px auto 8px;
+      gap:12px; margin:12px auto 10px;
     }
     .btn{
       border:none; cursor:pointer; text-decoration:none;
@@ -99,7 +119,10 @@
     .btn-outline:hover{ background:#ffffff18; }
 
     /* botões mais estreitos que o título */
-    .cta-narrow{ width:min(82%, 280px); padding:10px 14px; font-size:15px; }
+    .cta-narrow{ width:min(82%, 320px); padding:10px 14px; font-size:15px; }
+    @media (min-width:1024px){
+      .cta-narrow{ width:min(40vw, 420px); font-size:16px; }
+    }
 
     .chips{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:12px 0 0; }
     .chip{
@@ -112,20 +135,19 @@
     .install-wrap{ margin-top:16px; display:flex; justify-content:center; }
     #btnInstall{
       display:none;
-      width:min(90%, 360px);
+      width:min(92%, 420px);
       padding:14px 18px;
       background:var(--azul-escuro); color:#fff; border:1px solid #0a1a55;
       border-radius:14px; font-weight:800; font-size:16px;
-      /* garante centralização perfeita do texto, mesmo com ícone */
       display:inline-flex; align-items:center; justify-content:center; gap:10px;
       text-align:center;
     }
     #btnInstall.show{ display:inline-flex; }
 
-    /* ===== Footer ===== */
+    /* ===== Footer enxuto ===== */
     footer{
       background:var(--azul-escuro); color:#cde1ff;
-      padding:14px 10px;
+      padding:12px 10px;
       margin-top:auto;
     }
     .foot-links{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
@@ -139,7 +161,7 @@
     <!-- Header -->
     <header class="header" role="banner" aria-label="Cabeçalho">
       <div class="spacer"></div>
-      <a class="btn-enter" href="/painel_login.html?v=home-2025-09-07h">Entrar</a>
+      <a class="btn-enter" href="/painel_login.html?v=home-2025-09-07r">Entrar</a>
     </header>
 
     <!-- Hero -->
@@ -150,8 +172,8 @@
         <p class="slogan">Encontre profissionais confiáveis no seu bairro — simples, direto e rápido</p>
 
         <div class="ctas">
-          <a class="btn btn-white cta-narrow" href="/clientes.html?v=home-2025-09-07h">Cliente</a>
-          <a class="btn btn-outline cta-narrow" href="/cadastro.html?v=home-2025-09-07h">Cadastrar profissional</a>
+          <a class="btn btn-white cta-narrow" href="/clientes.html?v=home-2025-09-07r">Cliente</a>
+          <a class="btn btn-outline cta-narrow" href="/cadastro.html?v=home-2025-09-07r">Cadastrar profissional</a>
         </div>
 
         <div class="chips" aria-label="Vantagens">
@@ -184,10 +206,10 @@
   </div>
 
   <script>
-    /* SW */
+    /* SW com auto-reload quando atualizar */
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07h').catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07r').catch(()=>{});
       });
       let reloaded=false;
       navigator.serviceWorker.addEventListener('controllerchange', ()=>{
