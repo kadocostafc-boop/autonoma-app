@@ -9,7 +9,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/css/app.css?v=home-2025-09-07f">
+  <link rel="stylesheet" href="/css/app.css?v=home-2025-09-07g">
 
   <style>
     :root{
@@ -19,15 +19,12 @@
       --txt:#0f172a;
     }
 
-    /* ===== Base (sem espaço abaixo do rodapé) ===== */
+    /* ===== Base ===== */
     html, body { height:100%; margin:0; background:var(--azul-escuro); }
     body { display:flex; }
-    .page{
-      min-height:100vh; display:flex; flex-direction:column;
-    }
+    .page{ min-height:100vh; display:flex; flex-direction:column; }
     @supports (min-height:100svh){ .page{ min-height:100svh; } }
     @supports (min-height:100dvh){ .page{ min-height:100dvh; } }
-
     img{ max-width:100%; display:block; }
 
     /* ===== Header ===== */
@@ -44,38 +41,54 @@
     }
     .btn-enter:hover{ background:#ffffff18; }
 
-    /* ===== Hero (flexível, ocupa o miolo) ===== */
+    /* ===== Hero ===== */
     .hero{
-      flex:1; /* ocupa o espaço entre header e footer */
-      display:flex; align-items:center; /* centraliza vertical */
+      flex:1;
+      display:flex; align-items:center;
       background:linear-gradient(180deg, var(--azul) 0%, var(--azul-2) 100%);
       color:#fff; text-align:center;
-      padding: clamp(24px, 5vw, 36px) 16px; /* borda interna consistente */
-      margin-top:-1px; /* cobre hairline entre header/hero */
+      padding: clamp(24px, 5vw, 36px) 16px;
+      margin-top:-1px;
     }
     .hero-inner{ max-width:960px; margin:0 auto; width:100%; }
 
+    /* Título 3D turbinado */
     .brand-3d{
-      font-size:clamp(44px, 11vw, 88px);
-      font-weight:900; line-height:1.02; letter-spacing:.3px; color:#fff;
+      /* maior */
+      font-size:clamp(54px, 13vw, 104px);
+      font-weight:900;
+      line-height:1.06;           /* + espaçamento entre linhas do título */
+      letter-spacing:.2px;
+      color:#fff;
+      /* “camadas” para dar profundidade + um leve deslocamento de perspectiva */
       text-shadow:
-        0 1px 0 #eef4ff,
-        0 2px 0 #dfe9ff,
-        0 3px 0 #cfe0ff,
-        0 4px 0 #bcd4ff,
-        0 10px 18px rgba(0,0,0,.35),
-        0 22px 40px rgba(0,0,0,.45);
-      margin:0 0 10px;
+        /* brilho suave próximo */
+        0 1px 0 #f3f7ff,
+        0 2px 0 #e8f0ff,
+        0 3px 0 #dfe9ff,
+        0 4px 0 #d3e1ff,
+        /* sombra média */
+        2px 8px 14px rgba(0,0,0,.35),
+        /* sombra longa (salta da tela) */
+        6px 20px 36px rgba(0,0,0,.48),
+        /* um “contorno” frio muito sutil */
+        0 0 24px rgba(180,205,255,.35);
+      margin:0 0 12px;
+      transform: perspective(900px) translateZ(8px); /* toque de 3D */
     }
 
     .slogan{
-      margin:6px auto 12px;
+      margin:8px auto 14px;
       font-size:clamp(14px, 3.4vw, 18px);
-      line-height:1.35; opacity:.95;
+      line-height:1.45;           /* + espaçamento entre linhas do slogan */
+      opacity:.95;
       max-width:760px;
     }
 
-    .ctas{ display:flex; flex-direction:column; align-items:center; gap:10px; margin:10px auto 8px; }
+    .ctas{
+      display:flex; flex-direction:column; align-items:center;
+      gap:10px; margin:10px auto 8px;
+    }
     .btn{
       border:none; cursor:pointer; text-decoration:none;
       display:inline-flex; align-items:center; justify-content:center;
@@ -87,7 +100,9 @@
     .btn-white:hover{ filter:brightness(.97); }
     .btn-outline{ background:transparent; color:#fff; border:1.5px solid #ffffffcc; }
     .btn-outline:hover{ background:#ffffff18; }
-    .cta-narrow{ width:min(92%, 340px); padding:12px 14px; font-size:16px; }
+
+    /* botões mais estreitos */
+    .cta-narrow{ width:min(86%, 300px); padding:10px 14px; font-size:15px; }
 
     .chips{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:10px 0 0; }
     .chip{
@@ -100,17 +115,17 @@
     .install-wrap{ margin-top:14px; display:flex; justify-content:center; }
     #btnInstall{
       display:none;
-      width:min(92%, 360px);
-      padding:13px 16px;
+      width:min(90%, 340px);
+      padding:12px 16px;
       background:var(--azul-escuro); color:#fff; border:1px solid #0a1a55;
       border-radius:14px; font-weight:800; font-size:16px; gap:8px;
     }
     #btnInstall.show{ display:inline-flex; }
 
-    /* ===== Rodapé (mais baixo) ===== */
+    /* ===== Rodapé (baixo) ===== */
     footer{
       background:var(--azul-escuro); color:#cde1ff;
-      padding:14px 10px;   /* << reduzido */
+      padding:14px 10px;
       margin-top:auto;
     }
     .foot-links{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
@@ -124,7 +139,7 @@
     <!-- Header -->
     <header class="header" role="banner" aria-label="Cabeçalho">
       <div class="spacer"></div>
-      <a class="btn-enter" href="/painel_login.html?v=home-2025-09-07f">Entrar</a>
+      <a class="btn-enter" href="/painel_login.html?v=home-2025-09-07g">Entrar</a>
     </header>
 
     <!-- Hero -->
@@ -132,9 +147,11 @@
       <div class="hero-inner">
         <h1 class="brand-3d" aria-label="Autônoma">Autônoma</h1>
 
+        <p class="slogan">Encontre profissionais confiáveis no seu bairro — simples, direto e rápido</p>
+
         <div class="ctas">
-          <a class="btn btn-white cta-narrow" href="/clientes.html?v=home-2025-09-07f">Cliente</a>
-          <a class="btn btn-outline cta-narrow" href="/cadastro.html?v=home-2025-09-07f">Cadastrar profissional</a>
+          <a class="btn btn-white cta-narrow" href="/clientes.html?v=home-2025-09-07g">Cliente</a>
+          <a class="btn btn-outline cta-narrow" href="/cadastro.html?v=home-2025-09-07g">Cadastrar profissional</a>
         </div>
 
         <div class="chips" aria-label="Vantagens">
@@ -142,8 +159,6 @@
           <span class="chip">📍 Foco no local</span>
           <span class="chip">🆓 Grátis para começar</span>
         </div>
-
-        <p class="slogan">Encontre profissionais confiáveis no seu bairro — simples, direto e rápido</p>
 
         <div class="install-wrap">
           <button id="btnInstall" type="button" aria-label="Baixar o app">
@@ -171,7 +186,7 @@
     /* SW */
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07f').catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07g').catch(()=>{});
       });
       let reloaded=false;
       navigator.serviceWorker.addEventListener('controllerchange', ()=>{
