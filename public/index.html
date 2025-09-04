@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Autônoma.app • Profissionais no seu bairro</title>
+  <title>Autônoma.app • Encontre profissionais confiáveis no seu bairro</title>
 
   <!-- PWA / Tema -->
   <meta name="theme-color" content="#0b1f63">
@@ -11,125 +11,160 @@
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
 
-  <!-- CSS global -->
-  <link rel="stylesheet" href="/css/app.css?v=home-2025-09-07c"/>
+  <!-- CSS global do app -->
+  <link rel="stylesheet" href="/css/app.css?v=home-2025-09-07c">
 
   <style>
     :root{
-      --azul-escuro:#0b1f63;     /* header/rodapé/botão baixar */
-      --azul-brilho:#2D81FF;     /* gradiente hero */
-      --azul-brilho-2:#1E6EF2;
+      --azul-escuro:#0b1f63;   /* header/rodapé e botões escuros */
+      --azul:#2D81FF;          /* azul brilhante do fundo */
+      --azul-2:#1E6EF2;
       --borda:#e5e7eb;
+      --txt:#0f172a;
     }
 
-    /* ===== Reset + evita “linha branca” + tira qualquer espaço no fim ===== */
-    html,body{ margin:0; padding:0; background:#0b49c8; height:auto; }
+    /* zera margens para não aparecer “linha” entre os blocos */
+    html,body{ margin:0; padding:0; background:var(--azul); }
+
     img{ max-width:100%; display:block; }
 
-    /* ===== Header ===== */
+    /* =================== HEADER =================== */
     .header{
       background:var(--azul-escuro);
       color:#fff;
-      display:flex; align-items:center; justify-content:flex-end;
-      padding:12px 16px; position:relative; z-index:2;
+      display:flex; align-items:center;
+      padding:12px 16px;
+      margin:0; border:0; outline:0;
     }
+    .header .spacer{ flex:1; }
     .btn-enter{
+      appearance:none; border:1px solid #ffffff44;
       background:transparent; color:#fff; font-weight:800;
-      border:1px solid #ffffff44; border-radius:12px;
-      padding:8px 14px; font-size:14px; text-decoration:none;
+      padding:8px 12px; border-radius:10px; text-decoration:none;
+      font-size:14px; line-height:1;
     }
     .btn-enter:hover{ background:#ffffff18; }
 
-    /* ===== HERO ===== */
+    /* =================== HERO =================== */
     .hero{
-      background:linear-gradient(180deg,var(--azul-brilho) 0%, var(--azul-brilho-2) 100%);
-      color:#fff;
-      padding: clamp(28px,8vw,52px) 18px 26px;
-      margin-top:-1px; /* cola no header */
+      background:linear-gradient(180deg, var(--azul) 0%, var(--azul-2) 100%);
+      color:#fff; text-align:center;
+      padding: clamp(36px, 8vw, 52px) 16px clamp(28px, 6vw, 40px);
+      margin:0; border:0; outline:0;
+      /* sobrepõe 1px para não surgir hairline entre header e hero */
+      margin-top:-1px;
     }
-    .hero-inner{ max-width:720px; margin:0 auto; }
+    .hero-inner{ max-width: 960px; margin:0 auto; }
 
-    /* Título 3D/“saltando” */
+    /* Título 3D bem destacado */
     .brand-3d{
-      font-size: clamp(48px, 12vw, 92px);
-      font-weight:900; line-height:1.02; letter-spacing:.2px; margin:0 0 8px;
+      font-size: clamp(44px, 11vw, 88px);
+      font-weight: 900;
+      line-height: 1.02;
+      letter-spacing: .3px;
       color:#fff;
-      /* extrusão + glow + sombra pesada */
       text-shadow:
-        /* extrusão clara */
-        0 1px 0 #eef4ff, 0 2px 0 #deeaff, 0 3px 0 #cfe0ff, 0 4px 0 #c0d6ff,
-        /* glow suave */
-        0 0 10px rgba(255,255,255,.18),
-        /* sombras profundas que “levantam” o título */
-        0 14px 24px rgba(0,0,0,.35),
-        0 24px 44px rgba(0,0,0,.45);
-      filter: drop-shadow(0 6px 12px rgba(0,0,0,.25));
+        0 1px 0 #eef4ff,
+        0 2px 0 #dfe9ff,
+        0 3px 0 #cfe0ff,
+        0 4px 0 #bcd4ff,
+        0 10px 18px rgba(0,0,0,.35),
+        0 22px 40px rgba(0,0,0,.45); /* sombra profunda para “saltar” */
+      margin:0 0 10px;
     }
 
-    /* Stack dos botões principais – menores que o título */
-    .cta-stack{
-      display:flex; flex-direction:column; gap:10px;
-      margin:16px 0 10px;
-      max-width:560px;
+    /* Slogan mais discreto (menor) */
+    .slogan{
+      margin:6px auto 16px;
+      font-size: clamp(14px, 3.4vw, 18px);
+      line-height: 1.35;
+      opacity:.95;
     }
-    .cta-big{
-      appearance:none; border:none; cursor:pointer;
-      width:100%;
-      background:#fff; color:#0b1f63; font-weight:900;
-      padding:14px 16px; border-radius:16px; text-decoration:none; font-size:17px;
-      display:flex; align-items:center; gap:10px; justify-content:flex-start;
-      box-shadow: 0 8px 20px rgba(0,0,0,.12);
+
+    /* CTAs principais – mais estreitos e empilhados */
+    .ctas{
+      display:flex; flex-direction:column; align-items:center; gap:10px;
+      margin: 12px auto 6px;
     }
-    .cta-big .ico{ font-size:20px; }
-
-    /* Chips (vantagens) */
-    .chips{ display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 14px; max-width:560px; }
-    .chip{ display:inline-flex; align-items:center; gap:6px;
-      padding:8px 12px; border:1px solid #ffffff3a; border-radius:999px;
-      background:#ffffff14; color:#fff; font-size:13px; }
-
-    /* Slogan */
-    .slogan{ font-size:clamp(18px,3.2vw,22px); line-height:1.25; margin:6px 0 14px; max-width:560px; }
-
-    /* Botão Baixar o app */
-    .download-wrap{ margin-top:6px; max-width:560px; }
-    .btn-download{
-      width:100%;
-      background:var(--azul-escuro); color:#fff; font-weight:900;
-      padding:16px 18px; border-radius:20px; text-decoration:none; font-size:18px;
-      border:1px solid #0a1a54;
-      display:inline-flex; align-items:center; gap:10px; justify-content:center;
-      box-shadow: 0 12px 28px rgba(0,0,0,.20);
+    .btn{
+      border:none; cursor:pointer; text-decoration:none;
+      display:inline-flex; align-items:center; justify-content:center;
+      border-radius:14px; font-weight:800; line-height:1;
+      transition:transform .05s ease;
     }
-    .btn-download .ico{ font-size:20px; }
+    .btn:active{ transform:scale(.98); }
 
-    /* Rodapé – nada abaixo dele */
-    footer{ padding:24px 12px; background:var(--azul-escuro); color:#cde1ff; }
+    .btn-white{
+      background:#fff; color:var(--txt);
+      border:1px solid #ffffff;
+    }
+    .btn-white:hover{ filter:brightness(.97); }
+    .btn-outline{
+      background:transparent; color:#fff; border:1.5px solid #ffffffcc;
+    }
+    .btn-outline:hover{ background:#ffffff18; }
+
+    /* largura e tipografia menores que o título */
+    .cta-narrow{
+      width:min(92%, 340px);
+      padding:12px 14px;
+      font-size:16px;    /* menor que antes */
+    }
+
+    /* Chips */
+    .chips{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:12px 0 0; }
+    .chip{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:6px 10px; border:1px solid #ffffff33;
+      border-radius:999px; background:#ffffff14; color:#fff; font-size:13px;
+      backdrop-filter:blur(2px);
+    }
+
+    /* Botão “Baixar o app” (escuro) */
+    .install-wrap{ margin-top:14px; display:flex; justify-content:center; }
+    #btnInstall{
+      display:none;
+      width:min(92%, 360px);
+      padding:13px 16px;
+      background:var(--azul-escuro); color:#fff; border:1px solid #0a1a55;
+      border-radius:14px; font-weight:800; font-size:16px;
+      gap:8px;
+    }
+    #btnInstall.show{ display:inline-flex; }
+
+    /* =================== RODAPÉ =================== */
+    footer{
+      background:var(--azul-escuro);
+      color:#cde1ff;
+      padding: 24px 12px;
+    }
     .foot-links{ display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
-    .foot-links a{ color:#cde1ff; text-decoration:none; font-size:14px; }
+    .foot-links a{ color:#cde1ff; font-size:14px; text-decoration:none; }
     .foot-links a:hover{ text-decoration:underline; }
     .copy{ text-align:center; font-size:12px; color:#b8cffc; margin-top:8px; }
   </style>
 </head>
 <body>
 
-  <!-- HEADER -->
-  <header class="header" role="banner">
+  <!-- ===== HEADER (apenas botão Entrar à direita) ===== -->
+  <header class="header" role="banner" aria-label="Cabeçalho">
+    <div class="spacer"></div>
     <a class="btn-enter" href="/painel_login.html?v=home-2025-09-07c">Entrar</a>
   </header>
 
-  <!-- HERO -->
+  <!-- ===== HERO ===== -->
   <section class="hero">
     <div class="hero-inner">
       <h1 class="brand-3d" aria-label="Autônoma">Autônoma</h1>
 
-      <div class="cta-stack">
-        <a class="cta-big" href="/clientes.html?v=home-2025-09-07c">
-          <span class="ico">👤</span> <span>Cliente</span>
-        </a>
-        <a class="cta-big" href="/cadastro.html?v=home-2025-09-07c">
-          <span class="ico">🧰</span> <span>Cadastrar profissional</span>
-        </a>
+      <p class="slogan">
+        Encontre profissionais confiáveis no seu bairro — simples, direto e rápido
+      </p>
+
+      <!-- CTAs PRINCIPAIS (mais estreitos e empilhados) -->
+      <div class="ctas">
+        <a class="btn btn-white cta-narrow" href="/clientes.html?v=home-2025-09-07c" rel="noopener">Cliente</a>
+        <a class="btn btn-outline cta-narrow" href="/cadastro.html?v=home-2025-09-07c" rel="noopener">Cadastrar profissional</a>
       </div>
 
       <!-- Chips -->
@@ -139,19 +174,16 @@
         <span class="chip">🆓 Grátis para começar</span>
       </div>
 
-      <!-- Slogan -->
-      <p class="slogan">Encontre profissionais confiáveis no seu bairro — simples, direto e rápido.</p>
-
-      <!-- Baixar o app -->
-      <div class="download-wrap">
-        <a id="btnDownload" class="btn-download" href="/app/autonoma.apk" download>
-          <span class="ico">⬇️</span> Baixar o app
-        </a>
+      <!-- Botão Baixar o app (APK + PWA) -->
+      <div class="install-wrap">
+        <button id="btnInstall" type="button" aria-label="Baixar o app">
+          <span aria-hidden="true">📱</span> Baixar o app
+        </button>
       </div>
     </div>
   </section>
 
-  <!-- RODAPÉ -->
+  <!-- ===== RODAPÉ ===== -->
   <footer role="contentinfo">
     <nav class="foot-links" aria-label="Links do rodapé">
       <a href="/termos.html">Termos</a>
@@ -165,33 +197,44 @@
   </footer>
 
   <script>
-    // ===== Service Worker =====
+    /* ===== Service Worker ===== */
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07c')
-          .then(r=>r.update()).catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07c').catch(()=>{});
       });
     }
 
-    // ===== Botão “Baixar o app”: APK + fallback PWA =====
+    /* ===== Instalação APK + PWA ===== */
     (function(){
-      const btn = document.getElementById('btnDownload');
+      const btn = document.getElementById('btnInstall');
       let deferredPrompt = null;
 
+      // Exibe botão quando houver evento de instalação PWA
       window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
+        btn.classList.add('show');
       });
 
-      btn.addEventListener('click', async (ev) => {
-        if (deferredPrompt && /Android|Linux/i.test(navigator.userAgent)) {
-          ev.preventDefault();
-          try{
-            deferredPrompt.prompt();
-            await deferredPrompt.userChoice;
-          }catch(_){}
+      // Fallback: sempre mostra no Android (para baixar APK), sem esconder o PWA
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      if (isAndroid) btn.classList.add('show');
+
+      btn.addEventListener('click', async () => {
+        // se houver prompt PWA, tenta instalar
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          try { await deferredPrompt.userChoice; } catch {}
           deferredPrompt = null;
+        } else {
+          // fallback: baixar APK local (se existir)
+          window.location.href = '/app/autonoma.apk';
         }
+      });
+
+      window.addEventListener('appinstalled', () => {
+        // esconde após instalar via PWA
+        btn.classList.remove('show');
       });
     })();
   </script>
