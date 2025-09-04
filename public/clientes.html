@@ -21,7 +21,7 @@
   <meta property="og:image" content="https://autonomaapp.com.br/img/og-cover.png">
   <meta property="og:url" content="https://autonomaapp.com.br/clientes.html">
 
-  <link rel="stylesheet" href="/css/app.css?v=clients-2025-09-06e">
+  <link rel="stylesheet" href="/css/app.css?v=clients-2025-09-07">
 
   <style>
     :root{
@@ -29,33 +29,29 @@
       --azul-brilho:#2D81FF;
       --azul-brilho-2:#1E6EF2;
       --cinza:#64748b;
+      --cinza-claro:#f1f5f9;
       --borda:#e5e7eb;
     }
-
     .wrap{max-width:1120px;margin:0 auto;padding:16px}
 
-    /* ============ HEADER (sem logo) ============ */
+    /* ===== HEADER sem logo ===== */
     .header{
       background:var(--azul-escuro);
-      display:flex; align-items:center; justify-content:center;
-      gap:10px; padding:12px 16px;
+      padding:12px 16px; display:flex; gap:8px; align-items:center; justify-content:flex-end;
     }
-    .topbar-links{ display:flex; gap:10px; flex-wrap:wrap }
-    .topbar-links .btn{
-      background:var(--azul-brilho);
-      color:#fff; border:none; padding:8px 12px; border-radius:10px;
-      text-decoration:none; font-weight:800; font-size:14px;
+    .nav-btn{
+      appearance:none; border:none; cursor:pointer;
+      background:var(--azul-brilho); color:#fff; font-weight:800;
+      padding:8px 12px; border-radius:10px; text-decoration:none; font-size:14px;
+      display:inline-flex; align-items:center; justify-content:center;
     }
-    .topbar-links .btn:hover{ filter:brightness(.97); }
+    .nav-btn:hover{ filter:brightness(.96); }
 
-    /* ================= Bloco 1: HERO de busca ================= */
+    /* ===== BLOCO 1: HERO de busca ===== */
     .search-hero{
       background: linear-gradient(180deg, var(--azul-brilho) 0%, var(--azul-brilho-2) 100%);
-      color:#fff;
-      margin:0 0 14px 0;
-      padding: 20px 14px 16px;
-      border-radius:18px;
-      box-shadow: 0 10px 24px rgba(0,0,0,.10);
+      color:#fff; margin:0 0 14px 0; padding: 20px 14px 16px;
+      border-radius:18px; box-shadow: 0 10px 24px rgba(0,0,0,.10);
     }
     .search-hero h1{
       margin:0 0 10px; font-size:26px; line-height:1.15; font-weight:900; letter-spacing:.2px;
@@ -80,7 +76,7 @@
     .btn.ghost{ background:#fff; color:#0f172a; border:1px solid var(--borda) }
     .btn.dark{ background:var(--azul-escuro) }
 
-    /* ================= Resultados (cards) ================= */
+    /* ===== Resultados (cards) ===== */
     .results-grid{ display:grid; gap:10px; grid-template-columns:1fr; }
     @media(min-width:720px){ .results-grid{ grid-template-columns:1fr 1fr } }
     @media(min-width:1060px){ .results-grid{ grid-template-columns:1fr 1fr 1fr } }
@@ -108,6 +104,8 @@
     .section-title{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
     .section-title h2{ margin:0; font-size:18px }
     .card{ background:#fff; border:1px solid var(--borda); border-radius:16px; padding:14px; }
+
+    /* Rodapé */
     footer { padding: 28px 12px; background:var(--azul-escuro); margin-top:16px }
     .foot-links { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
     .foot-links a { color:#cde1ff; font-size:14px; text-decoration:none; }
@@ -115,13 +113,11 @@
   </style>
 </head>
 <body>
-  <!-- Header (sem logo; botões com fundo azul brilhante e fonte branca) -->
-  <header class="header" role="banner">
-    <nav class="topbar-links" aria-label="Navegação principal">
-      <a class="btn" href="/">Início</a>
-      <a class="btn" href="/top10.html">🏆 Top 10</a>
-      <a class="btn" href="/painel_login.html">Entrar</a>
-    </nav>
+  <!-- ===== HEADER (sem logo) ===== -->
+  <header class="header" role="banner" aria-label="Cabeçalho">
+    <a class="nav-btn" href="/">Início</a>
+    <a class="nav-btn" href="/top10.html">Top 10</a>
+    <a class="nav-btn" href="/painel_login.html">Entrar</a>
   </header>
 
   <main class="wrap" role="main">
@@ -189,7 +185,7 @@
       <p id="contagem" class="small muted" style="margin-top:6px"></p>
     </div>
 
-    <!-- ============ BLOCO 2: DESTAQUES ============ -->
+    <!-- ============ BLOCO 2: DESTAQUES (fallback mobile) ============ -->
     <section class="card" aria-labelledby="destaquesTitle">
       <div class="section-title">
         <h2 id="destaquesTitle">Profissionais em destaque</h2>
@@ -212,24 +208,15 @@
 
   <script>
   (function(){
+    // ---------- Utils ----------
     const $ = (id)=> document.getElementById(id);
     const esc = (s)=> String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
     const estrelas = (n)=>{ const r=Math.round((Number(n)||0)*2)/2; const f=Math.floor(r),h=(r%1!==0); return "★".repeat(f)+(h?"½":"")+"☆".repeat(5-f-(h?1:0)); };
     const kmFmt = (d)=> (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${Number(d).toFixed(d<10?1:0)} km`));
     const NO_STORE = { cache:'no-store' };
-    const HTTPS = location.protocol === 'https:';
+    const ts = () => `ts=${Date.now()}`; // cache-buster
 
-    // aceita foto "real" (https ou /uploads). Se http, não é carregável em https.
-    function hasRealPhoto(u){
-      if(!u) return false;
-      const s = String(u).trim();
-      if(!s) return false;
-      const low = s.toLowerCase();
-      if (low.includes('icon-192') || low.includes('placeholder.com') || low.endsWith('.svg')) return false;
-      if (HTTPS && low.startsWith('http://')) return false;
-      return (low.startsWith('https://') || low.startsWith('/uploads/'));
-    }
-
+    // Haversine (fallback distância no front)
     function hav(lat1, lon1, lat2, lon2){
       if([lat1,lon1,lat2,lon2].some(v=>!Number.isFinite(v))) return null;
       const toRad = d=> d*Math.PI/180, R=6371;
@@ -238,14 +225,15 @@
       return 2*R*Math.asin(Math.sqrt(a));
     }
 
+    // ---------- Estado ----------
     let userLat=null, userLng=null, useGPS=false;
     let page=1, limit=20, total=0, acumulados=0;
     let lastQuery={ cidade:"", bairro:"", servico:"", minRating:"" };
-    let destaquesCache = [];
 
+    // ---------- Autocomplete ----------
     async function fillCidades(){
       try{
-        const r=await fetch('/api/geo/cidades?ts='+Date.now(), NO_STORE);
+        const r=await fetch(`/api/geo/cidades?${ts()}`, NO_STORE);
         if(!r.ok) return;
         const js=await r.json();
         $('listaCidades').innerHTML=(js||[]).map(c=>`<option value="${esc(c)}">`).join('');
@@ -254,7 +242,7 @@
     async function loadBairrosDaCidade(cidadeVal){
       if(!cidadeVal) { $('listaBairros').innerHTML=''; return; }
       try{
-        const r = await fetch('/api/geo/bairros?cidade='+encodeURIComponent(cidadeVal)+'&ts='+Date.now(), NO_STORE);
+        const r = await fetch(`/api/geo/bairros?cidade=${encodeURIComponent(cidadeVal)}&${ts()}`, NO_STORE);
         if(!r.ok) return;
         const js = await r.json();
         $('listaBairros').innerHTML = (js||[]).map(b=>`<option value="${esc(b)}">`).join('');
@@ -263,12 +251,12 @@
     async function suggestBairros(q){
       const cid=$('cidade').value.trim();
       if(!cid||!q) return [];
-      const r=await fetch(`/api/geo/bairros/suggest?cidade=${encodeURIComponent(cid)}&q=${encodeURIComponent(q)}&ts=${Date.now()}`, NO_STORE);
+      const r=await fetch(`/api/geo/bairros/suggest?cidade=${encodeURIComponent(cid)}&q=${encodeURIComponent(q)}&${ts()}`, NO_STORE);
       return r.ok?(await r.json()):[];
     }
     async function suggestServicos(q){
       if(!q) return [];
-      const r=await fetch(`/api/geo/servicos/suggest?q=${encodeURIComponent(q)}&ts=${Date.now()}`, NO_STORE);
+      const r=await fetch(`/api/geo/servicos/suggest?q=${encodeURIComponent(q)}&${ts()}`, NO_STORE);
       return r.ok?(await r.json()):[];
     }
 
@@ -287,12 +275,13 @@
       $('listaServicos').innerHTML=list.map(s=>`<option value="${esc(s)}">`).join('');
     });
 
+    // ---------- GPS ----------
     function isSecureForGeo(){
       return location.hostname==='localhost' || location.hostname==='127.0.0.1' || (window.isSecureContext===true);
     }
     async function resolveCityByGPS(lat,lng){
       try{
-        const r=await fetch(`/api/geo/closest-city?lat=${lat}&lng=${lng}&ts=${Date.now()}`, NO_STORE);
+        const r=await fetch(`/api/geo/closest-city?lat=${lat}&lng=${lng}&${ts()}`, NO_STORE);
         const js=await r.json();
         if(js&&js.ok&&js.cidade){
           $('cidade').value=js.cidade;
@@ -327,11 +316,13 @@
       else { $('gpsStatus').textContent='GPS desativado.'; userLat=null; userLng=null; }
     });
 
+    // ---------- UI helpers ----------
     function showTag(id, txt){ const el=$(id); el.textContent=txt; el.style.display='inline-flex'; }
     function hideTags(){ ['tagCidade','tagBairro','tagServico','tagRating'].forEach(id=>$(id).style.display='none'); }
     function resetResults(){ $('results').innerHTML=''; page=1; total=0; acumulados=0; $('paginacao').style.display='none'; $('contagem').textContent=''; }
 
-    function cardHTMLBase(p){
+    // ---------- Template do Card (sem jamais descartar por causa de foto) ----------
+    function cardHTML(p){
       const item = {
         id: p.id, nome: p.nome,
         servico: p.servico || p.profissao || '',
@@ -343,24 +334,24 @@
         lat: p.lat, lng: p.lng
       };
 
-      // fallback distância local
+      // Fallback distância no front se back não mandou
       if((item.distanceKm==null || !isFinite(item.distanceKm)) &&
          Number.isFinite(userLat) && Number.isFinite(userLng) &&
          Number.isFinite(item.lat) && Number.isFinite(item.lng)){
         try{ item.distanceKm = hav(userLat,userLng,item.lat,item.lng); }catch{}
       }
 
-      // escolha da foto: tenta usar; se não carregar, some a imagem mas mantém o card
-      const fotoSrc = item.foto ? esc(item.foto) : '/icons/icon-192.png';
       const dist = kmFmt(item.distanceKm);
+      // Nunca esconda o card por causa da foto. Usa placeholder local no erro.
+      const fotoSrc = item.foto || '/icons/icon-192.png';
       const id = encodeURIComponent(item.id);
       const local = [item.bairro, item.cidade].filter(Boolean).join(' • ');
-      const price = item.precoBase ? ('R$ '+String(item.precoBase).toString().replace('.',',')) : null;
+      const price = (item.precoBase!=null && item.precoBase!=="") ? `R$ ${String(item.precoBase).toString().replace('.',',')}` : null;
 
       return `
         <article class="pro-card">
-          <img class="pro-avatar" src="${fotoSrc}" alt="Foto de ${esc(item.nome)}"
-               loading="lazy" onerror="this.style.display='none'">
+          <img class="pro-avatar" src="${esc(fotoSrc)}" alt="Foto de ${esc(item.nome)}"
+               loading="lazy" onerror="this.src='/icons/icon-192.png'">
           <div class="pro-main">
             <h3 class="pro-name">${esc(item.nome)}</h3>
             <div class="pro-sub">
@@ -370,27 +361,15 @@
             </div>
           </div>
           <div class="pro-right">
-            <span class="dist">Distância: ${dist}</span>
-            ${price ? `<span class="price">Valor: ${esc(price)}</span>`:''}
+            <span class="dist">${dist}</span>
+            ${price ? `<span class="price">${esc(price)}</span>`:''}
             <a class="btn" style="padding:6px 10px; font-size:13px; margin-top:4px" href="/profissional/${id}">Ver</a>
           </div>
         </article>
       `;
     }
 
-    // versão com filtro "foto real"
-    function cardHTMLIfReal(p){
-      if(!hasRealPhoto(p.foto)) return '';
-      return cardHTMLBase(p);
-    }
-
-    function renderIntoGrid(gridId, items, {onlyReal=false}={}){
-      const grid = $(gridId);
-      const html = (items||[]).map(onlyReal?cardHTMLIfReal:cardHTMLBase).filter(Boolean).join('');
-      grid.innerHTML = html;
-      return html.length > 0;
-    }
-
+    // ---------- Busca ----------
     async function fetchProfissionais(isLoadMore=false){
       const params = new URLSearchParams();
       if(lastQuery.cidade) params.set('cidade', lastQuery.cidade);
@@ -403,51 +382,44 @@
         params.set('userLat', String(userLat));
         params.set('userLng', String(userLng));
       }
-      params.set('ts', String(Date.now()));
+      // cache buster
+      params.set('ts', Date.now());
 
       try{
         $('loader').style.display='';
         const r = await fetch('/api/profissionais?'+params.toString(), NO_STORE);
-        if(!r.ok) throw new Error('bad status');
         const js = await r.json();
-        const items = Array.isArray(js.items) ? js.items : [];
-        total = Number(js.total||items.length)||0;
+        const items = js.items||[];
+        total = js.total ?? items.length ?? 0;
 
-        const grid = $('results');
-
-        // 1) tenta “apenas com foto real”
-        let cards = items.map(cardHTMLIfReal).filter(Boolean).join('');
-        if(!cards){
-          // 2) se não sobrou nada, relaxa o filtro para não sumir no celular
-          cards = items.map(cardHTMLBase).filter(Boolean).join('');
-        }
-
-        if(isLoadMore && cards){
-          grid.insertAdjacentHTML('beforeend', cards);
-        }else{
-          grid.innerHTML = cards || `<div class="card"><p class="meta">Nenhum profissional encontrado com os filtros atuais.</p></div>`;
-          if(!cards && destaquesCache.length){
-            const extra = destaquesCache.map(cardHTMLIfReal).filter(Boolean).join('') ||
-                          destaquesCache.map(cardHTMLBase).filter(Boolean).join('');
-            if(extra) grid.insertAdjacentHTML('beforeend', extra);
+        if(items.length===0 && !isLoadMore){
+          // fallback: tenta pegar destaques para não ficar vazio no celular
+          const alt = await tryFeaturedFallback();
+          if(alt && alt.length){
+            renderResults(alt, false);
+            acumulados = alt.length;
+            $('paginacao').style.display='none';
+            $('contagem').textContent='';
+            return;
           }
         }
 
-        acumulados += (items||[]).length;
-        $('paginacao').style.display = (acumulados<total && items.length>0)?'':'none';
+        renderResults(items, isLoadMore);
+        acumulados += items.length;
+        $('paginacao').style.display = (acumulados<total)?'':'none';
         $('contagem').textContent = (acumulados<total)? `${acumulados}/${total} exibidos` : '';
       }catch{
-        if(!isLoadMore){
-          $('results').innerHTML = `<div class="card"><p class="err">Falha ao carregar resultados. Tente novamente.</p></div>`;
-          if(destaquesCache.length){
-            const extra = destaquesCache.map(cardHTMLIfReal).filter(Boolean).join('') ||
-                          destaquesCache.map(cardHTMLBase).filter(Boolean).join('');
-            if(extra) $('results').insertAdjacentHTML('beforeend', extra);
-          }
-        }
+        if(!isLoadMore) $('results').innerHTML = `<div class="card"><p class="err">Falha ao carregar resultados. Tente novamente.</p></div>`;
       }finally{
         $('loader').style.display='none';
       }
+    }
+
+    function renderResults(items, isLoadMore){
+      const grid = $('results');
+      const html = (items||[]).map(cardHTML).join('');
+      if(isLoadMore) grid.insertAdjacentHTML('beforeend', html);
+      else grid.innerHTML = html || `<div class="card"><p class="meta">Nenhum profissional encontrado com os filtros atuais.</p></div>`;
     }
 
     function applyStateTags(q){
@@ -478,40 +450,52 @@
     });
     document.getElementById('btnMais').addEventListener('click', ()=>{ if(acumulados < total){ page++; fetchProfissionais(true); } });
 
+    // ---------- Destaques (e fallback) ----------
+    async function tryFeaturedFallback(){
+      try{
+        const url1 = `/api/profissionais?featured=1&limit=6&sort=score&dir=desc&${ts()}`;
+        let r = await fetch(url1, NO_STORE);
+        let js = r.ok ? await r.json() : null;
+        if(js && Array.isArray(js.items) && js.items.length) return js.items;
+
+        const url2 = `/api/profissionais?limit=6&sort=score&dir=desc&${ts()}`;
+        r = await fetch(url2, NO_STORE);
+        js = r.ok ? await r.json() : {items:[]};
+        return js.items || [];
+      }catch{ return []; }
+    }
+
     async function loadDestaques(){
       const cont = $('destaques');
       const count = $('destCount');
       cont.innerHTML = `<div class="muted">Carregando destaques…</div>`;
       try{
-        const ts = Date.now();
-        let r = await fetch('/api/profissionais?featured=1&limit=12&sort=score&dir=desc&ts='+ts, NO_STORE);
-        let js = r.ok ? await r.json() : null;
-        if(!js || !Array.isArray(js.items) || js.items.length===0){
-          r = await fetch('/api/profissionais?limit=12&sort=score&dir=desc&ts='+(ts+1), NO_STORE);
-          js = r.ok ? await r.json() : {items:[]};
-        }
-        const arr = js.items||[];
-        destaquesCache = arr.slice();
-        count.textContent = arr.length ? `${arr.length} selecionados` : '';
+        const items = await tryFeaturedFallback();
+        count.textContent = items.length ? `${items.length} selecionados` : '';
+        cont.innerHTML = items.length ? items.map(cardHTML).join('') : `<div class="muted">Sem destaques no momento.</div>`;
 
-        if(!renderIntoGrid('destaques', arr, {onlyReal:true})){
-          if(!renderIntoGrid('destaques', arr, {onlyReal:false})){
-            cont.innerHTML = `<div class="muted">Sem destaques no momento.</div>`;
-          }
-        }
-
-        if($('results').children.length===0 && arr.length){
-          renderIntoGrid('results', arr, {onlyReal:true}) || renderIntoGrid('results', arr, {onlyReal:false});
+        // Se os resultados principais estiverem vazios, mostra os destaques no topo também
+        if($('results').children.length===0 && items.length){
+          $('results').innerHTML = items.map(cardHTML).join('');
         }
       }catch{
         cont.innerHTML = `<div class="muted">Não foi possível carregar os destaques.</div>`;
       }
     }
 
+    // ---------- Boot ----------
     (async function init(){
-      if('serviceWorker' in navigator){ try{ const regs=await navigator.serviceWorker.getRegistrations(); regs.forEach(r=>r.update()); }catch{} }
+      // força atualização do SW (quebra cache teimoso no celular)
+      if('serviceWorker' in navigator){
+        try{
+          const regs=await navigator.serviceWorker.getRegistrations();
+          regs.forEach(r=>r.update());
+        }catch{}
+      }
+
       await fillCidades();
 
+      // Querystring inicial
       const u=new URL(location.href);
       const cid=u.searchParams.get('cidade')||'';
       const bai=u.searchParams.get('bairro')||'';
@@ -522,16 +506,19 @@
       if(ser) $('servico').value=ser;
       if(mr) $('minRating').value=mr;
 
-      await loadDestaques();   // carrega destaques primeiro (para fallback)
-      submitBusca();           // depois a busca principal
+      // 1) busca principal
+      submitBusca();
+      // 2) destaques
+      loadDestaques();
     })();
   })();
   </script>
 
   <script>
+    /* Mantém o SW registrado — com versão nova para forçar update no mobile */
     if ('serviceWorker' in navigator){
       window.addEventListener('load', ()=>{
-        navigator.serviceWorker.register('/sw.js?v=clients-2025-09-06e').catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=clients-2025-09-07').catch(()=>{});
       });
     }
   </script>
