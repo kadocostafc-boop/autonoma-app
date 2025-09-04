@@ -5,12 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Autônoma.app — Encontre profissionais confiáveis no seu bairro</title>
 
-  <!-- PWA / tema -->
   <meta name="theme-color" content="#0b1f63">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/css/app.css?v=home-2025-09-07t"/>
+  <link rel="stylesheet" href="/css/app.css?v=home-2025-09-07u"/>
 
   <style>
     :root{
@@ -20,12 +19,11 @@
       --txt:#0f172a;
     }
 
-    /* ===== Base / layout ===== */
+    /* ===== Base ===== */
     html, body { height:100%; margin:0; background:var(--azul-escuro); }
-    body{ display:flex; }
+    body{ display:flex; overflow-x:hidden; }
     .page{ min-height:100vh; display:flex; flex-direction:column; }
     @supports (min-height:100svh){ .page{ min-height:100svh; } }
-    @supports (min-height:100dvh){ .page{ min-height:100dvh; } }
     img{ max-width:100%; display:block; }
 
     /* ===== Header ===== */
@@ -42,26 +40,20 @@
     }
     .btn-enter:hover{ background:#ffffff18; }
 
-    /* ===== Hero =====
-       Força full-bleed e centraliza mesmo se existir estilo global para <section>.
-    */
+    /* ===== HERO full-bleed (sempre centralizado) ===== */
     .hero{
       position:relative;
-      inline-size:100vw;                     /* largura da janela */
-      margin-inline: calc(50% - 50vw);       /* encosta nas bordas */
-      box-sizing:border-box;
+      width:100vw !important;                   /* ocupa a janela toda */
+      left:50%; transform:translateX(-50%);     /* centraliza */
+      margin:0; max-width:none !important;      /* ignora estilos globais */
+      border-radius:0 !important;
 
       display:flex; align-items:center; justify-content:center;
       background:linear-gradient(180deg, var(--azul) 0%, var(--azul-2) 100%);
       color:#fff; text-align:center;
       padding: clamp(20px, 5vw, 48px) clamp(16px, 6vw, 48px);
-      margin-top:-1px;   /* gruda no header sem filete */
-      min-height: clamp(560px, 82dvh, 800px);
-      border-radius:0 !important;            /* anula possíveis estilos globais */
-      max-width:none !important;             /* idem */
-    }
-    @media (min-width:1024px){
-      .hero{ min-height: calc(100dvh - 56px - 96px); }
+      margin-top:-1px; /* cola no header */
+      min-height: calc(100dvh - 56px - 120px); /* ocupa quase a tela inteira */
     }
 
     .hero-inner{
@@ -71,12 +63,12 @@
       display:flex;
       flex-direction:column;
       align-items:center;
-      gap:16px; /* espaçamento base dos blocos (mobile) */
+      gap:16px;
     }
 
-    /* ===== Título 3D ===== */
+    /* ===== Título 3D seguro no desktop ===== */
     .brand-3d{
-      font-size:clamp(68px, 14vw, 160px);
+      font-size:clamp(68px, 12vw, 120px); /* limite superior mais seguro p/ notebook */
       font-weight:900;
       line-height:1.04;
       letter-spacing:.2px;
@@ -86,30 +78,17 @@
         0 2px 0 #ecf3ff,
         0 3px 0 #e1ecff,
         0 4px 0 #d6e5ff,
-        0 8px 16px rgba(0,0,0,.30),
-        0 18px 34px rgba(0,0,0,.44),
-        0 36px 66px rgba(0,0,0,.58),
-        0 0 34px rgba(175,205,255,.40);
-      margin:0 0 6px;
-      transform: perspective(900px) translateZ(18px);
-    }
-    @media (min-width:1024px){
-      .brand-3d{
-        text-shadow:
-          0 1px 0 #ffffff,
-          0 3px 0 #e9f1ff,
-          0 8px 16px rgba(0,0,0,.35),
-          0 22px 42px rgba(0,0,0,.52),
-          0 48px 96px rgba(0,0,0,.62),
-          0 0 46px rgba(160,200,255,.46);
-        transform: perspective(900px) translateZ(28px);
-        margin-bottom:10px;
-      }
+        0 10px 18px rgba(0,0,0,.34),
+        0 24px 48px rgba(0,0,0,.52),
+        0 42px 84px rgba(0,0,0,.6),
+        0 0 44px rgba(165,205,255,.45);
+      transform: perspective(900px) translateZ(24px);
+      margin:0 0 8px;
     }
 
     .slogan{
       margin:8px auto 12px;
-      font-size:clamp(14px, 2.8vw, 20px);
+      font-size:clamp(14px, 2.6vw, 20px);
       line-height:1.45;
       opacity:.95;
       max-width:860px;
@@ -117,15 +96,12 @@
 
     /* ===== CTAs ===== */
     .ctas{
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      gap:16px;                /* espaçamento base */
-      margin:12px auto 6px;
+      display:flex; flex-direction:column; align-items:center;
+      gap:20px; /* espaçamento vertical MAIOR no celular */
+      margin:12px auto 8px;
     }
-    /* ↑ AUMENTO do espaçamento VERTICAL no celular, sem mexer na largura dos botões */
-    @media (max-width:767px){
-      .ctas{ gap:20px; }       /* ~4–5 mm na maioria dos celulares */
+    @media (min-width:1024px){
+      .ctas{ gap:22px; }
     }
 
     .btn{
@@ -133,6 +109,7 @@
       display:inline-flex; align-items:center; justify-content:center;
       border-radius:14px; font-weight:800; line-height:1;
       transition:transform .05s ease;
+      white-space:nowrap;               /* texto sempre em 1 linha */
     }
     .btn:active{ transform:scale(.98); }
     .btn-white{ background:#fff; color:var(--txt); border:1px solid #ffffff; }
@@ -140,15 +117,14 @@
     .btn-outline{ background:transparent; color:#fff; border:1.5px solid #ffffffcc; }
     .btn-outline:hover{ background:#ffffff18; }
 
-    /* Largura dos botões — NÃO muda, só o gap acima muda no mobile */
-    .cta-narrow{ width:min(82%, 320px); padding:10px 14px; font-size:15px; }
+    /* LARGURA DOS BOTÕES — aumentei um pouco p/ caber em 1 linha no mobile */
+    .cta-narrow{ width:min(88%, 360px); padding:12px 16px; font-size:15.5px; }
     @media (min-width:1024px){
-      .cta-narrow{ width:min(40vw, 420px); font-size:16px; }
-      .ctas{ gap:24px; margin:22px auto 10px; }
+      .cta-narrow{ width:min(42vw, 440px); font-size:16px; }
     }
 
     /* ===== Chips ===== */
-    .chips{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:8px 0 0; }
+    .chips{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:10px 0 0; }
     .chip{
       display:inline-flex; align-items:center; gap:6px;
       padding:6px 10px; border:1px solid #ffffff33;
@@ -157,10 +133,10 @@
     }
 
     /* ===== Botão Baixar app ===== */
-    .install-wrap{ margin-top:16px; display:flex; justify-content:center; }
+    .install-wrap{ margin-top:18px; display:flex; justify-content:center; }
     #btnInstall{
-      display:none; /* mostrado via JS */
-      width:min(92%, 420px);
+      display:none;
+      width:min(92%, 460px);
       padding:14px 18px;
       background:var(--azul-escuro); color:#fff; border:1px solid #0a1a55;
       border-radius:14px; font-weight:800; font-size:16px;
@@ -169,7 +145,7 @@
     }
     #btnInstall.show{ display:inline-flex; }
 
-    /* ===== Footer (enxuto) ===== */
+    /* ===== Footer enxuto ===== */
     footer{
       background:var(--azul-escuro); color:#cde1ff;
       padding:12px 10px;
@@ -186,10 +162,10 @@
     <!-- Header -->
     <header class="header" role="banner" aria-label="Cabeçalho">
       <div class="spacer"></div>
-      <a class="btn-enter" href="/painel_login.html?v=home-2025-09-07t">Entrar</a>
+      <a class="btn-enter" href="/painel_login.html?v=home-2025-09-07u">Entrar</a>
     </header>
 
-    <!-- Hero full-bleed -->
+    <!-- Hero -->
     <section class="hero">
       <div class="hero-inner">
         <h1 class="brand-3d" aria-label="Autônoma">Autônoma</h1>
@@ -197,8 +173,8 @@
         <p class="slogan">Encontre profissionais confiáveis no seu bairro — simples, direto e rápido</p>
 
         <div class="ctas">
-          <a class="btn btn-white cta-narrow" href="/clientes.html?v=home-2025-09-07t">Cliente</a>
-          <a class="btn btn-outline cta-narrow" href="/cadastro.html?v=home-2025-09-07t">Cadastrar profissional</a>
+          <a class="btn btn-white cta-narrow" href="/clientes.html?v=home-2025-09-07u">Cliente</a>
+          <a class="btn btn-outline cta-narrow" href="/cadastro.html?v=home-2025-09-07u">Cadastrar profissional</a>
         </div>
 
         <div class="chips" aria-label="Vantagens">
@@ -234,7 +210,7 @@
     /* Service Worker (auto-reload quando atualizar) */
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07t').catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07u').catch(()=>{});
       });
       let reloaded=false;
       navigator.serviceWorker.addEventListener('controllerchange', ()=>{
