@@ -9,40 +9,39 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/css/app.css?v=home-2025-09-07d">
+  <link rel="stylesheet" href="/css/app.css?v=home-2025-09-07e">
 
   <style>
     :root{
-      --azul-escuro:#0b1f63;   /* header/rodapé e fallback */
+      --azul-escuro:#0b1f63;   /* header/rodapé */
       --azul:#2D81FF;          /* fundo brilhante do hero */
       --azul-2:#1E6EF2;
-      --borda:#e5e7eb;
       --txt:#0f172a;
     }
 
-    /* ===== Layout base (gruda rodapé no fim e elimina espaço extra) ===== */
-    html,body{ height:100%; margin:0; }
-    body{
-      min-height:100%;
-      background:var(--azul-escuro); /* <- agora igual ao rodapé */
-      display:flex;
-    }
+    /* ===== Base + correção do espaço pós-rodapé ===== */
+    html, body { height:100%; margin:0; background:var(--azul-escuro); }
+    body { display:flex; }
     .page{
-      min-height:100dvh; /* viewport real de mobile */
-      width:100%;
-      display:flex;
-      flex-direction:column;
+      /* fallback */
+      min-height:100vh;
+      display:flex; flex-direction:column;
+    }
+    /* usa a menor viewport para não sobrar espaço quando a barra aparece */
+    @supports (min-height: 100svh) {
+      .page { min-height:100svh; }
+    }
+    /* e acompanha a expansão quando a barra some */
+    @supports (min-height: 100dvh) {
+      .page { min-height:100dvh; }
     }
 
     img{ max-width:100%; display:block; }
 
-    /* =================== HEADER =================== */
+    /* ===== Header ===== */
     .header{
-      background:var(--azul-escuro);
-      color:#fff;
-      display:flex; align-items:center;
-      padding:12px 16px;
-      margin:0; border:0; outline:0;
+      background:var(--azul-escuro); color:#fff;
+      display:flex; align-items:center; padding:12px 16px;
     }
     .header .spacer{ flex:1; }
     .btn-enter{
@@ -53,24 +52,18 @@
     }
     .btn-enter:hover{ background:#ffffff18; }
 
-    /* =================== HERO =================== */
+    /* ===== Hero ===== */
     .hero{
       background:linear-gradient(180deg, var(--azul) 0%, var(--azul-2) 100%);
       color:#fff; text-align:center;
       padding: clamp(36px, 8vw, 52px) 16px clamp(28px, 6vw, 40px);
-      margin:0; border:0; outline:0;
-      /* cobre qualquer hairline entre header e hero */
-      margin-top:-1px;
+      margin-top:-1px; /* cobre hairline entre header/hero */
     }
-    .hero-inner{ max-width: 960px; margin:0 auto; }
+    .hero-inner{ max-width:960px; margin:0 auto; }
 
-    /* Título 3D */
     .brand-3d{
-      font-size: clamp(44px, 11vw, 88px);
-      font-weight: 900;
-      line-height: 1.02;
-      letter-spacing: .3px;
-      color:#fff;
+      font-size:clamp(44px, 11vw, 88px);
+      font-weight:900; line-height:1.02; letter-spacing:.3px; color:#fff;
       text-shadow:
         0 1px 0 #eef4ff,
         0 2px 0 #dfe9ff,
@@ -82,16 +75,12 @@
     }
 
     .slogan{
-      margin:6px auto 16px;
-      font-size: clamp(14px, 3.4vw, 18px);
-      line-height: 1.35;
-      opacity:.95;
+      margin:6px auto 14px;
+      font-size:clamp(14px, 3.4vw, 18px);
+      line-height:1.35; opacity:.95;
     }
 
-    .ctas{
-      display:flex; flex-direction:column; align-items:center; gap:10px;
-      margin: 12px auto 6px;
-    }
+    .ctas{ display:flex; flex-direction:column; align-items:center; gap:10px; margin:12px auto 6px; }
     .btn{
       border:none; cursor:pointer; text-decoration:none;
       display:inline-flex; align-items:center; justify-content:center;
@@ -123,12 +112,10 @@
     }
     #btnInstall.show{ display:inline-flex; }
 
-    /* =================== RODAPÉ =================== */
+    /* ===== Rodapé ===== */
     footer{
-      background:var(--azul-escuro);
-      color:#cde1ff;
-      padding: 24px 12px;
-      margin-top:auto;     /* <- empurra rodapé para o fim da página */
+      background:var(--azul-escuro); color:#cde1ff;
+      padding:24px 12px; margin-top:auto; /* cola no fim */
     }
     .foot-links{ display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
     .foot-links a{ color:#cde1ff; font-size:14px; text-decoration:none; }
@@ -138,20 +125,20 @@
 </head>
 <body>
   <div class="page">
-    <!-- HEADER -->
+    <!-- Header -->
     <header class="header" role="banner" aria-label="Cabeçalho">
       <div class="spacer"></div>
-      <a class="btn-enter" href="/painel_login.html?v=home-2025-09-07d">Entrar</a>
+      <a class="btn-enter" href="/painel_login.html?v=home-2025-09-07e">Entrar</a>
     </header>
 
-    <!-- HERO -->
+    <!-- Hero -->
     <section class="hero">
       <div class="hero-inner">
         <h1 class="brand-3d" aria-label="Autônoma">Autônoma</h1>
 
         <div class="ctas">
-          <a class="btn btn-white cta-narrow" href="/clientes.html?v=home-2025-09-07d" rel="noopener">Cliente</a>
-          <a class="btn btn-outline cta-narrow" href="/cadastro.html?v=home-2025-09-07d" rel="noopener">Cadastrar profissional</a>
+          <a class="btn btn-white cta-narrow" href="/clientes.html?v=home-2025-09-07e">Cliente</a>
+          <a class="btn btn-outline cta-narrow" href="/cadastro.html?v=home-2025-09-07e">Cadastrar profissional</a>
         </div>
 
         <div class="chips" aria-label="Vantagens">
@@ -170,7 +157,7 @@
       </div>
     </section>
 
-    <!-- RODAPÉ -->
+    <!-- Rodapé -->
     <footer role="contentinfo">
       <nav class="foot-links" aria-label="Links do rodapé">
         <a href="/termos.html">Termos</a>
@@ -185,9 +172,15 @@
   </div>
 
   <script>
+    /* SW */
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07d').catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07e').catch(()=>{});
+      });
+      /* força recarregar quando o SW novo assumir (evita layout antigo) */
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!reloaded) { reloaded = true; location.reload(); }
       });
     }
 
