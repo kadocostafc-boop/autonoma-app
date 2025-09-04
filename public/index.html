@@ -5,26 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Autônoma.app • Encontre profissionais confiáveis no seu bairro</title>
 
-  <!-- PWA / Tema -->
   <meta name="theme-color" content="#0b1f63">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
-
-  <!-- CSS global do app -->
-  <link rel="stylesheet" href="/css/app.css?v=home-2025-09-07c">
+  <link rel="stylesheet" href="/css/app.css?v=home-2025-09-07d">
 
   <style>
     :root{
-      --azul-escuro:#0b1f63;   /* header/rodapé e botões escuros */
-      --azul:#2D81FF;          /* azul brilhante do fundo */
+      --azul-escuro:#0b1f63;   /* header/rodapé e fallback */
+      --azul:#2D81FF;          /* fundo brilhante do hero */
       --azul-2:#1E6EF2;
       --borda:#e5e7eb;
       --txt:#0f172a;
     }
 
-    /* zera margens para não aparecer “linha” entre os blocos */
-    html,body{ margin:0; padding:0; background:var(--azul); }
+    /* ===== Layout base (gruda rodapé no fim e elimina espaço extra) ===== */
+    html,body{ height:100%; margin:0; }
+    body{
+      min-height:100%;
+      background:var(--azul-escuro); /* <- agora igual ao rodapé */
+      display:flex;
+    }
+    .page{
+      min-height:100dvh; /* viewport real de mobile */
+      width:100%;
+      display:flex;
+      flex-direction:column;
+    }
 
     img{ max-width:100%; display:block; }
 
@@ -51,12 +59,12 @@
       color:#fff; text-align:center;
       padding: clamp(36px, 8vw, 52px) 16px clamp(28px, 6vw, 40px);
       margin:0; border:0; outline:0;
-      /* sobrepõe 1px para não surgir hairline entre header e hero */
+      /* cobre qualquer hairline entre header e hero */
       margin-top:-1px;
     }
     .hero-inner{ max-width: 960px; margin:0 auto; }
 
-    /* Título 3D bem destacado */
+    /* Título 3D */
     .brand-3d{
       font-size: clamp(44px, 11vw, 88px);
       font-weight: 900;
@@ -69,11 +77,10 @@
         0 3px 0 #cfe0ff,
         0 4px 0 #bcd4ff,
         0 10px 18px rgba(0,0,0,.35),
-        0 22px 40px rgba(0,0,0,.45); /* sombra profunda para “saltar” */
+        0 22px 40px rgba(0,0,0,.45);
       margin:0 0 10px;
     }
 
-    /* Slogan mais discreto (menor) */
     .slogan{
       margin:6px auto 16px;
       font-size: clamp(14px, 3.4vw, 18px);
@@ -81,7 +88,6 @@
       opacity:.95;
     }
 
-    /* CTAs principais – mais estreitos e empilhados */
     .ctas{
       display:flex; flex-direction:column; align-items:center; gap:10px;
       margin: 12px auto 6px;
@@ -93,25 +99,12 @@
       transition:transform .05s ease;
     }
     .btn:active{ transform:scale(.98); }
-
-    .btn-white{
-      background:#fff; color:var(--txt);
-      border:1px solid #ffffff;
-    }
+    .btn-white{ background:#fff; color:var(--txt); border:1px solid #ffffff; }
     .btn-white:hover{ filter:brightness(.97); }
-    .btn-outline{
-      background:transparent; color:#fff; border:1.5px solid #ffffffcc;
-    }
+    .btn-outline{ background:transparent; color:#fff; border:1.5px solid #ffffffcc; }
     .btn-outline:hover{ background:#ffffff18; }
+    .cta-narrow{ width:min(92%, 340px); padding:12px 14px; font-size:16px; }
 
-    /* largura e tipografia menores que o título */
-    .cta-narrow{
-      width:min(92%, 340px);
-      padding:12px 14px;
-      font-size:16px;    /* menor que antes */
-    }
-
-    /* Chips */
     .chips{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:12px 0 0; }
     .chip{
       display:inline-flex; align-items:center; gap:6px;
@@ -120,15 +113,13 @@
       backdrop-filter:blur(2px);
     }
 
-    /* Botão “Baixar o app” (escuro) */
     .install-wrap{ margin-top:14px; display:flex; justify-content:center; }
     #btnInstall{
       display:none;
       width:min(92%, 360px);
       padding:13px 16px;
       background:var(--azul-escuro); color:#fff; border:1px solid #0a1a55;
-      border-radius:14px; font-weight:800; font-size:16px;
-      gap:8px;
+      border-radius:14px; font-weight:800; font-size:16px; gap:8px;
     }
     #btnInstall.show{ display:inline-flex; }
 
@@ -137,6 +128,7 @@
       background:var(--azul-escuro);
       color:#cde1ff;
       padding: 24px 12px;
+      margin-top:auto;     /* <- empurra rodapé para o fim da página */
     }
     .foot-links{ display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
     .foot-links a{ color:#cde1ff; font-size:14px; text-decoration:none; }
@@ -145,97 +137,85 @@
   </style>
 </head>
 <body>
+  <div class="page">
+    <!-- HEADER -->
+    <header class="header" role="banner" aria-label="Cabeçalho">
+      <div class="spacer"></div>
+      <a class="btn-enter" href="/painel_login.html?v=home-2025-09-07d">Entrar</a>
+    </header>
 
-  <!-- ===== HEADER (apenas botão Entrar à direita) ===== -->
-  <header class="header" role="banner" aria-label="Cabeçalho">
-    <div class="spacer"></div>
-    <a class="btn-enter" href="/painel_login.html?v=home-2025-09-07c">Entrar</a>
-  </header>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-inner">
+        <h1 class="brand-3d" aria-label="Autônoma">Autônoma</h1>
 
-  <!-- ===== HERO ===== -->
-  <section class="hero">
-    <div class="hero-inner">
-      <h1 class="brand-3d" aria-label="Autônoma">Autônoma</h1>
+        <div class="ctas">
+          <a class="btn btn-white cta-narrow" href="/clientes.html?v=home-2025-09-07d" rel="noopener">Cliente</a>
+          <a class="btn btn-outline cta-narrow" href="/cadastro.html?v=home-2025-09-07d" rel="noopener">Cadastrar profissional</a>
+        </div>
 
-      <p class="slogan">
-        Encontre profissionais confiáveis no seu bairro — simples, direto e rápido
-      </p>
+        <div class="chips" aria-label="Vantagens">
+          <span class="chip">✅ Sem burocracia</span>
+          <span class="chip">📍 Foco no local</span>
+          <span class="chip">🆓 Grátis para começar</span>
+        </div>
 
-      <!-- CTAs PRINCIPAIS (mais estreitos e empilhados) -->
-      <div class="ctas">
-        <a class="btn btn-white cta-narrow" href="/clientes.html?v=home-2025-09-07c" rel="noopener">Cliente</a>
-        <a class="btn btn-outline cta-narrow" href="/cadastro.html?v=home-2025-09-07c" rel="noopener">Cadastrar profissional</a>
+        <p class="slogan">Encontre profissionais confiáveis no seu bairro — simples, direto e rápido</p>
+
+        <div class="install-wrap">
+          <button id="btnInstall" type="button" aria-label="Baixar o app">
+            <span aria-hidden="true">📱</span> Baixar o app
+          </button>
+        </div>
       </div>
+    </section>
 
-      <!-- Chips -->
-      <div class="chips" aria-label="Vantagens">
-        <span class="chip">✅ Sem burocracia</span>
-        <span class="chip">📍 Foco no local</span>
-        <span class="chip">🆓 Grátis para começar</span>
-      </div>
-
-      <!-- Botão Baixar o app (APK + PWA) -->
-      <div class="install-wrap">
-        <button id="btnInstall" type="button" aria-label="Baixar o app">
-          <span aria-hidden="true">📱</span> Baixar o app
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== RODAPÉ ===== -->
-  <footer role="contentinfo">
-    <nav class="foot-links" aria-label="Links do rodapé">
-      <a href="/termos.html">Termos</a>
-      <a href="/privacidade.html">Privacidade</a>
-      <a href="/top10.html">Top 10</a>
-      <a href="/planos.html">Planos</a>
-      <a href="/politica-de-seguranca.html">Segurança</a>
-      <a href="/favoritos.html">Favoritos</a>
-    </nav>
-    <div class="copy">© 2025 Autônoma.app — Todos os direitos reservados.</div>
-  </footer>
+    <!-- RODAPÉ -->
+    <footer role="contentinfo">
+      <nav class="foot-links" aria-label="Links do rodapé">
+        <a href="/termos.html">Termos</a>
+        <a href="/privacidade.html">Privacidade</a>
+        <a href="/top10.html">Top 10</a>
+        <a href="/planos.html">Planos</a>
+        <a href="/politica-de-seguranca.html">Segurança</a>
+        <a href="/favoritos.html">Favoritos</a>
+      </nav>
+      <div class="copy">© 2025 Autônoma.app — Todos os direitos reservados.</div>
+    </footer>
+  </div>
 
   <script>
-    /* ===== Service Worker ===== */
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07c').catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07d').catch(()=>{});
       });
     }
 
-    /* ===== Instalação APK + PWA ===== */
+    /* APK + PWA */
     (function(){
       const btn = document.getElementById('btnInstall');
       let deferredPrompt = null;
 
-      // Exibe botão quando houver evento de instalação PWA
       window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
         btn.classList.add('show');
       });
 
-      // Fallback: sempre mostra no Android (para baixar APK), sem esconder o PWA
       const isAndroid = /Android/i.test(navigator.userAgent);
       if (isAndroid) btn.classList.add('show');
 
       btn.addEventListener('click', async () => {
-        // se houver prompt PWA, tenta instalar
         if (deferredPrompt) {
           deferredPrompt.prompt();
           try { await deferredPrompt.userChoice; } catch {}
           deferredPrompt = null;
         } else {
-          // fallback: baixar APK local (se existir)
           window.location.href = '/app/autonoma.apk';
         }
       });
 
-      window.addEventListener('appinstalled', () => {
-        // esconde após instalar via PWA
-        btn.classList.remove('show');
-      });
+      window.addEventListener('appinstalled', () => btn.classList.remove('show'));
     })();
   </script>
 </body>
