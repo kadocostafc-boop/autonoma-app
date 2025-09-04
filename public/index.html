@@ -9,12 +9,12 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/css/app.css?v=home-2025-09-07g">
+  <link rel="stylesheet" href="/css/app.css?v=home-2025-09-07h">
 
   <style>
     :root{
-      --azul-escuro:#0b1f63;   /* header/rodapé */
-      --azul:#2D81FF;          /* fundo brilhante do hero */
+      --azul-escuro:#0b1f63;
+      --azul:#2D81FF;
       --azul-2:#1E6EF2;
       --txt:#0f172a;
     }
@@ -47,40 +47,37 @@
       display:flex; align-items:center;
       background:linear-gradient(180deg, var(--azul) 0%, var(--azul-2) 100%);
       color:#fff; text-align:center;
-      padding: clamp(24px, 5vw, 36px) 16px;
+      padding: clamp(24px, 5vw, 40px) 16px;
       margin-top:-1px;
     }
     .hero-inner{ max-width:960px; margin:0 auto; width:100%; }
 
-    /* Título 3D turbinado */
+    /* ===== Título 3D — MAIOR e com “depth” forte ===== */
     .brand-3d{
-      /* maior */
-      font-size:clamp(54px, 13vw, 104px);
+      font-size:clamp(64px, 15vw, 120px);   /* >> maior que os botões */
       font-weight:900;
-      line-height:1.06;           /* + espaçamento entre linhas do título */
+      line-height:1.06;
       letter-spacing:.2px;
       color:#fff;
-      /* “camadas” para dar profundidade + um leve deslocamento de perspectiva */
+      /* camadas: brilho, sombra média e sombra longa para “saltar” */
       text-shadow:
-        /* brilho suave próximo */
-        0 1px 0 #f3f7ff,
-        0 2px 0 #e8f0ff,
-        0 3px 0 #dfe9ff,
-        0 4px 0 #d3e1ff,
-        /* sombra média */
-        2px 8px 14px rgba(0,0,0,.35),
-        /* sombra longa (salta da tela) */
-        6px 20px 36px rgba(0,0,0,.48),
-        /* um “contorno” frio muito sutil */
-        0 0 24px rgba(180,205,255,.35);
-      margin:0 0 12px;
-      transform: perspective(900px) translateZ(8px); /* toque de 3D */
+        0 1px 0 #f7faff,
+        0 2px 0 #ecf3ff,
+        0 3px 0 #e1ecff,
+        0 4px 0 #d6e5ff,
+        0 6px 12px rgba(0,0,0,.30),
+        0 14px 26px rgba(0,0,0,.42),
+        0 28px 54px rgba(0,0,0,.55),
+        0 0 28px rgba(180,205,255,.35);
+      margin:0 0 14px;
+      /* leve perspectiva + “pull out” */
+      transform: perspective(900px) translateZ(14px);
     }
 
     .slogan{
-      margin:8px auto 14px;
+      margin:8px auto 16px;
       font-size:clamp(14px, 3.4vw, 18px);
-      line-height:1.45;           /* + espaçamento entre linhas do slogan */
+      line-height:1.45;
       opacity:.95;
       max-width:760px;
     }
@@ -101,10 +98,10 @@
     .btn-outline{ background:transparent; color:#fff; border:1.5px solid #ffffffcc; }
     .btn-outline:hover{ background:#ffffff18; }
 
-    /* botões mais estreitos */
-    .cta-narrow{ width:min(86%, 300px); padding:10px 14px; font-size:15px; }
+    /* botões mais estreitos que o título */
+    .cta-narrow{ width:min(82%, 280px); padding:10px 14px; font-size:15px; }
 
-    .chips{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:10px 0 0; }
+    .chips{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:12px 0 0; }
     .chip{
       display:inline-flex; align-items:center; gap:6px;
       padding:6px 10px; border:1px solid #ffffff33;
@@ -112,17 +109,20 @@
       backdrop-filter:blur(2px);
     }
 
-    .install-wrap{ margin-top:14px; display:flex; justify-content:center; }
+    .install-wrap{ margin-top:16px; display:flex; justify-content:center; }
     #btnInstall{
       display:none;
-      width:min(90%, 340px);
-      padding:12px 16px;
+      width:min(90%, 360px);
+      padding:14px 18px;
       background:var(--azul-escuro); color:#fff; border:1px solid #0a1a55;
-      border-radius:14px; font-weight:800; font-size:16px; gap:8px;
+      border-radius:14px; font-weight:800; font-size:16px;
+      /* garante centralização perfeita do texto, mesmo com ícone */
+      display:inline-flex; align-items:center; justify-content:center; gap:10px;
+      text-align:center;
     }
     #btnInstall.show{ display:inline-flex; }
 
-    /* ===== Rodapé (baixo) ===== */
+    /* ===== Footer ===== */
     footer{
       background:var(--azul-escuro); color:#cde1ff;
       padding:14px 10px;
@@ -139,7 +139,7 @@
     <!-- Header -->
     <header class="header" role="banner" aria-label="Cabeçalho">
       <div class="spacer"></div>
-      <a class="btn-enter" href="/painel_login.html?v=home-2025-09-07g">Entrar</a>
+      <a class="btn-enter" href="/painel_login.html?v=home-2025-09-07h">Entrar</a>
     </header>
 
     <!-- Hero -->
@@ -150,8 +150,8 @@
         <p class="slogan">Encontre profissionais confiáveis no seu bairro — simples, direto e rápido</p>
 
         <div class="ctas">
-          <a class="btn btn-white cta-narrow" href="/clientes.html?v=home-2025-09-07g">Cliente</a>
-          <a class="btn btn-outline cta-narrow" href="/cadastro.html?v=home-2025-09-07g">Cadastrar profissional</a>
+          <a class="btn btn-white cta-narrow" href="/clientes.html?v=home-2025-09-07h">Cliente</a>
+          <a class="btn btn-outline cta-narrow" href="/cadastro.html?v=home-2025-09-07h">Cadastrar profissional</a>
         </div>
 
         <div class="chips" aria-label="Vantagens">
@@ -162,13 +162,14 @@
 
         <div class="install-wrap">
           <button id="btnInstall" type="button" aria-label="Baixar o app">
-            <span aria-hidden="true">📱</span> Baixar o app
+            <span aria-hidden="true">📱</span>
+            <span>Baixar o app</span>
           </button>
         </div>
       </div>
     </section>
 
-    <!-- Rodapé -->
+    <!-- Footer -->
     <footer role="contentinfo">
       <nav class="foot-links" aria-label="Links do rodapé">
         <a href="/termos.html">Termos</a>
@@ -186,7 +187,7 @@
     /* SW */
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07g').catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07h').catch(()=>{});
       });
       let reloaded=false;
       navigator.serviceWorker.addEventListener('controllerchange', ()=>{
