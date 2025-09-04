@@ -12,19 +12,18 @@
   <link rel="icon" href="/favicon.ico">
 
   <!-- CSS global -->
-  <link rel="stylesheet" href="/css/app.css?v=home-2025-09-07b"/>
+  <link rel="stylesheet" href="/css/app.css?v=home-2025-09-07c"/>
 
   <style>
     :root{
       --azul-escuro:#0b1f63;     /* header/rodapé/botão baixar */
       --azul-brilho:#2D81FF;     /* gradiente hero */
       --azul-brilho-2:#1E6EF2;
-      --texto:#0f172a;
       --borda:#e5e7eb;
     }
 
-    /* ===== Reset e correção de “linha branca” ===== */
-    html,body{ margin:0; padding:0; background:#0b49c8; }
+    /* ===== Reset + evita “linha branca” + tira qualquer espaço no fim ===== */
+    html,body{ margin:0; padding:0; background:#0b49c8; height:auto; }
     img{ max-width:100%; display:block; }
 
     /* ===== Header ===== */
@@ -44,63 +43,67 @@
     /* ===== HERO ===== */
     .hero{
       background:linear-gradient(180deg,var(--azul-brilho) 0%, var(--azul-brilho-2) 100%);
-      color:#fff; text-align:left;
-      padding: clamp(28px,8vw,52px) 18px 28px;
-      margin-top:-1px; /* cola no header e mata hairline */
+      color:#fff;
+      padding: clamp(28px,8vw,52px) 18px 26px;
+      margin-top:-1px; /* cola no header */
     }
     .hero-inner{ max-width:720px; margin:0 auto; }
 
-    /* Título 3D */
+    /* Título 3D/“saltando” */
     .brand-3d{
-      font-size: clamp(44px, 11vw, 84px);
-      font-weight:900; line-height:1.02; letter-spacing:.2px; margin:0 0 12px;
+      font-size: clamp(48px, 12vw, 92px);
+      font-weight:900; line-height:1.02; letter-spacing:.2px; margin:0 0 8px;
       color:#fff;
+      /* extrusão + glow + sombra pesada */
       text-shadow:
-        0 1px 0 #e8efff,
-        0 2px 0 #d6e3ff,
-        0 3px 0 #c3d7ff,
-        0 4px 0 #aac8ff,
-        0 16px 34px rgba(0,0,0,.45); /* sombra escura que “salta” */
+        /* extrusão clara */
+        0 1px 0 #eef4ff, 0 2px 0 #deeaff, 0 3px 0 #cfe0ff, 0 4px 0 #c0d6ff,
+        /* glow suave */
+        0 0 10px rgba(255,255,255,.18),
+        /* sombras profundas que “levantam” o título */
+        0 14px 24px rgba(0,0,0,.35),
+        0 24px 44px rgba(0,0,0,.45);
+      filter: drop-shadow(0 6px 12px rgba(0,0,0,.25));
     }
 
-    .cta-stack{ display:flex; flex-direction:column; gap:12px; margin:18px 0 10px; }
+    /* Stack dos botões principais – menores que o título */
+    .cta-stack{
+      display:flex; flex-direction:column; gap:10px;
+      margin:16px 0 10px;
+      max-width:560px;
+    }
     .cta-big{
       appearance:none; border:none; cursor:pointer;
       width:100%;
       background:#fff; color:#0b1f63; font-weight:900;
-      padding:16px 18px; border-radius:18px; text-decoration:none; font-size:18px;
+      padding:14px 16px; border-radius:16px; text-decoration:none; font-size:17px;
       display:flex; align-items:center; gap:10px; justify-content:flex-start;
       box-shadow: 0 8px 20px rgba(0,0,0,.12);
     }
-    .cta-big .ico{ font-size:22px; }
+    .cta-big .ico{ font-size:20px; }
 
     /* Chips (vantagens) */
-    .chips{ display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 16px; }
+    .chips{ display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 14px; max-width:560px; }
     .chip{ display:inline-flex; align-items:center; gap:6px;
       padding:8px 12px; border:1px solid #ffffff3a; border-radius:999px;
       background:#ffffff14; color:#fff; font-size:13px; }
 
-    /* Slogan curto */
-    .slogan{ font-size:clamp(18px,3.2vw,24px); line-height:1.25; margin:8px 0 18px; }
+    /* Slogan */
+    .slogan{ font-size:clamp(18px,3.2vw,22px); line-height:1.25; margin:6px 0 14px; max-width:560px; }
 
-    /* Botão Baixar o app (prioridade visual) */
-    .download-wrap{ margin-top:8px; }
+    /* Botão Baixar o app */
+    .download-wrap{ margin-top:6px; max-width:560px; }
     .btn-download{
       width:100%;
       background:var(--azul-escuro); color:#fff; font-weight:900;
-      padding:16px 18px; border-radius:22px; text-decoration:none; font-size:18px;
+      padding:16px 18px; border-radius:20px; text-decoration:none; font-size:18px;
       border:1px solid #0a1a54;
       display:inline-flex; align-items:center; gap:10px; justify-content:center;
       box-shadow: 0 12px 28px rgba(0,0,0,.20);
     }
     .btn-download .ico{ font-size:20px; }
 
-    /* Lojinhas (opcional) */
-    .stores{ display:flex; gap:18px; align-items:center; justify-content:center;
-      opacity:.9; margin-top:10px; font-size:13px; }
-    .stores img{ height:22px; width:auto; }
-
-    /* Rodapé */
+    /* Rodapé – nada abaixo dele */
     footer{ padding:24px 12px; background:var(--azul-escuro); color:#cde1ff; }
     .foot-links{ display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
     .foot-links a{ color:#cde1ff; text-decoration:none; font-size:14px; }
@@ -112,7 +115,7 @@
 
   <!-- HEADER -->
   <header class="header" role="banner">
-    <a class="btn-enter" href="/painel_login.html?v=home-2025-09-07b">Entrar</a>
+    <a class="btn-enter" href="/painel_login.html?v=home-2025-09-07c">Entrar</a>
   </header>
 
   <!-- HERO -->
@@ -121,10 +124,10 @@
       <h1 class="brand-3d" aria-label="Autônoma">Autônoma</h1>
 
       <div class="cta-stack">
-        <a class="cta-big" href="/clientes.html?v=home-2025-09-07b">
+        <a class="cta-big" href="/clientes.html?v=home-2025-09-07c">
           <span class="ico">👤</span> <span>Cliente</span>
         </a>
-        <a class="cta-big" href="/cadastro.html?v=home-2025-09-07b">
+        <a class="cta-big" href="/cadastro.html?v=home-2025-09-07c">
           <span class="ico">🧰</span> <span>Cadastrar profissional</span>
         </a>
       </div>
@@ -137,17 +140,13 @@
       </div>
 
       <!-- Slogan -->
-      <p class="slogan">Tenha um profissional ao seu alcance — baixe agora</p>
+      <p class="slogan">Encontre profissionais confiáveis no seu bairro — simples, direto e rápido.</p>
 
       <!-- Baixar o app -->
       <div class="download-wrap">
         <a id="btnDownload" class="btn-download" href="/app/autonoma.apk" download>
           <span class="ico">⬇️</span> Baixar o app
         </a>
-        <div class="stores" aria-hidden="true">
-          <img src="/img/store-appstore.svg" alt="App Store" onerror="this.style.display='none'">
-          <img src="/img/store-googleplay.svg" alt="Google Play" onerror="this.style.display='none'">
-        </div>
       </div>
     </div>
   </section>
@@ -166,15 +165,15 @@
   </footer>
 
   <script>
-    // ===== Service Worker (PWA) =====
+    // ===== Service Worker =====
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        // força atualização para celulares “teimosos”
-        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07b').then(r=>r.update()).catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07c')
+          .then(r=>r.update()).catch(()=>{});
       });
     }
 
-    // ===== Botão “Baixar o app” com fallback para instalar PWA =====
+    // ===== Botão “Baixar o app”: APK + fallback PWA =====
     (function(){
       const btn = document.getElementById('btnDownload');
       let deferredPrompt = null;
@@ -182,12 +181,9 @@
       window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
-        // Se não existir APK no servidor, usaremos PWA
-        // (a tag <a> continua visível para ambos os casos).
       });
 
       btn.addEventListener('click', async (ev) => {
-        // Se houver o evento de PWA e for Android/Chrome, oferece instalar
         if (deferredPrompt && /Android|Linux/i.test(navigator.userAgent)) {
           ev.preventDefault();
           try{
@@ -195,9 +191,6 @@
             await deferredPrompt.userChoice;
           }catch(_){}
           deferredPrompt = null;
-        } else {
-          // Caso padrão: tenta baixar APK (se existir)
-          // Se o arquivo não existir, o navegador apenas mostrará 404.
         }
       });
     })();
