@@ -9,7 +9,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/css/app.css?v=home-2025-09-07e">
+  <link rel="stylesheet" href="/css/app.css?v=home-2025-09-07f">
 
   <style>
     :root{
@@ -19,22 +19,14 @@
       --txt:#0f172a;
     }
 
-    /* ===== Base + correção do espaço pós-rodapé ===== */
+    /* ===== Base (sem espaço abaixo do rodapé) ===== */
     html, body { height:100%; margin:0; background:var(--azul-escuro); }
     body { display:flex; }
     .page{
-      /* fallback */
-      min-height:100vh;
-      display:flex; flex-direction:column;
+      min-height:100vh; display:flex; flex-direction:column;
     }
-    /* usa a menor viewport para não sobrar espaço quando a barra aparece */
-    @supports (min-height: 100svh) {
-      .page { min-height:100svh; }
-    }
-    /* e acompanha a expansão quando a barra some */
-    @supports (min-height: 100dvh) {
-      .page { min-height:100dvh; }
-    }
+    @supports (min-height:100svh){ .page{ min-height:100svh; } }
+    @supports (min-height:100dvh){ .page{ min-height:100dvh; } }
 
     img{ max-width:100%; display:block; }
 
@@ -52,14 +44,16 @@
     }
     .btn-enter:hover{ background:#ffffff18; }
 
-    /* ===== Hero ===== */
+    /* ===== Hero (flexível, ocupa o miolo) ===== */
     .hero{
+      flex:1; /* ocupa o espaço entre header e footer */
+      display:flex; align-items:center; /* centraliza vertical */
       background:linear-gradient(180deg, var(--azul) 0%, var(--azul-2) 100%);
       color:#fff; text-align:center;
-      padding: clamp(36px, 8vw, 52px) 16px clamp(28px, 6vw, 40px);
+      padding: clamp(24px, 5vw, 36px) 16px; /* borda interna consistente */
       margin-top:-1px; /* cobre hairline entre header/hero */
     }
-    .hero-inner{ max-width:960px; margin:0 auto; }
+    .hero-inner{ max-width:960px; margin:0 auto; width:100%; }
 
     .brand-3d{
       font-size:clamp(44px, 11vw, 88px);
@@ -75,12 +69,13 @@
     }
 
     .slogan{
-      margin:6px auto 14px;
+      margin:6px auto 12px;
       font-size:clamp(14px, 3.4vw, 18px);
       line-height:1.35; opacity:.95;
+      max-width:760px;
     }
 
-    .ctas{ display:flex; flex-direction:column; align-items:center; gap:10px; margin:12px auto 6px; }
+    .ctas{ display:flex; flex-direction:column; align-items:center; gap:10px; margin:10px auto 8px; }
     .btn{
       border:none; cursor:pointer; text-decoration:none;
       display:inline-flex; align-items:center; justify-content:center;
@@ -94,7 +89,7 @@
     .btn-outline:hover{ background:#ffffff18; }
     .cta-narrow{ width:min(92%, 340px); padding:12px 14px; font-size:16px; }
 
-    .chips{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:12px 0 0; }
+    .chips{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:10px 0 0; }
     .chip{
       display:inline-flex; align-items:center; gap:6px;
       padding:6px 10px; border:1px solid #ffffff33;
@@ -112,15 +107,16 @@
     }
     #btnInstall.show{ display:inline-flex; }
 
-    /* ===== Rodapé ===== */
+    /* ===== Rodapé (mais baixo) ===== */
     footer{
       background:var(--azul-escuro); color:#cde1ff;
-      padding:24px 12px; margin-top:auto; /* cola no fim */
+      padding:14px 10px;   /* << reduzido */
+      margin-top:auto;
     }
-    .foot-links{ display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
-    .foot-links a{ color:#cde1ff; font-size:14px; text-decoration:none; }
+    .foot-links{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+    .foot-links a{ color:#cde1ff; font-size:13px; text-decoration:none; }
     .foot-links a:hover{ text-decoration:underline; }
-    .copy{ text-align:center; font-size:12px; color:#b8cffc; margin-top:8px; }
+    .copy{ text-align:center; font-size:11.5px; color:#b8cffc; margin-top:6px; }
   </style>
 </head>
 <body>
@@ -128,7 +124,7 @@
     <!-- Header -->
     <header class="header" role="banner" aria-label="Cabeçalho">
       <div class="spacer"></div>
-      <a class="btn-enter" href="/painel_login.html?v=home-2025-09-07e">Entrar</a>
+      <a class="btn-enter" href="/painel_login.html?v=home-2025-09-07f">Entrar</a>
     </header>
 
     <!-- Hero -->
@@ -137,8 +133,8 @@
         <h1 class="brand-3d" aria-label="Autônoma">Autônoma</h1>
 
         <div class="ctas">
-          <a class="btn btn-white cta-narrow" href="/clientes.html?v=home-2025-09-07e">Cliente</a>
-          <a class="btn btn-outline cta-narrow" href="/cadastro.html?v=home-2025-09-07e">Cadastrar profissional</a>
+          <a class="btn btn-white cta-narrow" href="/clientes.html?v=home-2025-09-07f">Cliente</a>
+          <a class="btn btn-outline cta-narrow" href="/cadastro.html?v=home-2025-09-07f">Cadastrar profissional</a>
         </div>
 
         <div class="chips" aria-label="Vantagens">
@@ -175,12 +171,11 @@
     /* SW */
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07e').catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07f').catch(()=>{});
       });
-      /* força recarregar quando o SW novo assumir (evita layout antigo) */
-      let reloaded = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!reloaded) { reloaded = true; location.reload(); }
+      let reloaded=false;
+      navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+        if(!reloaded){ reloaded=true; location.reload(); }
       });
     }
 
