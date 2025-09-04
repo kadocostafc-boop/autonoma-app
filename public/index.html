@@ -3,14 +3,13 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Autônoma.app — Encontre profissionais confiáveis no seu bairro</title>
+  <title>Autônoma.app • Encontre profissionais confiáveis no seu bairro</title>
 
-  <!-- PWA / tema -->
   <meta name="theme-color" content="#0b1f63">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/css/app.css?v=home-2025-09-07s"/>
+  <link rel="stylesheet" href="/css/app.css?v=home-2025-09-07r"/>
 
   <style>
     :root{
@@ -42,7 +41,7 @@
     }
     .btn-enter:hover{ background:#ffffff18; }
 
-    /* ===== Hero ===== */
+    /* ===== Hero (cobre toda a largura) ===== */
     .hero{
       flex:1;
       display:flex; align-items:center; justify-content:center;
@@ -50,27 +49,24 @@
       color:#fff; text-align:center;
       padding: clamp(20px, 5vw, 48px) clamp(16px, 6vw, 48px);
       margin-top:-1px;   /* gruda no header sem filete */
-      min-height: clamp(560px, 82dvh, 800px);
+      min-height: clamp(520px, 82dvh, 760px);
     }
+    /* em telas largas, garante altura visual equilibrada entre header/hero/footer */
     @media (min-width:1024px){
       .hero{ min-height: calc(100dvh - 56px - 96px); }
     }
 
     .hero-inner{
       width:100%;
-      max-width:1100px;
+      max-width:1100px;   /* + largo no desktop */
       margin:0 auto;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      gap:16px; /* espaçamento base entre blocos no MOBILE */
     }
 
-    /* ===== Título 3D ===== */
+    /* ===== Título 3D – mais forte em desktop ===== */
     .brand-3d{
-      font-size:clamp(68px, 14vw, 160px);  /* grande em desktop */
+      font-size:clamp(64px, 14vw, 150px);   /* MAIOR no desktop */
       font-weight:900;
-      line-height:1.04;
+      line-height:1.06;
       letter-spacing:.2px;
       color:#fff;
       text-shadow:
@@ -81,39 +77,34 @@
         0 8px 16px rgba(0,0,0,.30),
         0 18px 34px rgba(0,0,0,.44),
         0 36px 66px rgba(0,0,0,.58),
-        0 0 34px rgba(175,205,255,.40);
-      margin:0 0 6px;
-      transform: perspective(900px) translateZ(18px);
+        0 0 32px rgba(175,205,255,.38);
+      margin:0 0 14px;
+      transform: perspective(900px) translateZ(16px);
     }
     @media (min-width:1024px){
       .brand-3d{
         text-shadow:
           0 1px 0 #ffffff,
           0 3px 0 #e9f1ff,
-          0 8px 16px rgba(0,0,0,.35),
+          0 6px 12px rgba(0,0,0,.35),
           0 22px 42px rgba(0,0,0,.52),
           0 48px 96px rgba(0,0,0,.62),
-          0 0 46px rgba(160,200,255,.46);
-        transform: perspective(900px) translateZ(28px); /* “salta” mais */
-        margin-bottom: 10px;
+          0 0 42px rgba(160,200,255,.42);
+        transform: perspective(900px) translateZ(24px); /* “salta” mais */
       }
     }
 
     .slogan{
-      margin:8px auto 12px;
+      margin:10px auto 18px;
       font-size:clamp(14px, 2.8vw, 20px);
       line-height:1.45;
       opacity:.95;
       max-width:860px;
     }
 
-    /* ===== CTAs ===== */
     .ctas{
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      gap:16px;           /* ~4mm no celular */
-      margin:12px auto 6px;
+      display:flex; flex-direction:column; align-items:center;
+      gap:12px; margin:12px auto 10px;
     }
     .btn{
       border:none; cursor:pointer; text-decoration:none;
@@ -127,15 +118,13 @@
     .btn-outline{ background:transparent; color:#fff; border:1.5px solid #ffffffcc; }
     .btn-outline:hover{ background:#ffffff18; }
 
-    /* Largura dos botões — mais estreitos que o título */
+    /* botões mais estreitos que o título */
     .cta-narrow{ width:min(82%, 320px); padding:10px 14px; font-size:15px; }
     @media (min-width:1024px){
       .cta-narrow{ width:min(40vw, 420px); font-size:16px; }
-      .ctas{ gap:24px; margin:22px auto 10px; } /* + respiro no desktop */
     }
 
-    /* ===== Chips ===== */
-    .chips{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:8px 0 0; }
+    .chips{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:12px 0 0; }
     .chip{
       display:inline-flex; align-items:center; gap:6px;
       padding:6px 10px; border:1px solid #ffffff33;
@@ -143,10 +132,9 @@
       backdrop-filter:blur(2px);
     }
 
-    /* ===== Botão Baixar app ===== */
     .install-wrap{ margin-top:16px; display:flex; justify-content:center; }
     #btnInstall{
-      display:none; /* será mostrado via JS */
+      display:none;
       width:min(92%, 420px);
       padding:14px 18px;
       background:var(--azul-escuro); color:#fff; border:1px solid #0a1a55;
@@ -156,7 +144,7 @@
     }
     #btnInstall.show{ display:inline-flex; }
 
-    /* ===== Footer (enxuto, sem faixa extra) ===== */
+    /* ===== Footer enxuto ===== */
     footer{
       background:var(--azul-escuro); color:#cde1ff;
       padding:12px 10px;
@@ -173,7 +161,7 @@
     <!-- Header -->
     <header class="header" role="banner" aria-label="Cabeçalho">
       <div class="spacer"></div>
-      <a class="btn-enter" href="/painel_login.html?v=home-2025-09-07s">Entrar</a>
+      <a class="btn-enter" href="/painel_login.html?v=home-2025-09-07r">Entrar</a>
     </header>
 
     <!-- Hero -->
@@ -184,19 +172,19 @@
         <p class="slogan">Encontre profissionais confiáveis no seu bairro — simples, direto e rápido</p>
 
         <div class="ctas">
-          <a class="btn btn-white cta-narrow" href="/clientes.html?v=home-2025-09-07s">Cliente</a>
-          <a class="btn btn-outline cta-narrow" href="/cadastro.html?v=home-2025-09-07s">Cadastrar profissional</a>
+          <a class="btn btn-white cta-narrow" href="/clientes.html?v=home-2025-09-07r">Cliente</a>
+          <a class="btn btn-outline cta-narrow" href="/cadastro.html?v=home-2025-09-07r">Cadastrar profissional</a>
         </div>
 
         <div class="chips" aria-label="Vantagens">
-          <span class="chip">&#9989; Sem burocracia</span>
-          <span class="chip">&#128205; Foco no local</span>
-          <span class="chip">&#127379; Grátis para começar</span>
+          <span class="chip">✅ Sem burocracia</span>
+          <span class="chip">📍 Foco no local</span>
+          <span class="chip">🆓 Grátis para começar</span>
         </div>
 
         <div class="install-wrap">
           <button id="btnInstall" type="button" aria-label="Baixar o app">
-            <span aria-hidden="true">&#128241;</span>
+            <span aria-hidden="true">📱</span>
             <span>Baixar o app</span>
           </button>
         </div>
@@ -218,10 +206,10 @@
   </div>
 
   <script>
-    /* Service Worker (com auto-reload quando atualizar) */
+    /* SW com auto-reload quando atualizar */
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07s').catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07r').catch(()=>{});
       });
       let reloaded=false;
       navigator.serviceWorker.addEventListener('controllerchange', ()=>{
@@ -229,7 +217,7 @@
       });
     }
 
-    /* APK + PWA (botão Baixar o app) */
+    /* APK + PWA */
     (function(){
       const btn = document.getElementById('btnInstall');
       let deferredPrompt = null;
@@ -241,7 +229,7 @@
       });
 
       const isAndroid = /Android/i.test(navigator.userAgent);
-      if (isAndroid) btn.classList.add('show');   // sempre mostrar botão no Android
+      if (isAndroid) btn.classList.add('show');
 
       btn.addEventListener('click', async () => {
         if (deferredPrompt) {
@@ -249,7 +237,6 @@
           try { await deferredPrompt.userChoice; } catch {}
           deferredPrompt = null;
         } else {
-          // fallback APK
           window.location.href = '/app/autonoma.apk';
         }
       });
