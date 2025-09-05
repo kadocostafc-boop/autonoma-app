@@ -18,7 +18,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
 
   <!-- CSS global -->
-  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/app.css?v=cadastro-2025-09-08r">
 
   <style>
     /* Ajustes locais */
@@ -29,7 +29,11 @@
     .row-wrap { display:flex; gap:10px; flex-wrap:wrap }
     .field-50 { flex:1 1 220px }
     .avatar-preview{ width:84px;height:84px;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb;background:#f8fafc }
+    .doc-preview{ width:120px;height:84px;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb;background:#f8fafc }
     .warn { color:#b91c1c }
+    .gps-pill { display:inline-flex; align-items:center; gap:8px; background:#eef2ff; border:1px solid #c7d2fe; color:#0b1f63; padding:6px 10px; border-radius:12px }
+    .btn.small { padding:8px 12px; font-size:14px }
+    .muted { color:#64748b; font-size:12px }
   </style>
 </head>
 <body>
@@ -51,29 +55,52 @@
 
   <div class="card" style="max-width:880px;margin:auto">
     <form id="formCad" action="/cadastrar" method="POST" enctype="multipart/form-data" novalidate>
-      <!-- Foto -->
-      <label for="foto">Foto de perfil (opcional)</label>
+      <!-- Foto (OBRIGATÓRIA) -->
+      <label for="foto">Foto de perfil <strong>(obrigatória)</strong></label>
       <div class="row-wrap" style="align-items:center">
-        <img id="fotoPrev" class="avatar-preview" src="https://via.placeholder.com/160?text=Foto" alt="Prévia da foto">
-        <input id="foto" name="foto" type="file" accept="image/*">
+        <img id="fotoPrev" class="avatar-preview" src="/icons/icon-192.png" alt="Prévia da foto">
+        <input id="foto" name="foto" type="file" accept="image/*" required aria-required="true">
       </div>
-      <p class="help">Formatos: JPG ou PNG, até 3MB.</p>
+      <p class="help">Formatos: JPG ou PNG, até 3MB. A foto é necessária para dar mais confiança ao cliente.</p>
+
+      <!-- Selo verificado -->
+      <div class="row-wrap" style="align-items:flex-start">
+        <label class="gps-pill" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534">
+          <input id="wantSelo" type="checkbox" style="transform:translateY(1px)">
+          Quero selo verificado
+        </label>
+        <span id="seloHint" class="muted">Para análise do selo, envie um documento com foto (RG, CNH, passaporte).</span>
+      </div>
+
+      <div id="docWrap" style="display:none; margin-top:8px">
+        <label for="doc">Documento com foto <span class="muted">(obrigatório se quiser o selo)</span></label>
+        <div class="row-wrap" style="align-items:center">
+          <img id="docPrev" class="doc-preview" src="/img/doc-placeholder.png" alt="Prévia do documento" onerror="this.style.display='none'">
+          <input id="doc" name="doc" type="file" accept="image/*,application/pdf">
+        </div>
+        <p class="help">Foto legível do documento. Aceitamos imagem (JPG/PNG) ou PDF.</p>
+      </div>
 
       <!-- Nome -->
       <label for="nome">Seu nome completo *</label>
       <input id="nome" name="nome" type="text" maxlength="80" required placeholder="Ex.: Ana Souza">
 
-      <!-- Cidade / Bairro -->
+      <!-- GPS / Cidade / Bairro -->
+      <div class="row-wrap" style="align-items:center; gap:10px; margin-top:4px">
+        <button type="button" id="btnGPS" class="btn small" aria-describedby="gpsStatus">Usar minha localização</button>
+        <span id="gpsStatus" class="muted">GPS desativado.</span>
+      </div>
+
       <div class="row-wrap">
         <div class="field-50">
           <label for="cidade">Cidade *</label>
-          <input id="cidade" name="cidade" type="text" list="lista-cidades" required placeholder="Ex.: Rio de Janeiro / RJ">
+          <input id="cidade" name="cidade" type="text" list="lista-cidades" required placeholder="Ex.: Rio de Janeiro/RJ" autocomplete="off">
           <datalist id="lista-cidades"></datalist>
           <p class="help">Digite e escolha na lista. Aceitamos “Cidade/UF” ou só “Cidade”.</p>
         </div>
         <div class="field-50">
           <label for="bairro">Bairro *</label>
-          <input id="bairro" name="bairro" type="text" list="lista-bairros" required placeholder="Ex.: Copacabana">
+          <input id="bairro" name="bairro" type="text" list="lista-bairros" required placeholder="Ex.: Copacabana" autocomplete="off">
           <datalist id="lista-bairros"></datalist>
           <p class="help">Depois de escolher a cidade, este campo sugere bairros automaticamente.</p>
         </div>
@@ -83,7 +110,7 @@
       <div class="row-wrap">
         <div class="field-50">
           <label for="servico">Categoria/Serviço (recomendado)</label>
-          <input id="servico" name="servico" type="text" list="lista-servicos" placeholder="Ex.: Eletricista">
+          <input id="servico" name="servico" type="text" list="lista-servicos" placeholder="Ex.: Eletricista" autocomplete="off">
           <datalist id="lista-servicos"></datalist>
         </div>
         <div class="field-50">
@@ -99,7 +126,7 @@
           <label for="whatsapp">WhatsApp (com DDD) *</label>
           <input id="whatsapp" name="whatsapp" type="tel" required inputmode="tel" placeholder="Ex.: (21) 98765-4321">
           <div id="whatsPrev" class="preview"></div>
-          <p class="help">Pode colar com espaços/parênteses/traços. Nós formatamos automaticamente e adicionamos o +55.</p>
+          <p class="help">Pode colar com espaços/parênteses/traços. Formatamos automaticamente e adicionamos o +55.</p>
         </div>
         <div class="field-50">
           <label for="telefone">Telefone (opcional)</label>
@@ -139,7 +166,7 @@
       <label for="descricao">Sobre você *</label>
       <textarea id="descricao" name="descricao" maxlength="600" required placeholder="Descreva seu trabalho, diferenciais e área de atendimento."></textarea>
 
-      <!-- Lat/Lng (ocultos, se usar GPS no futuro) -->
+      <!-- Lat/Lng (ocultos, preenchidos via GPS) -->
       <input type="hidden" id="lat" name="lat">
       <input type="hidden" id="lng" name="lng">
 
@@ -147,6 +174,7 @@
         <button class="btn" type="submit">Cadastrar</button>
         <a class="btn ghost" href="/clientes.html">Cancelar</a>
       </div>
+
       <p id="err" class="meta warn" style="display:none;margin-top:8px"></p>
     </form>
   </div>
@@ -156,28 +184,142 @@
 (function(){
   const $ = (id)=> document.getElementById(id);
   const err = $("err");
+  const NO_STORE = { cache:'no-store' };
+  const ts = ()=> 'ts='+Date.now();
 
-  // --- Foto preview ---
+  // --- Foto preview (OBRIGATÓRIA) ---
   const foto = $("foto"), fotoPrev = $("fotoPrev");
-  if (foto){ foto.addEventListener("change", ()=>{ const f=foto.files?.[0]; if(!f){ fotoPrev.src="https://via.placeholder.com/160?text=Foto"; return; } const url=URL.createObjectURL(f); fotoPrev.src=url; }); }
+  if (foto){
+    foto.addEventListener("change", ()=>{
+      const f=foto.files?.[0];
+      if(!f){ fotoPrev.src="/icons/icon-192.png"; return; }
+      const url=URL.createObjectURL(f);
+      fotoPrev.src=url;
+    });
+  }
 
-  // --- Lists dinâmicas ---
-  async function fillCities(){ try{ const r=await fetch("/api/geo/cidades"); if(!r.ok) return; const arr=await r.json(); $("lista-cidades").innerHTML = (arr||[]).map(c=>`<option value="${c}">`).join(""); }catch{} }
-  async function fillServicos(){ try{ const r=await fetch("/api/geo/servicos"); if(!r.ok) return; const arr=await r.json(); $("lista-servicos").innerHTML = (arr||[]).map(s=>`<option value="${s}">`).join(""); }catch{} }
-  async function refreshBairros(){ const cid = $("cidade").value.trim(); if(!cid) return; try{ const r=await fetch("/api/geo/bairros?cidade="+encodeURIComponent(cid)); if(!r.ok) return; const arr=await r.json(); $("lista-bairros").innerHTML = (arr||[]).map(b=>`<option value="${b}">`).join(""); }catch{} }
+  // --- Documento preview (opcional / obrigatório se quiser selo) ---
+  const wantSelo = $("wantSelo");
+  const docWrap = $("docWrap");
+  const doc = $("doc");
+  const docPrev = $("docPrev");
+
+  wantSelo.addEventListener("change", ()=>{
+    const on = wantSelo.checked;
+    docWrap.style.display = on ? "" : "none";
+    doc.required = on;
+    doc.setAttribute("aria-required", on ? "true" : "false");
+  });
+
+  if (doc){
+    doc.addEventListener("change", ()=>{
+      const f=doc.files?.[0];
+      if(!f){ docPrev.style.display="none"; return; }
+      // mostra preview apenas se imagem
+      if (f.type && f.type.startsWith("image/")){
+        docPrev.style.display="";
+        const url=URL.createObjectURL(f);
+        docPrev.src=url;
+      } else {
+        docPrev.style.display="none";
+      }
+    });
+  }
+
+  // --- Lists dinâmicas + sugestões ---
+  async function fillCities(){
+    try{
+      const r=await fetch("/api/geo/cidades?"+ts(), NO_STORE);
+      if(!r.ok) return;
+      const arr=await r.json();
+      $("lista-cidades").innerHTML = (arr||[]).map(c=>`<option value="${escapeHtml(c)}">`).join("");
+    }catch{}
+  }
+  async function refreshBairros(){
+    const cid = $("cidade").value.trim();
+    if(!cid){ $("lista-bairros").innerHTML=""; return; }
+    try{
+      const r=await fetch("/api/geo/bairros?cidade="+encodeURIComponent(cid)+"&"+ts(), NO_STORE);
+      if(!r.ok) return;
+      const arr=await r.json();
+      $("lista-bairros").innerHTML = (arr||[]).map(b=>`<option value="${escapeHtml(b)}">`).join("");
+    }catch{}
+  }
+  async function suggestBairros(q){
+    const cid = $("cidade").value.trim();
+    if(!cid || !q) return;
+    try{
+      const r=await fetch(`/api/geo/bairros/suggest?cidade=${encodeURIComponent(cid)}&q=${encodeURIComponent(q)}&${ts()}`, NO_STORE);
+      if(!r.ok) return;
+      const arr=await r.json();
+      $("lista-bairros").innerHTML = (arr||[]).map(b=>`<option value="${escapeHtml(b)}">`).join("");
+    }catch{}
+  }
+  async function suggestServicos(q){
+    if(!q) return;
+    try{
+      const r=await fetch(`/api/geo/servicos/suggest?q=${encodeURIComponent(q)}&${ts()}`, NO_STORE);
+      if(!r.ok) return;
+      const arr=await r.json();
+      $("lista-servicos").innerHTML = (arr||[]).map(s=>`<option value="${escapeHtml(s)}">`).join("");
+    }catch{}
+  }
   $("cidade").addEventListener("change", refreshBairros);
-  fillCities(); fillServicos();
+  $("bairro").addEventListener("input", e=> suggestBairros(e.target.value.trim()));
+  $("servico").addEventListener("input", e=> suggestServicos(e.target.value.trim()));
+  fillCities();
+
+  // --- GPS (preenche cidade e lat/lng) ---
+  const btnGPS = $("btnGPS");
+  const gpsStatus = $("gpsStatus");
+  function isSecureForGeo(){
+    return location.hostname==='localhost' || location.hostname==='127.0.0.1' || (window.isSecureContext===true);
+  }
+  async function resolveCityByGPS(lat,lng){
+    try{
+      const r=await fetch(`/api/geo/closest-city?lat=${lat}&lng=${lng}&${ts()}`, NO_STORE);
+      const js=await r.json();
+      if(js&&js.ok&&js.cidade){
+        $("cidade").value = js.cidade;
+        await refreshBairros();
+        gpsStatus.textContent = `Localização detectada: ${js.cidade}`;
+      }else{
+        gpsStatus.textContent = "Não foi possível identificar sua cidade.";
+      }
+    }catch{
+      gpsStatus.textContent = "Falha ao consultar a cidade.";
+    }
+  }
+  btnGPS.addEventListener("click", ()=>{
+    if(!isSecureForGeo()){
+      gpsStatus.textContent = "Para usar GPS, acesse via HTTPS ou localhost.";
+      return;
+    }
+    if(!('geolocation' in navigator)){
+      gpsStatus.textContent = "Seu navegador não suporta geolocalização.";
+      return;
+    }
+    gpsStatus.textContent = "Solicitando localização…";
+    navigator.geolocation.getCurrentPosition(async pos=>{
+      const lat = pos.coords.latitude, lng = pos.coords.longitude;
+      $("lat").value = String(lat);
+      $("lng").value = String(lng);
+      gpsStatus.textContent = "Localização obtida.";
+      if(!$("cidade").value.trim()) await resolveCityByGPS(lat,lng);
+    }, _=>{
+      gpsStatus.textContent = "Não foi possível obter a localização.";
+    }, {enableHighAccuracy:true,timeout:12000,maximumAge:30000});
+  });
 
   // --- Normalização BR: remove não-dígitos; adiciona 55 se vier só DDD+número ---
   function onlyDigits(s){ return String(s||"").replace(/\D/g,""); }
   function ensureBR(dig){
     if (!dig) return "";
-    if (dig.startsWith("55")) return dig;               // já com Brasil
+    if (dig.startsWith("55")) return dig;                 // já com Brasil
     if (dig.length===10 || dig.length===11) return "55"+dig; // DDD + 8/9 dígitos
     return dig; // outros casos (deixa como está)
   }
   function isValidBR(digCom55){ return /^\d{12,13}$/.test(digCom55); } // 55 + 2 + 8/9
-
   // Formatação bonitinha: +55 (21) 98765-4321 ou +55 (21) 3456-7890
   function formatPrettyBR(digCom55){
     if (!/^\d{12,13}$/.test(digCom55)) return "";
@@ -190,8 +332,6 @@
       return `+${cc} (${ddd}) ${rest.slice(0,4)}-${rest.slice(4)}`;
     }
   }
-
-  // Atualiza preview e normaliza on-the-fly
   function bindPhoneInput(inputId, prevId){
     const input = $(inputId);
     const prev  = $(prevId);
@@ -204,27 +344,48 @@
       else if (dig.length){
         prev.textContent = "Formato inválido — digite com DDD. Ex.: (21) 98765-4321";
         prev.style.color="#b91c1c";
-      } else {
-        prev.textContent = "";
-      }
+      } else { prev.textContent = ""; }
     }
     input.addEventListener("input", update);
     input.addEventListener("blur", ()=>{
       const dig = onlyDigits(input.value);
       const with55 = ensureBR(dig);
-      // se válido, persistimos no input (para evitar rejeição do servidor)
-      if (isValidBR(with55)) input.value = with55;
+      if (isValidBR(with55)) input.value = with55; // persiste normalizado
       update();
     });
     update();
   }
   bindPhoneInput("whatsapp","whatsPrev");
-  bindPhoneInput("telefone","telPrev"); // telefone é opcional, mas já normaliza se o usuário quiser
+  bindPhoneInput("telefone","telPrev"); // opcional
+
+  // --- Escapar simples para datalist ---
+  function escapeHtml(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
 
   // --- Envio com validação mínima no front (o back valida de verdade) ---
   const form = $("formCad");
   form.addEventListener("submit", (e)=>{
     err.style.display="none"; err.textContent="";
+
+    // Foto obrigatória
+    if (!foto.files || !foto.files[0]){
+      e.preventDefault();
+      err.textContent = "Envie uma foto de perfil (JPG/PNG até 3MB).";
+      err.style.display = "";
+      foto.focus();
+      return;
+    }
+
+    // Se quer selo, exigir documento
+    if (wantSelo.checked){
+      if (!doc.files || !doc.files[0]){
+        e.preventDefault();
+        err.textContent = "Para solicitar o selo verificado, envie um documento com foto.";
+        err.style.display = "";
+        doc.focus();
+        return;
+      }
+    }
+
     // Normaliza telefone/whatsapp antes de enviar
     const wIn = $("whatsapp"), tIn = $("telefone");
     const wWith55 = ensureBR( onlyDigits(wIn.value) );
@@ -236,6 +397,7 @@
       return;
     }
     wIn.value = wWith55;
+
     const tDig = onlyDigits(tIn.value);
     if (tDig){
       const tWith55 = ensureBR(tDig);
@@ -248,6 +410,7 @@
       }
       tIn.value = tWith55;
     }
+
     // Campos obrigatórios
     if (!$("nome").value.trim()){
       e.preventDefault(); err.textContent="Informe seu nome."; err.style.display=""; $("nome").focus(); return;
@@ -266,7 +429,17 @@
     }
     // passa — o servidor trata o resto
   });
+
 })();
+</script>
+
+<!-- SW: manter registrado (não obrigatório aqui, mas ajuda no mobile) -->
+<script>
+if ('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('/sw.js?v=cadastro-2025-09-08r').catch(()=>{});
+  });
+}
 </script>
 </body>
 </html>
