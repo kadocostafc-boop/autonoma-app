@@ -1,81 +1,248 @@
-// sw.js — Autônoma.app (v22)
-// Estratégia: network-first p/ estáticos, network-only p/ APIs.
-// Garante Response sempre válido e nunca intercepta POST/PUT etc.
+// sw.js — Autônoma.app (v36)
+// Estrat.: 
+//  - APIs:       network-only (sem cache)
+//  - HTML:       network-first com fallback offline
+//  - CSS/JS/ICONS: stale-while-revalidate
+//  - IMAGENS:    cache-first com LRU (limite) + fallback
+//  - APK:        sempre rede (no-store)
+// Obs.: não intercepta métodos ≠ GET
 
-const VERSION = 'v22';
-const CACHE_NAME = 'autonoma-' + VERSION;
+const VERSION = 'v36';
+const CACHE_STATIC = `autonoma-static-${VERSION}`;
+const CACHE_HTML   = `autonoma-html-${VERSION}`;
+const CACHE_IMG    = `autonoma-img-${VERSION}`;
+const ALL_CACHES   = [CACHE_STATIC, CACHE_HTML, CACHE_IMG];
 
 const CORE = [
-  '/', '/index.html', '/css/app.css', '/img/logo.png', '/favicon.ico',
-  '/clientes.html', '/cadastro.html', '/favoritos.html', '/cadastro_sucesso.html', '/denunciar.html',
-  '/termos-de-uso.html', '/politica-de-privacidade.html',
-  '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'
+  '/', '/index.html',
+  '/css/app.css',
+  '/img/logo.png',
+  '/favicon.ico',
+  '/clientes.html', '/cadastro.html', '/favoritos.html',
+  '/cadastro_sucesso.html', '/denunciar.html',
+  '/manifest.webmanifest',
+  '/icons/icon-192.png', '/icons/icon-512.png'
 ];
 
-const OFFLINE_HTML = `<!doctype html><meta charset="utf-8">
-<title>Autônoma.app</title>
-<body style="font-family:system-ui,Arial,sans-serif;padding:20px">
-<h1>Você está offline</h1>
-<p>Tente novamente quando sua conexão voltar.</p>
-</body>`;
+const OFFLINE_HTML =
+  `<!doctype html><meta charset="utf-8"><title>Autônoma.app</title>` +
+  `<body style="font-family:system-ui,Arial,sans-serif;padding:20px">` +
+  `<h1>Você está offline</h1><p>Tente novamente quando sua conexão voltar.</p></body>`;
 
+const IMG_FALLBACK = '/icons/icon-192.png';
+
+// ------------------------------ Utils ------------------------------
+function isAPI(url) {
+  return url.pathname.startsWith('/api/');
+}
+function isAPK(url) {
+  return url.pathname.endsWith('.apk') || url.pathname.startsWith('/app/') && url.pathname.endsWith('.apk');
+}
+function isHTML(req, url) {
+  // Treat navigations and .html as HTML
+  return req.mode === 'navigate' ||
+         url.pathname.endsWith('.html') ||
+         (req.headers.get('accept') || '').includes('text/html');
+}
+function isStaticAsset(url) {
+  // CSS/JS/ico/png/svg/json/manifest etc (não inclui /uploads/)
+  if (url.pathname.startsWith('/uploads/')) return false;
+  return /\.(css|js|ico|png|svg|webp|jpg|jpeg|gif|json|webmanifest)$/i.test(url.pathname);
+}
+function isImage(url) {
+  return /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(url.pathname) || url.pathname.startsWith('/uploads/');
+}
+
+async function putCache(cacheName, req, res) {
+  try {
+    const c = await caches.open(cacheName);
+    await c.put(req, res.clone());
+  } catch {}
+}
+
+async function cleanOldCaches() {
+  const names = await caches.keys();
+  await Promise.all(names.map(n => {
+    if (!ALL_CACHES.includes(n)) return caches.delete(n);
+  }));
+}
+
+async function limitCacheSize(cacheName, maxEntries = 80) {
+  try {
+    const cache = await caches.open(cacheName);
+    const keys = await cache.keys();
+    if (keys.length <= maxEntries) return;
+    // Remove os mais antigos
+    const remove = keys.length - maxEntries;
+    for (let i = 0; i < remove; i++) {
+      await cache.delete(keys[i]);
+    }
+  } catch {}
+}
+
+// Broadcast para todos os clients (p/ avisar update)
+async function broadcast(type, data) {
+  try {
+    const clients = await self.clients.matchAll({ includeUncontrolled: true });
+    for (const client of clients) {
+      client.postMessage({ type, ...data });
+    }
+  } catch {}
+}
+
+// ------------------------------ Install ------------------------------
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
-    try { const cache = await caches.open(CACHE_NAME); await cache.addAll(CORE); } catch {}
+    try {
+      const cache = await caches.open(CACHE_STATIC);
+      await cache.addAll(CORE);
+    } catch {}
+    // Navigation Preload ajuda muito em mobile
+    if ('navigationPreload' in self.registration) {
+      try { await self.registration.navigationPreload.enable(); } catch {}
+    }
     self.skipWaiting();
   })());
 });
 
+// ------------------------------ Activate ------------------------------
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
-    const names = await caches.keys();
-    await Promise.all(names.map(n => n !== CACHE_NAME ? caches.delete(n) : null));
-    self.clients.claim();
+    await cleanOldCaches();
+    await self.clients.claim();
+    await broadcast('SW_ACTIVATED', { version: VERSION });
   })());
 });
 
-async function safeHandle(request) {
-  const url = new URL(request.url);
+// ------------------------------ Fetch Strategy ------------------------------
+async function networkOnly(req) {
+  // Usado p/ APIs e APK (sem cache)
+  return fetch(req);
+}
 
-  // 🔴 APIs: sempre rede, sem cache
-  if (url.pathname.startsWith('/api/')) {
-    try { return await fetch(request); }
-    catch { return new Response('', { status: 504, statusText: 'Gateway Timeout' }); }
-  }
-
-  // Cross-origin: tenta rede e, se falhar, cai no cache
-  if (url.origin !== self.location.origin) {
-    try { return await fetch(request); }
-    catch {
-      const cached = await caches.match(request);
-      return cached || new Response('', { status: 504, statusText: 'Gateway Timeout' });
-    }
-  }
-
-  // Mesma origem: network-first + atualiza cache (só GET OK)
+async function networkFirstHTML(req) {
+  // Tenta rede primeiro; se falhar, usa cache e se nada, offline-fallback
   try {
-    const net = await fetch(request);
-    if (request.method === 'GET' && net && net.ok) {
-      const cache = await caches.open(CACHE_NAME);
-      cache.put(request, net.clone()).catch(()=>{});
+    const preload = 'preloadResponse' in event ? await event.preloadResponse : null; // eslint-disable-line no-undef
+    const net = preload || await fetch(req, { cache: 'no-store' });
+    // Cacheia respostas 200/opaques de navegação
+    if (net && (net.ok || net.type === 'opaqueredirect')) {
+      await putCache(CACHE_HTML, req, net.clone());
     }
     return net;
   } catch {
-    const cached = await caches.match(request);
+    const cached = await caches.match(req);
     if (cached) return cached;
-    if (request.mode === 'navigate') {
-      return new Response(OFFLINE_HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
-    }
-    return new Response('', { status: 504, statusText: 'Gateway Timeout' });
+    return new Response(OFFLINE_HTML, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   }
 }
 
-self.addEventListener('fetch', (event) => {
+async function staleWhileRevalidateStatic(req) {
+  const cache = await caches.open(CACHE_STATIC);
+  const cached = await cache.match(req);
+  const fetchPromise = (async () => {
+    try {
+      const net = await fetch(req, { cache: 'no-store' });
+      if (net && net.ok) await cache.put(req, net.clone());
+    } catch {}
+  })();
+  return cached || fetchPromise.then(() => caches.match(req)) || fetch(req);
+}
+
+async function cacheFirstImage(req) {
+  const cache = await caches.open(CACHE_IMG);
+  const cached = await cache.match(req);
+  if (cached) return cached;
+  try {
+    const net = await fetch(req, { cache: 'no-store' });
+    if (net && net.ok) {
+      await cache.put(req, net.clone());
+      await limitCacheSize(CACHE_IMG, 120); // limite para imagens
+    }
+    return net;
+  } catch {
+    // Fallback simples
+    return caches.match(IMG_FALLBACK) || new Response('', { status: 504, statusText: 'Gateway Timeout' });
+  }
+}
+
+async function handleFetch(event) {
   const req = event.request;
   if (req.method !== 'GET') return; // não intercepta POST/PUT/etc
-  event.respondWith(safeHandle(req));
+  const url = new URL(req.url);
+
+  // APIs => network-only
+  if (isAPI(url)) {
+    event.respondWith(networkOnly(req).catch(() => new Response('', { status: 504, statusText: 'Gateway Timeout' })));
+    return;
+  }
+
+  // APK => sempre rede (sem cache)
+  if (isAPK(url)) {
+    event.respondWith(fetch(req, { cache: 'no-store' }).catch(() => new Response('', { status: 504, statusText: 'Gateway Timeout' })));
+    return;
+  }
+
+  // CROSS-ORIGIN (ex.: CDN de imagem) => imagem? cache-first; senão, tenta rede e cai p/ cache
+  if (url.origin !== self.location.origin) {
+    if (isImage(url)) {
+      event.respondWith(cacheFirstImage(req));
+    } else {
+      event.respondWith((async () => {
+        try {
+          return await fetch(req);
+        } catch {
+          const cached = await caches.match(req);
+          return cached || new Response('', { status: 504, statusText: 'Gateway Timeout' });
+        }
+      })());
+    }
+    return;
+  }
+
+  // HTML (navegações/páginas)
+  if (isHTML(req, url)) {
+    event.respondWith(networkFirstHTML(req));
+    return;
+  }
+
+  // Estáticos locais (css/js/ícones/etc) => SWR
+  if (isStaticAsset(url)) {
+    event.respondWith(staleWhileRevalidateStatic(req));
+    return;
+  }
+
+  // Imagens locais (/uploads e demais)
+  if (isImage(url)) {
+    event.respondWith(cacheFirstImage(req));
+    return;
+  }
+
+  // Default: tenta rede, cai no cache se existir
+  event.respondWith((async () => {
+    try {
+      const net = await fetch(req);
+      return net;
+    } catch {
+      const cached = await caches.match(req);
+      return cached || new Response('', { status: 504, statusText: 'Gateway Timeout' });
+    }
+  })());
+}
+
+self.addEventListener('fetch', (event) => {
+  // Torna preloadResponse acessível dentro do handler HTML
+  // (hack leve apenas para o networkFirstHTML usar 'event')
+  // eslint-disable-next-line no-undef
+  self.event = event;
+  handleFetch(event);
 });
 
+// ------------------------------ Mensagens ------------------------------
 self.addEventListener('message', (event) => {
-  if (event.data === 'SKIP_WAITING') self.skipWaiting();
+  const data = event.data;
+  if (!data) return;
+  if (data === 'SKIP_WAITING' || data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });

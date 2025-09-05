@@ -4,8 +4,8 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Admin • Autônoma.app</title>
-  <link rel="stylesheet" href="/css/app.css">
   <meta name="theme-color" content="#2d6cdf">
+  <link rel="stylesheet" href="/css/app.css?v=admin-2025-09-07">
   <style>
     .header { display:flex; align-items:center; gap:12px; padding:12px 16px; }
     .header .logo { height:32px; width:auto; display:block; }
@@ -38,7 +38,6 @@
     .chart-canvas{ width:100%; height:280px; display:block; }
     @media (min-width:920px){ #chartPie, #chartBars { height:240px; } }
     a:focus, button:focus, select:focus, input:focus { outline:3px solid #a5b4fc; outline-offset:2px; }
-
     /* ===== Denúncias ===== */
     .den-grid { display:grid; grid-template-columns: 1fr; gap:12px; }
     @media (min-width:980px){ .den-grid { grid-template-columns: 2fr 1fr; } }
@@ -49,11 +48,11 @@
     .chip.descartada{ border-color:#fecaca; background:#fee2e2; color:#991b1b }
     .den-actions .btn{ padding:6px 8px; }
     .den-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px; }
-
     /* ===== Badges de plano ===== */
     .plan-badge{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid #e5e7eb; background:#f1f5f9; font-weight:800; margin-left:6px }
     .plan-badge.PRO{ background:#eef2ff; border-color:#6366f1 }
     .plan-badge.PREMIUM{ background:#fffbeb; border-color:#fbbf24 }
+    /* Botões básicos herdados do app.css */
   </style>
 </head>
 <body>
@@ -166,12 +165,13 @@
           <tbody id="tbody"></tbody>
         </table>
       </div>
+
       <div class="row" style="justify-content:space-between; margin-top:10px">
         <div class="meta" id="listInfo">—</div>
         <div class="row">
-          <button id="prev" class="btn ghost">«</button>
+          <button id="prev" class="btn ghost" aria-label="Página anterior">«</button>
           <span id="pageInfo" class="meta">1/1</span>
-          <button id="next" class="btn ghost">»</button>
+          <button id="next" class="btn ghost" aria-label="Próxima página">»</button>
         </div>
       </div>
       <p id="errList" class="meta warn" style="display:none">Erro ao carregar lista.</p>
@@ -193,6 +193,7 @@
             <input id="d_q" class="input" placeholder="Buscar por motivo/descrição/ID prof.">
             <button id="d_go" class="btn">Filtrar</button>
           </div>
+
           <div style="overflow:auto; max-height:420px">
             <table class="table" id="tabDen">
               <thead>
@@ -208,12 +209,13 @@
               <tbody id="tbodyDen"></tbody>
             </table>
           </div>
+
           <div class="row" style="justify-content:space-between; margin-top:10px">
             <div class="meta" id="denInfo">—</div>
             <div class="row">
-              <button id="d_prev" class="btn ghost">«</button>
+              <button id="d_prev" class="btn ghost" aria-label="Página anterior">«</button>
               <span id="d_pageInfo" class="meta">1/1</span>
-              <button id="d_next" class="btn ghost">»</button>
+              <button id="d_next" class="btn ghost" aria-label="Próxima página">»</button>
             </div>
           </div>
           <p id="errDen" class="meta warn" style="display:none">Erro ao carregar denúncias.</p>
@@ -244,11 +246,11 @@
   (function(){
     const $ = (id)=> document.getElementById(id);
 
-    // KPIs
+    // ======= KPIs =======
     const kAtivos=$('k_ativos'), kSusp=$('k_susp'), kExc=$('k_exc'),
           kVis=$('k_vis'), kCalls=$('k_calls'), kAvg=$('k_avg');
 
-    // Charts
+    // ======= Charts =======
     const cLines=$('chartLines'), cPie=$('chartPie'), cBars=$('chartBars');
     const errMet=$('errMet');
 
@@ -299,16 +301,14 @@
       return ctx;
     }
 
-    // ===== Charts (sem libs) =====
+    // ===== Charts (vanilla) =====
     function drawLineChart(cv, series, labels){
       const ctx = deviceScaleCanvas(cv); if (!ctx) return;
       const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
       ctx.clearRect(0,0,W,H);
-
       // axes
       ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo(40,10); ctx.lineTo(40,H-30); ctx.lineTo(W-10,H-30); ctx.stroke();
-
       const max = Math.max(1, ...series.flat());
       const scaleY = (H-40)/max;
       const stepX = (W-60)/Math.max(1, labels.length-1);
@@ -326,7 +326,6 @@
         const grad = ctx.createLinearGradient(0,10,0,H-30);
         grad.addColorStop(0, colors[si] + 'cc');
         grad.addColorStop(1, colors[si] + '11');
-
         ctx.beginPath();
         data.forEach((v,i)=>{
           const x=40 + i*stepX;
@@ -362,7 +361,6 @@
       const ctx = deviceScaleCanvas(cv); if (!ctx) return;
       const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
       ctx.clearRect(0,0,W,H);
-
       const sum = vals.reduce((a,b)=>a+b,0) || 1;
       const cx=W/2, cy=H/2, r=Math.min(W,H)*0.36, inner=r*0.58;
       const colors=['#10b981','#e5e7eb'];
@@ -383,7 +381,6 @@
       const ctx = deviceScaleCanvas(cv); if (!ctx) return;
       const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
       ctx.clearRect(0,0,W,H);
-
       const max = Math.max(1, ...values);
       const axisL = 40, axisB = 30;
       const bw = Math.max(16, (W-axisL-20)/Math.max(1, labels.length) - 10);
@@ -402,7 +399,6 @@
         grad.addColorStop(0,'#2563eb'); grad.addColorStop(1,'#93c5fd');
         ctx.fillStyle=grad;
         ctx.fillRect(x, (H-axisB)-h, bw, h);
-
         // labels
         ctx.save();
         ctx.translate(x + bw/2, H-10);
@@ -411,7 +407,6 @@
         const lab = labels[i] || '';
         ctx.fillText(lab.length>16 ? lab.slice(0,16)+'…' : lab, 0, 0);
         ctx.restore();
-
         x += bw + 10;
       });
     }
@@ -518,14 +513,13 @@
         const foto = p.foto || 'https://via.placeholder.com/100?text=Foto';
         const svc = (p.servico||p.profissao||'');
         const ver = p.verificado ? '✅' : '—';
-        const ratingStr = p.rating ? Number(p.rating).toFixed(2) : '—';
-        const ratingClass = (p.rating && Number(p.rating)<3) ? 'rating-low' : '';
+        const ratingStr = (p.rating!=null) ? Number(p.rating).toFixed(2) : '—';
+        const ratingClass = (p.rating!=null && Number(p.rating)<3) ? 'rating-low' : '';
         const statusChip = p.excluido ? '<span class="status-pill">Excluído</span>'
                           : (p.suspenso ? '<span class="status-pill" style="border-color:#fde68a;background:#fef3c7;color:#92400e">Suspenso</span>' : '');
         const plano = String(p.plano||'free').toLowerCase();
         const badgePlano = plano==='premium' ? '<span class="plan-badge PREMIUM">PREMIUM</span>'
-                         : plano==='pro'     ? '<span class="plan-badge PRO">PRO</span>'
-                         : '';
+                          : (plano==='pro' ? '<span class="plan-badge PRO">PRO</span>' : '');
         return `<tr>
           <td>${p.id}</td>
           <td>
@@ -557,7 +551,6 @@
           </td>
         </tr>`;
       }).join('');
-
       listInfo.textContent = `Total: ${data.total} • Página ${data.page}/${data.pages}`;
       PAGES = data.pages;
       pageInfo.textContent = `${data.page}/${data.pages}`;
@@ -574,7 +567,8 @@
               await postJSON(`/api/admin/profissionais/${id}/ativar`, {});
             } else if (act==='excluir'){
               if (!confirm('Tem certeza que deseja excluir?')) return;
-              await fetch(`/api/admin/profissionais/${id}`, { method:'DELETE' });
+              const r = await fetch(`/api/admin/profissionais/${id}`, { method:'DELETE' });
+              if(!r.ok) throw new Error('HTTP '+r.status);
             } else if (act==='restaurar'){
               await postJSON(`/api/admin/profissionais/${id}/restaurar`, {});
             }
@@ -613,7 +607,7 @@
         const prof = d.profissional || {};
         const status = String(d.status||'aberta');
         const chip = `<span class="chip ${status}">${escapeHtml(status.replace('_',' '))}</span>`;
-        const profIdText = prof.id ? ('#'+ String(prof.id)) : '';
+        const profIdText = (prof.id!=null) ? ('#'+ String(prof.id)) : '';
         return `<tr>
           <td>${d.id}</td>
           <td><span class="meta">${escapeHtml(when)}</span></td>
@@ -630,7 +624,6 @@
           </td>
         </tr>`;
       }).join('');
-
       denInfo.textContent = `Total: ${data.total} • Página ${data.page}/${data.pages}`;
       D_PAGES = data.pages;
       d_pageInfo.textContent = `${data.page}/${data.pages}`;
