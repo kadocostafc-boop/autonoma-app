@@ -1409,10 +1409,9 @@ app.use((req,_res,next)=>{
   next();
 });
 
-// ----------------------------------------------------------------------------
-/** Inicialização */
-// ----------------------------------------------------------------------------
-const PORT = process.env.PORT || BASE_PORT;
+// -------------------- INÍCIO DO SERVIDOR --------------------
+const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
-  console.log(`✅ Autônoma.app rodando em http://localhost:${PORT} (PID ${process.pid})`);
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
