@@ -21,7 +21,7 @@
   <meta property="og:image" content="https://autonomaapp.com.br/img/og-cover.png">
   <meta property="og:url" content="https://autonomaapp.com.br/clientes.html">
 
-  <link rel="stylesheet" href="/css/app.css?v=clients-2025-09-07">
+  <link rel="stylesheet" href="/css/app.css?v=clients-2025-09-08r">
 
   <style>
     :root{
@@ -321,7 +321,7 @@
     function hideTags(){ ['tagCidade','tagBairro','tagServico','tagRating'].forEach(id=>$(id).style.display='none'); }
     function resetResults(){ $('results').innerHTML=''; page=1; total=0; acumulados=0; $('paginacao').style.display='none'; $('contagem').textContent=''; }
 
-    // ---------- Template do Card (sem jamais descartar por causa de foto) ----------
+    // ---------- Template do Card (não descartar por erro de foto; placeholder no onerror) ----------
     function cardHTML(p){
       const item = {
         id: p.id, nome: p.nome,
@@ -342,7 +342,6 @@
       }
 
       const dist = kmFmt(item.distanceKm);
-      // Nunca esconda o card por causa da foto. Usa placeholder local no erro.
       const fotoSrc = item.foto || '/icons/icon-192.png';
       const id = encodeURIComponent(item.id);
       const local = [item.bairro, item.cidade].filter(Boolean).join(' • ');
@@ -369,6 +368,16 @@
       `;
     }
 
+    // Filtra só cards com foto real (caso o back não faça)
+    function onlyPhoto(items){
+      return (items||[]).filter(p=>{
+        const f = String(p.foto||"");
+        if(!f) return false;
+        // evita placeholders comuns
+        return !/icon-192|placeholder|default|no-?photo/i.test(f);
+      });
+    }
+
     // ---------- Busca ----------
     async function fetchProfissionais(isLoadMore=false){
       const params = new URLSearchParams();
@@ -376,6 +385,7 @@
       if(lastQuery.bairro)  params.set('bairro', lastQuery.bairro);
       if(lastQuery.servico) params.set('servico', lastQuery.servico);
       if(lastQuery.minRating) params.set('minRating', lastQuery.minRating);
+      params.set('photoOnly','1'); // <-- força só com foto
       params.set('sort','score'); params.set('dir','desc');
       params.set('page', String(page)); params.set('limit', String(limit));
       if(useGPS && userLat!=null && userLng!=null){
@@ -389,11 +399,14 @@
         $('loader').style.display='';
         const r = await fetch('/api/profissionais?'+params.toString(), NO_STORE);
         const js = await r.json();
-        const items = js.items||[];
+        let items = js.items||[];
         total = js.total ?? items.length ?? 0;
 
+        // Segurança extra: aplica filtro local por foto real
+        items = onlyPhoto(items);
+
         if(items.length===0 && !isLoadMore){
-          // fallback: tenta pegar destaques para não ficar vazio no celular
+          // fallback: tenta pegar destaques para não ficar vazio (também só com foto)
           const alt = await tryFeaturedFallback();
           if(alt && alt.length){
             renderResults(alt, false);
@@ -453,15 +466,17 @@
     // ---------- Destaques (e fallback) ----------
     async function tryFeaturedFallback(){
       try{
-        const url1 = `/api/profissionais?featured=1&limit=6&sort=score&dir=desc&${ts()}`;
+        const base = `featured=1&photoOnly=1&limit=6&sort=score&dir=desc&${ts()}`;
+        const url1 = `/api/profissionais?${base}`;
         let r = await fetch(url1, NO_STORE);
         let js = r.ok ? await r.json() : null;
-        if(js && Array.isArray(js.items) && js.items.length) return js.items;
+        let items = js && Array.isArray(js.items) ? onlyPhoto(js.items) : [];
+        if(items.length) return items;
 
-        const url2 = `/api/profissionais?limit=6&sort=score&dir=desc&${ts()}`;
+        const url2 = `/api/profissionais?photoOnly=1&limit=6&sort=score&dir=desc&${ts()}`;
         r = await fetch(url2, NO_STORE);
         js = r.ok ? await r.json() : {items:[]};
-        return js.items || [];
+        return onlyPhoto(js.items || []);
       }catch{ return []; }
     }
 
@@ -518,7 +533,7 @@
     /* Mantém o SW registrado — com versão nova para forçar update no mobile */
     if ('serviceWorker' in navigator){
       window.addEventListener('load', ()=>{
-        navigator.serviceWorker.register('/sw.js?v=clients-2025-09-07').catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=clients-2025-09-08r').catch(()=>{});
       });
     }
   </script>
