@@ -1,10 +1,7 @@
-<!doctype html>
-<html lang="pt-BR">
-<head>
+<!doctype html><html lang="pt-BR"><head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Encontre profissionais • Autônoma.app</title>
-
   <!-- SEO/PWA -->
   <link rel="canonical" href="https://autonomaapp.com.br/clientes.html">
   <meta name="description" content="Busque profissionais perto de você. Filtre por bairro e tipo de serviço. Veja distância, preço, atendimentos e avaliações.">
@@ -20,72 +17,32 @@
   <meta property="og:description" content="Profissionais por perto, com avaliações e contato direto.">
   <meta property="og:image" content="https://autonomaapp.com.br/img/og-cover.png">
   <meta property="og:url" content="https://autonomaapp.com.br/clientes.html">
-
-  <link rel="stylesheet" href="/css/app.css?v=clients-2025-09-08r">
-
+  <link rel="stylesheet" href="/css/app.css?v=clients-2025-09-07">
   <style>
-    :root{
-      --azul-escuro:#0b1f63;
-      --azul-brilho:#2D81FF;
-      --azul-brilho-2:#1E6EF2;
-      --cinza:#64748b;
-      --cinza-claro:#f1f5f9;
-      --borda:#e5e7eb;
-    }
+    :root{ --azul-escuro:#0b1f63; --azul-brilho:#2D81FF; --azul-brilho-2:#1E6EF2; --cinza:#64748b; --cinza-claro:#f1f5f9; --borda:#e5e7eb; }
     .wrap{max-width:1120px;margin:0 auto;padding:16px}
-
-    /* ===== HEADER sem logo ===== */
-    .header{
-      background:var(--azul-escuro);
-      padding:12px 16px; display:flex; gap:8px; align-items:center; justify-content:flex-end;
-    }
-    .nav-btn{
-      appearance:none; border:none; cursor:pointer;
-      background:var(--azul-brilho); color:#fff; font-weight:800;
-      padding:8px 12px; border-radius:10px; text-decoration:none; font-size:14px;
-      display:inline-flex; align-items:center; justify-content:center;
-    }
+    /* HEADER */
+    .header{ background:var(--azul-escuro); padding:12px 16px; display:flex; gap:8px; align-items:center; justify-content:flex-end; }
+    .nav-btn{ appearance:none; border:none; cursor:pointer; background:var(--azul-brilho); color:#fff; font-weight:800; padding:8px 12px; border-radius:10px; text-decoration:none; font-size:14px; display:inline-flex; align-items:center; justify-content:center; }
     .nav-btn:hover{ filter:brightness(.96); }
-
-    /* ===== BLOCO 1: HERO de busca ===== */
-    .search-hero{
-      background: linear-gradient(180deg, var(--azul-brilho) 0%, var(--azul-brilho-2) 100%);
-      color:#fff; margin:0 0 14px 0; padding: 20px 14px 16px;
-      border-radius:18px; box-shadow: 0 10px 24px rgba(0,0,0,.10);
-    }
-    .search-hero h1{
-      margin:0 0 10px; font-size:26px; line-height:1.15; font-weight:900; letter-spacing:.2px;
-      text-shadow: 0 1px 0 #e8f0ff, 0 10px 24px rgba(0,0,0,.22);
-    }
+    /* HERO */
+    .search-hero{ background: linear-gradient(180deg, var(--azul-brilho) 0%, var(--azul-brilho-2) 100%); color:#fff; margin:0 0 14px 0; padding: 20px 14px 16px; border-radius:18px; box-shadow: 0 10px 24px rgba(0,0,0,.10); }
+    .search-hero h1{ margin:0 0 10px; font-size:26px; line-height:1.15; font-weight:900; letter-spacing:.2px; text-shadow: 0 1px 0 #e8f0ff, 0 10px 24px rgba(0,0,0,.22); }
     .gps-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:8px 0 12px}
     .gps-row .pill{background:#ffffff20; border:1px solid #ffffff40; color:#fff; padding:6px 10px; border-radius:12px}
     .gps-row .muted{color:#e2ebff}
-
-    .filters{
-      display:grid; gap:10px; grid-template-columns:1fr;
-      background:#fff; border:1px solid #ffffff40;
-      border-radius:14px; padding:12px;
-    }
+    .filters{ display:grid; gap:10px; grid-template-columns:1fr; background:#fff; border:1px solid #ffffff40; border-radius:14px; padding:12px; }
     @media(min-width:720px){ .filters{ grid-template-columns:1.2fr 1fr 1fr .8fr auto } }
     .filters label{color:#0f172a; font-weight:700; font-size:13px}
-    .filters input, .filters select{
-      width:100%; border:1px solid var(--borda); border-radius:12px; padding:10px 12px;
-      background:#fff; color:#0f172a; outline:none;
-    }
+    .filters input, .filters select{ width:100%; border:1px solid var(--borda); border-radius:12px; padding:10px 12px; background:#fff; color:#0f172a; outline:none; }
     .btn{ border:none; background:var(--azul-brilho); color:#fff; padding:11px 14px; border-radius:12px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; font-weight:800 }
     .btn.ghost{ background:#fff; color:#0f172a; border:1px solid var(--borda) }
     .btn.dark{ background:var(--azul-escuro) }
-
-    /* ===== Resultados (cards) ===== */
+    /* CARDS */
     .results-grid{ display:grid; gap:10px; grid-template-columns:1fr; }
     @media(min-width:720px){ .results-grid{ grid-template-columns:1fr 1fr } }
     @media(min-width:1060px){ .results-grid{ grid-template-columns:1fr 1fr 1fr } }
-
-    .pro-card{
-      background:#fff; border:1px solid var(--borda); border-radius:16px; padding:10px 12px;
-      display:flex; align-items:center; gap:12px; box-shadow: 0 6px 16px rgba(0,0,0,.06);
-      transition:transform .16s ease, box-shadow .16s ease;
-    }
+    .pro-card{ background:#fff; border:1px solid var(--borda); border-radius:16px; padding:10px 12px; display:flex; align-items:center; gap:12px; box-shadow: 0 6px 16px rgba(0,0,0,.06); transition:transform .16s ease, box-shadow .16s ease; }
     .pro-card:hover{ transform:translateY(-1px); box-shadow:0 10px 22px rgba(0,0,0,.09) }
     .pro-avatar{ width:56px; height:56px; border-radius:999px; object-fit:cover; border:1px solid var(--borda); background:#f8fafc; flex:0 0 56px }
     .pro-main{ flex:1 1 auto; min-width:0 }
@@ -95,25 +52,20 @@
     .pro-right .dist{ font-size:13px; color:#0f172a; background:#eef2ff; border:1px solid #c7d2fe; border-radius:999px; padding:2px 8px }
     .pro-right .price{ font-size:13px; color:#0f172a; background:#f1f5ff; border:1px solid #e0e7ff; border-radius:999px; padding:2px 8px }
     .rating{ color:#f59e0b; font-size:13px; }
-
     .muted{ color:var(--cinza) }
     .tag{ display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:4px 8px; border:1px solid var(--borda); border-radius:999px; background:#f8fafc }
     .loader{ display:none; font-size:14px }
     .gps-ok{ color:#22c55e } .gps-warn{ color:#f59e0b }
-
     .section-title{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
     .section-title h2{ margin:0; font-size:18px }
     .card{ background:#fff; border:1px solid var(--borda); border-radius:16px; padding:14px; }
-
-    /* Rodapé */
     footer { padding: 28px 12px; background:var(--azul-escuro); margin-top:16px }
     .foot-links { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
     .foot-links a { color:#cde1ff; font-size:14px; text-decoration:none; }
     .foot-links a:hover { text-decoration:underline; }
   </style>
-</head>
-<body>
-  <!-- ===== HEADER (sem logo) ===== -->
+</head><body>
+  <!-- HEADER -->
   <header class="header" role="banner" aria-label="Cabeçalho">
     <a class="nav-btn" href="/">Início</a>
     <a class="nav-btn" href="/top10.html">Top 10</a>
@@ -121,11 +73,10 @@
   </header>
 
   <main class="wrap" role="main">
-    <!-- ============ BLOCO 1: HERO DE BUSCA ============ -->
+    <!-- HERO -->
     <section class="search-hero" aria-labelledby="hTitle">
       <h1 id="hTitle">Encontre profissionais qualificados</h1>
 
-      <!-- Preferências/GPS -->
       <div class="gps-row">
         <label class="pill" style="gap:8px">
           <input id="useGPS" type="checkbox">
@@ -134,7 +85,6 @@
         <span id="gpsStatus" class="small muted">GPS desativado.</span>
       </div>
 
-      <!-- Filtros -->
       <form id="formBusca" class="filters" role="search" aria-label="Filtros de busca" novalidate>
         <div>
           <label for="cidade">Cidade</label>
@@ -166,7 +116,6 @@
         </div>
       </form>
 
-      <!-- Chips de estado -->
       <div class="gps-row">
         <span class="tag" id="tagCidade" style="display:none"></span>
         <span class="tag" id="tagBairro" style="display:none"></span>
@@ -176,16 +125,13 @@
       </div>
     </section>
 
-    <!-- Resultados -->
     <section id="results" class="results-grid" aria-live="polite"></section>
 
-    <!-- Paginação -->
     <div class="card" id="paginacao" style="text-align:center; display:none">
       <button id="btnMais" class="btn">Carregar mais</button>
       <p id="contagem" class="small muted" style="margin-top:6px"></p>
     </div>
 
-    <!-- ============ BLOCO 2: DESTAQUES (fallback mobile) ============ -->
     <section class="card" aria-labelledby="destaquesTitle">
       <div class="section-title">
         <h2 id="destaquesTitle">Profissionais em destaque</h2>
@@ -208,15 +154,15 @@
 
   <script>
   (function(){
-    // ---------- Utils ----------
+    // Utils
     const $ = (id)=> document.getElementById(id);
     const esc = (s)=> String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
     const estrelas = (n)=>{ const r=Math.round((Number(n)||0)*2)/2; const f=Math.floor(r),h=(r%1!==0); return "★".repeat(f)+(h?"½":"")+"☆".repeat(5-f-(h?1:0)); };
     const kmFmt = (d)=> (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${Number(d).toFixed(d<10?1:0)} km`));
     const NO_STORE = { cache:'no-store' };
-    const ts = () => `ts=${Date.now()}`; // cache-buster
+    const ts = () => `ts=${Date.now()}`;
 
-    // Haversine (fallback distância no front)
+    // Haversine
     function hav(lat1, lon1, lat2, lon2){
       if([lat1,lon1,lat2,lon2].some(v=>!Number.isFinite(v))) return null;
       const toRad = d=> d*Math.PI/180, R=6371;
@@ -225,12 +171,12 @@
       return 2*R*Math.asin(Math.sqrt(a));
     }
 
-    // ---------- Estado ----------
+    // Estado
     let userLat=null, userLng=null, useGPS=false;
     let page=1, limit=20, total=0, acumulados=0;
     let lastQuery={ cidade:"", bairro:"", servico:"", minRating:"" };
 
-    // ---------- Autocomplete ----------
+    // Autocomplete
     async function fillCidades(){
       try{
         const r=await fetch(`/api/geo/cidades?${ts()}`, NO_STORE);
@@ -259,7 +205,6 @@
       const r=await fetch(`/api/geo/servicos/suggest?q=${encodeURIComponent(q)}&${ts()}`, NO_STORE);
       return r.ok?(await r.json()):[];
     }
-
     $('cidade').addEventListener('change', async e=>{
       const v=e.target.value.trim();
       $('bairro').value=''; await loadBairrosDaCidade(v);
@@ -275,7 +220,7 @@
       $('listaServicos').innerHTML=list.map(s=>`<option value="${esc(s)}">`).join('');
     });
 
-    // ---------- GPS ----------
+    // GPS
     function isSecureForGeo(){
       return location.hostname==='localhost' || location.hostname==='127.0.0.1' || (window.isSecureContext===true);
     }
@@ -316,12 +261,12 @@
       else { $('gpsStatus').textContent='GPS desativado.'; userLat=null; userLng=null; }
     });
 
-    // ---------- UI helpers ----------
+    // UI helpers
     function showTag(id, txt){ const el=$(id); el.textContent=txt; el.style.display='inline-flex'; }
     function hideTags(){ ['tagCidade','tagBairro','tagServico','tagRating'].forEach(id=>$(id).style.display='none'); }
     function resetResults(){ $('results').innerHTML=''; page=1; total=0; acumulados=0; $('paginacao').style.display='none'; $('contagem').textContent=''; }
 
-    // ---------- Template do Card (não descartar por erro de foto; placeholder no onerror) ----------
+    // Template Card (corrigido)
     function cardHTML(p){
       const item = {
         id: p.id, nome: p.nome,
@@ -333,20 +278,17 @@
         distanceKm: (p.distanceKm ?? p.dist ?? p.distanciaKm ?? null),
         lat: p.lat, lng: p.lng
       };
-
-      // Fallback distância no front se back não mandou
+      // distância (fallback)
       if((item.distanceKm==null || !isFinite(item.distanceKm)) &&
          Number.isFinite(userLat) && Number.isFinite(userLng) &&
          Number.isFinite(item.lat) && Number.isFinite(item.lng)){
         try{ item.distanceKm = hav(userLat,userLng,item.lat,item.lng); }catch{}
       }
-
       const dist = kmFmt(item.distanceKm);
       const fotoSrc = item.foto || '/icons/icon-192.png';
       const id = encodeURIComponent(item.id);
       const local = [item.bairro, item.cidade].filter(Boolean).join(' • ');
       const price = (item.precoBase!=null && item.precoBase!=="") ? `R$ ${String(item.precoBase).toString().replace('.',',')}` : null;
-
       return `
         <article class="pro-card">
           <img class="pro-avatar" src="${esc(fotoSrc)}" alt="Foto de ${esc(item.nome)}"
@@ -368,45 +310,29 @@
       `;
     }
 
-    // Filtra só cards com foto real (caso o back não faça)
-    function onlyPhoto(items){
-      return (items||[]).filter(p=>{
-        const f = String(p.foto||"");
-        if(!f) return false;
-        // evita placeholders comuns
-        return !/icon-192|placeholder|default|no-?photo/i.test(f);
-      });
-    }
-
-    // ---------- Busca ----------
+    // Busca
     async function fetchProfissionais(isLoadMore=false){
       const params = new URLSearchParams();
       if(lastQuery.cidade) params.set('cidade', lastQuery.cidade);
       if(lastQuery.bairro)  params.set('bairro', lastQuery.bairro);
       if(lastQuery.servico) params.set('servico', lastQuery.servico);
       if(lastQuery.minRating) params.set('minRating', lastQuery.minRating);
-      params.set('photoOnly','1'); // <-- força só com foto
       params.set('sort','score'); params.set('dir','desc');
       params.set('page', String(page)); params.set('limit', String(limit));
       if(useGPS && userLat!=null && userLng!=null){
         params.set('userLat', String(userLat));
         params.set('userLng', String(userLng));
       }
-      // cache buster
       params.set('ts', Date.now());
 
       try{
         $('loader').style.display='';
         const r = await fetch('/api/profissionais?'+params.toString(), NO_STORE);
         const js = await r.json();
-        let items = js.items||[];
+        const items = js.items||[];
         total = js.total ?? items.length ?? 0;
 
-        // Segurança extra: aplica filtro local por foto real
-        items = onlyPhoto(items);
-
         if(items.length===0 && !isLoadMore){
-          // fallback: tenta pegar destaques para não ficar vazio (também só com foto)
           const alt = await tryFeaturedFallback();
           if(alt && alt.length){
             renderResults(alt, false);
@@ -427,14 +353,12 @@
         $('loader').style.display='none';
       }
     }
-
     function renderResults(items, isLoadMore){
       const grid = $('results');
       const html = (items||[]).map(cardHTML).join('');
       if(isLoadMore) grid.insertAdjacentHTML('beforeend', html);
       else grid.innerHTML = html || `<div class="card"><p class="meta">Nenhum profissional encontrado com os filtros atuais.</p></div>`;
     }
-
     function applyStateTags(q){
       hideTags();
       if(q.cidade) showTag('tagCidade','Cidade: '+q.cidade);
@@ -442,7 +366,6 @@
       if(q.servico) showTag('tagServico','Serviço: '+q.servico);
       if(q.minRating) showTag('tagRating','Avaliação: '+q.minRating+'+');
     }
-
     function submitBusca(){
       lastQuery = {
         cidade: $('cidade').value.trim(),
@@ -454,7 +377,6 @@
       resetResults();
       fetchProfissionais(false);
     }
-
     document.getElementById('formBusca').addEventListener('submit', (e)=>{ e.preventDefault(); submitBusca(); });
     document.getElementById('btnLimpar').addEventListener('click', async ()=>{
       $('cidade').value=''; $('bairro').value=''; $('servico').value=''; $('minRating').value='';
@@ -463,23 +385,19 @@
     });
     document.getElementById('btnMais').addEventListener('click', ()=>{ if(acumulados < total){ page++; fetchProfissionais(true); } });
 
-    // ---------- Destaques (e fallback) ----------
+    // Destaques
     async function tryFeaturedFallback(){
       try{
-        const base = `featured=1&photoOnly=1&limit=6&sort=score&dir=desc&${ts()}`;
-        const url1 = `/api/profissionais?${base}`;
+        const url1 = `/api/profissionais?featured=1&limit=6&sort=score&dir=desc&${ts()}`;
         let r = await fetch(url1, NO_STORE);
         let js = r.ok ? await r.json() : null;
-        let items = js && Array.isArray(js.items) ? onlyPhoto(js.items) : [];
-        if(items.length) return items;
-
-        const url2 = `/api/profissionais?photoOnly=1&limit=6&sort=score&dir=desc&${ts()}`;
+        if(js && Array.isArray(js.items) && js.items.length) return js.items;
+        const url2 = `/api/profissionais?limit=6&sort=score&dir=desc&${ts()}`;
         r = await fetch(url2, NO_STORE);
         js = r.ok ? await r.json() : {items:[]};
-        return onlyPhoto(js.items || []);
+        return js.items || [];
       }catch{ return []; }
     }
-
     async function loadDestaques(){
       const cont = $('destaques');
       const count = $('destCount');
@@ -488,8 +406,6 @@
         const items = await tryFeaturedFallback();
         count.textContent = items.length ? `${items.length} selecionados` : '';
         cont.innerHTML = items.length ? items.map(cardHTML).join('') : `<div class="muted">Sem destaques no momento.</div>`;
-
-        // Se os resultados principais estiverem vazios, mostra os destaques no topo também
         if($('results').children.length===0 && items.length){
           $('results').innerHTML = items.map(cardHTML).join('');
         }
@@ -498,19 +414,16 @@
       }
     }
 
-    // ---------- Boot ----------
+    // Boot
     (async function init(){
-      // força atualização do SW (quebra cache teimoso no celular)
+      // força atualização do SW
       if('serviceWorker' in navigator){
         try{
           const regs=await navigator.serviceWorker.getRegistrations();
           regs.forEach(r=>r.update());
         }catch{}
       }
-
       await fillCidades();
-
-      // Querystring inicial
       const u=new URL(location.href);
       const cid=u.searchParams.get('cidade')||'';
       const bai=u.searchParams.get('bairro')||'';
@@ -521,21 +434,18 @@
       if(ser) $('servico').value=ser;
       if(mr) $('minRating').value=mr;
 
-      // 1) busca principal
       submitBusca();
-      // 2) destaques
       loadDestaques();
     })();
   })();
   </script>
 
   <script>
-    /* Mantém o SW registrado — com versão nova para forçar update no mobile */
+    /* SW */
     if ('serviceWorker' in navigator){
       window.addEventListener('load', ()=>{
-        navigator.serviceWorker.register('/sw.js?v=clients-2025-09-08r').catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=clients-2025-09-07').catch(()=>{});
       });
     }
   </script>
-</body>
-</html>
+</body></html>
