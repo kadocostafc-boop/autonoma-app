@@ -1,6 +1,6 @@
 // ============================================================================
 // Autônoma.app • server.js (CONSOLIDADO)
-// Data: 2025-09-01
+// Data: 2025-09-07
 // - Páginas públicas + PWA + SEO
 // - Admin (login obrigatório) + export CSV
 // - Painel do Profissional (login via token WhatsApp, Radar on/off, raio, cidades extras)
@@ -132,12 +132,21 @@ if (!REDIRECTS_DISABLED){
 // Arquivos estáticos
 app.use(express.static(PUBLIC_DIR, { maxAge:"7d", fallthrough: true }));
 app.use("/uploads", express.static(UPLOAD_DIR, { maxAge:"30d", immutable:true }));
-// -----------------------------------------------------------------------------
+
+// Evita cache dos endpoints /api/* (especialmente em mobile/PWA)
+app.use(/^\/api\//, (req, res, next) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.set("Pragma", "no-cache");
+  res.set("Expires", "0");
+  res.set("Surrogate-Control", "no-store");
+  next();
+});
+
+// ----------------------------------------------------------------------------
 // GEO / AUTOCOMPLETE / GPS
-// -----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 // Lista básica de cidades BR com coordenadas (suficiente para dev)
-// Você pode aumentar/editar à vontade.
 const CIDADES_BASE = [
   { nome: "Rio de Janeiro/RJ", lat: -22.9068, lng: -43.1729,
     bairros: ["Copacabana","Ipanema","Botafogo","Tijuca","Barra da Tijuca","Leblon","Centro"] },
@@ -161,32 +170,39 @@ const CIDADES_BASE = [
     bairros: ["Adrianópolis","Centro","Ponta Negra","Flores","Parque 10"] },
 ];
 
-// Serviços base (você pode ampliar)
+// Serviços base
 const SERVICOS_BASE = [
   "Eletricista","Hidráulico","Pintor","Marceneiro","Diarista","Pedreiro","Técnico em informática",
   "Manicure","Cabeleireiro","Encanador","Chaveiro","Jardineiro","Fotógrafo","Personal Trainer"
 ];
 
-// --- /api/geo/cidades  --------------------------------------------------------
-app.get('/api/geo/cidades', (req, res) => {
-  try {
-    const lista = CIDADES_BASE.map(c => c.nome);
-    return res.json(lista);
-  } catch {
-    return res.json([]);
-  }
+// --- /api/geo/cidades ---------------------------------------------------------
+app.get('/api/geo/cidades', (_req, res) => {
+  try{
+    res.json(CIDADES_BASE.map(c => c.nome));
+  }catch{ res.json([]); }
 });
 
-// --- /api/geo/servicos  -------------------------------------------------------
-app.get('/api/geo/servicos', (req, res) => {
-  try {
-    return res.json(SERVICOS_BASE);
-  } catch {
-    return res.json([]);
-  }
+// --- /api/geo/cidades/suggest -------------------------------------------------
+app.get('/api/geo/cidades/suggest', (req, res) => {
+  try{
+    const q = trim(req.query.q||"");
+    if (!q) return res.json([]);
+    const QQ = norm(q);
+    const out = CIDADES_BASE
+      .map(c=>c.nome)
+      .filter(c => norm(c).includes(QQ) || norm(c.split("/")[0]).includes(QQ))
+      .slice(0, 20);
+    res.json(out);
+  }catch{ res.json([]); }
 });
 
-// --- /api/geo/bairros?cidade=Nome/UF  ----------------------------------------
+// --- /api/geo/servicos --------------------------------------------------------
+app.get('/api/geo/servicos', (_req, res) => {
+  try{ res.json(SERVICOS_BASE); }catch{ res.json([]); }
+});
+
+// --- /api/geo/bairros?cidade=Nome/UF -----------------------------------------
 app.get('/api/geo/bairros', (req, res) => {
   const cidade = String(req.query.cidade || '').trim().toLowerCase();
   if (!cidade) return res.json([]);
@@ -194,7 +210,7 @@ app.get('/api/geo/bairros', (req, res) => {
   return res.json(item ? item.bairros : []);
 });
 
-// --- /api/geo/bairros/suggest?cidade=...&q=...  -------------------------------
+// --- /api/geo/bairros/suggest?cidade=...&q=... --------------------------------
 app.get('/api/geo/bairros/suggest', (req, res) => {
   const cidade = String(req.query.cidade || '').trim().toLowerCase();
   const q = String(req.query.q || '').trim().toLowerCase();
@@ -205,7 +221,7 @@ app.get('/api/geo/bairros/suggest', (req, res) => {
   return res.json(out);
 });
 
-// --- /api/geo/servicos/suggest?q=...  -----------------------------------------
+// --- /api/geo/servicos/suggest?q=... ------------------------------------------
 app.get('/api/geo/servicos/suggest', (req, res) => {
   const q = String(req.query.q || '').trim().toLowerCase();
   if (!q) return res.json([]);
@@ -213,32 +229,35 @@ app.get('/api/geo/servicos/suggest', (req, res) => {
   return res.json(out);
 });
 
-// --- /api/geo/closest-city?lat=...&lng=...  -----------------------------------
+// --- /api/geo/closest-city?lat=...&lng=... ------------------------------------
 // Retorna { ok:true, cidade:"Nome/UF", distKm:number } ou { ok:false }.
-// (Não 404! Assim o front não “quebra”.)
 app.get('/api/geo/closest-city', (req, res) => {
   const lat = Number(req.query.lat);
   const lng = Number(req.query.lng);
   if (!isFinite(lat) || !isFinite(lng)) {
     return res.json({ ok:false, error:"coords_invalid" });
   }
-  const here = { lat, lng };
   let best = null;
   let bestD = Infinity;
   for (const c of CIDADES_BASE) {
-    const d = haversineKm(here, { lat:c.lat, lng:c.lng });
-    if (d < bestD) { best = c; bestD = d; }
+    const d = haversineKm(lat, lng, c.lat, c.lng);
+    if (d!=null && d < bestD) { best = c; bestD = d; }
   }
   if (!best) return res.json({ ok:false });
   return res.json({ ok:true, cidade: best.nome, distKm: Math.round(bestD*10)/10 });
 });
-// Sessões
+
+// Sessões (compatível com mobile/HTTPS)
 app.use(session({
   name: "aut_sess",
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  cookie: { httpOnly:true, sameSite:"lax", secure: (process.env.SECURE_COOKIES === "true") }
+  cookie: {
+    httpOnly: true,
+    sameSite: (process.env.SECURE_COOKIES === "true") ? "none" : "lax",
+    secure: (process.env.SECURE_COOKIES === "true")
+  }
 }));
 
 // ----------------------------------------------------------------------------
@@ -371,7 +390,7 @@ const upload = multer({
 });
 
 // ----------------------------------------------------------------------------
-// GEO utils + APIs
+// GEO utils + APIs (dinâmicos com arquivos)
 // ----------------------------------------------------------------------------
 function loadGeoMaps(){
   const bairrosMap = readJSON(BAIRROS_FILE, {}) || {};
@@ -407,33 +426,6 @@ function normalizeCidadeUF(input){
   return hit || input;
 }
 
-function getBairrosForCity(bairrosMap, cidadeEntrada){
-  if (!cidadeEntrada) return [];
-  const want = norm(cidadeEntrada);
-  for (const k of Object.keys(bairrosMap)){ if (norm(k) === want) return Array.isArray(bairrosMap[k]) ? bairrosMap[k] : []; }
-  const cityOnly = norm(cidadeEntrada.split("/")[0]);
-  for (const k of Object.keys(bairrosMap)){ if (norm(k.split("/")[0]) === cityOnly) return Array.isArray(bairrosMap[k]) ? bairrosMap[k] : []; }
-  for (const k of Object.keys(bairrosMap)){ if (norm(k).includes(cityOnly)) return Array.isArray(bairrosMap[k]) ? bairrosMap[k] : []; }
-  return [];
-}
-
-app.get("/api/geo/cidades", (_req,res)=>{ const { cidades } = loadGeoMaps(); res.json(cidades); });
-app.get("/api/geo/cidades/suggest", (req,res)=>{
-  const q = trim(req.query.q||""); if (!q) return res.json([]);
-  const { cidades } = loadGeoMaps(); const qn = norm(q);
-  const list = cidades.map(c=>({ val:c, n:norm(c) }));
-  const starts = list.filter(x=> x.n.startsWith(qn) || x.n.split("/")[0].startsWith(qn));
-  const contains = list.filter(x=> x.n.includes(qn) && !(x.n.startsWith(qn) || x.n.split("/")[0].startsWith(qn)));
-  res.json([...starts, ...contains].slice(0,10).map(x=>x.val));
-});
-app.get("/api/geo/bairros", (req,res)=>{
-  const { bairrosMap } = loadGeoMaps();
-  const cidade = trim(req.query.cidade||""); if (!cidade) return res.json([]);
-  const cidadeUF = normalizeCidadeUF(cidade);
-  res.json(getBairrosForCity(bairrosMap, cidadeUF));
-});
-app.get("/api/geo/servicos", (_req,res)=>{ const { servicos } = loadGeoMaps(); res.json(servicos); });
-
 // ----------------------------------------------------------------------------
 // Cadastro (simples)
 // ----------------------------------------------------------------------------
@@ -443,20 +435,25 @@ function validateCadastro(body){
   const e=[];
   const nome = trim(body.nome);
   if (!nome || nome.length<2 || nome.length>80) e.push("Nome é obrigatório (2–80).");
+
   const cidadeInput = trim(body.cidade);
   const cidade = normalizeCidadeUF(cidadeInput);
   const bairro = trim(body.bairro);
   if(!cidade) e.push("Cidade é obrigatória.");
   if(!bairro) e.push("Bairro é obrigatório.");
+
   const servico   = trim(body.servico);
   const profissao = trim(body.profissao);
   if(!servico && !profissao) e.push("Informe Categoria ou Profissão.");
+
   const email = trim(body.email);
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.push("E-mail inválido.");
+
   const telefone = ensureBR(onlyDigits(body.telefone));
   const whatsapp = ensureBR(onlyDigits(body.whatsapp));
   if (!whatsapp || !/^\d{12,13}$/.test(whatsapp)) e.push("WhatsApp inválido (use DDD).");
   if (telefone && !/^\d{12,13}$/.test(telefone)) e.push("Telefone inválido (use DDD).");
+
   let lat = (body.lat ?? "").toString().trim();
   let lng = (body.lng ?? "").toString().trim();
   lat = lat === "" ? null : Number(lat);
@@ -491,12 +488,15 @@ app.post("/cadastrar",
   (req,res)=>{
     try{
       const { ok, errors, values } = validateCadastro(req.body);
-      if (!ok) return res.status(400).send(htmlErrors("Dados inválidos", errors, "/cadastro.html"));
+      // Foto obrigatória
+      if (!req.file?.filename) errors.push("Foto é obrigatória.");
+      if (!ok || errors.length) return res.status(400).send(htmlErrors("Dados inválidos", errors, "/cadastro.html"));
+
       const db = readDB();
       if (isDuplicate(db, values)){
         return res.status(400).send(htmlMsg("Cadastro duplicado","Já existe um profissional com o mesmo WhatsApp neste bairro/cidade.","/cadastro.html"));
       }
-      const foto = (req.file?.filename) ? `/uploads/${req.file.filename}` : "";
+      const foto = `/uploads/${req.file.filename}`;
       const novo = {
         id: db.length ? db[db.length-1].id + 1 : 1,
         createdAt: nowISO(),
@@ -523,109 +523,130 @@ app.post("/cadastrar",
 );
 
 // ----------------------------------------------------------------------------
-/** Busca pública de profissionais (com Radar/raio) */
+// Busca pública de profissionais (reimplementada p/ mobile + filtros extra)
 // ----------------------------------------------------------------------------
 function isRecent(iso, mins=15){ if (!iso) return false; const t=new Date(iso).getTime(); if (!Number.isFinite(t)) return false; return (Date.now()-t) <= (mins*60*1000); }
-function proLimits(p){
-  if (p.plano==="premium") return { maxRaio:50, maxCidades:10, uberUnlimited:true, maxUberActivations:Infinity };
-  if (p.plano==="pro")     return { maxRaio:30, maxCidades:3,  uberUnlimited:false, maxUberActivations:5 };
-  return { maxRaio:0, maxCidades:0, uberUnlimited:false, maxUberActivations:0 };
-}
 
-app.get("/api/profissionais", (req,res)=>{
-  const {
-    q="", cidade="", bairro="", servico="",
-    sort="score", dir="desc",
-    minRating="", onlyVerified="", experienciaMin="",
-    userLat="", userLng=""
-  } = req.query;
+app.get("/api/profissionais", (req, res) => {
+  try{
+    const db = readDB().filter(p => !p.excluido && !p.suspenso);
 
-  let page = parseInt(req.query.page||"1",10);
-  let limit= parseInt(req.query.limit||"20",10);
-  if (!Number.isFinite(page) || page<1) page=1;
-  if (!Number.isFinite(limit)|| limit<1 || limit>100) limit=20;
+    // Filtros
+    const cidade    = trim(req.query.cidade || "");
+    const bairro    = trim(req.query.bairro || "");
+    const servicoQ  = trim(req.query.servico || "");
+    const minRating = Number(req.query.minRating || 0);
+    const featured  = String(req.query.featured || "").trim() === "1";
+    const photoOnly = String(req.query.photoOnly || "").trim() === "1";
 
-  const uLat = userLat==="" ? null : Number(userLat);
-  const uLng = userLng==="" ? null : Number(userLng);
-  const hasUserPos = Number.isFinite(uLat) && Number.isFinite(uLng);
+    const userLat  = Number(req.query.userLat);
+    const userLng  = Number(req.query.userLng);
+    const hasUserPos = Number.isFinite(userLat) && Number.isFinite(userLng);
 
-  const dbRaw = readDB().filter(p=>!p.suspenso && !p.excluido);
-  const qn = norm(q), cn = norm(cidade), bn = norm(bairro), sn = norm(servico);
+    let items = db;
 
-  let list = dbRaw.filter(p=>{
-    const nome = norm(p.nome), prof = norm(p.profissao), cat = norm(p.servico), cid = norm(p.cidade), bai = norm(p.bairro);
-    const okQ    = qn ? (nome.includes(qn)||prof.includes(qn)||cat.includes(qn)) : true;
-    const okServ = sn ? cat.includes(sn) : true;
-    let okLocal  = true;
-    if (cn || bn){ okLocal = cid.includes(cn) && (bn ? bai.includes(bn) : true); }
-    return okQ && okServ && okLocal;
-  });
-
-  list = list.map(p=>{
-    const notas = (p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
-    const rating = notas.length ? notas.reduce((a,b)=>a+b,0)/notas.length : 0;
-
-    let dist = null;
-    let refLat = null, refLng = null;
-    const radarAtivo = (p.radar?.on || p.uber?.on) && isRecent((p.radar?.lastOnAt||p.uber?.lastOnAt), 15)
-                       && Number.isFinite(p.lastPos?.lat) && Number.isFinite(p.lastPos?.lng);
-    if (hasUserPos){
-      if (radarAtivo){ refLat = p.lastPos.lat; refLng = p.lastPos.lng; }
-      else if (Number.isFinite(p.lat) && Number.isFinite(p.lng)) { refLat = p.lat; refLng = p.lng; }
-      if (refLat!=null && refLng!=null) dist = haversineKm(uLat,uLng,refLat,refLng);
+    if (featured) {
+      items = items.filter(p => p.verificado || (p.plano && p.plano !== 'free'));
     }
 
-    const base = (rating*2) + (p.atendimentos||0)*0.02 + (p.verificado?0.5:0);
-    const wPlano = p.plano==="premium" ? 1.2 : p.plano==="pro" ? 1.1 : 1.0;
-    const wRadar = radarAtivo ? 1.25 : 1.0;
-    let wDist = 1.0;
-    if (dist!=null) {
-      if (dist<=2) wDist = 1.25;
-      else if (dist<=5) wDist = 1.15;
-      else if (dist<=10) wDist = 1.05;
-      else if (dist<=20) wDist = 0.95;
-      else wDist = 0.9;
+    if (cidade) {
+      const alvo = normalizeCidadeUF(cidade);
+      const N = norm(alvo);
+      items = items.filter(p => norm(p.cidade||"") === N || norm(p.cidade||"").includes(N));
     }
-    const score = base * wPlano * wRadar * wDist;
-    return { ...p, rating, distanceKm: dist, score };
-  });
+    if (bairro) {
+      const NB = norm(bairro);
+      items = items.filter(p => norm(p.bairro||"").includes(NB));
+    }
+    if (servicoQ) {
+      const NS = norm(servicoQ);
+      items = items.filter(p => {
+        const s = norm(p.servico || p.profissao || "");
+        return s.includes(NS);
+      });
+    }
+    if (minRating) {
+      items = items.filter(p => {
+        const notas = (p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
+        const rating = notas.length ? notas.reduce((a,b)=>a+b,0)/notas.length : 0;
+        return rating >= minRating;
+      });
+    }
+    if (photoOnly) {
+      items = items.filter(p => !!p.foto);
+    }
 
-  const mR = Number(minRating);
-  if (Number.isFinite(mR) && mR>=1 && mR<=5){ list = list.filter(p => (p.rating||0) >= mR); }
-  if (String(onlyVerified)==="true"){ list = list.filter(p => !!p.verificado); }
-  const eMin = Number(experienciaMin);
-  if (Number.isFinite(eMin) && eMin>0){
-    list = list.filter(p => {
-      const num = Number(String(p.experiencia||"").replace(/\D/g,""));
-      return Number.isFinite(num) ? num>=eMin : true;
+    // Distância, rating e score
+    for (const p of items) {
+      const notas = (p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
+      p._rating = notas.length ? notas.reduce((a,b)=>a+b,0)/notas.length : 0;
+
+      let plat = Number(p.lat); let plng = Number(p.lng);
+      if (!Number.isFinite(plat) || !Number.isFinite(plng)) {
+        if (p.lastPos && Number.isFinite(p.lastPos.lat) && Number.isFinite(p.lastPos.lng)) {
+          plat = Number(p.lastPos.lat); plng = Number(p.lastPos.lng);
+        } else {
+          plat = null; plng = null;
+        }
+      }
+      let dist = null;
+      if (hasUserPos && Number.isFinite(plat) && Number.isFinite(plng)) {
+        dist = haversineKm(userLat, userLng, plat, plng);
+      }
+      p._distKm = dist;
+
+      // Score: plano > rating > proximidade > verificado
+      const planoW = (p.plano === "premium") ? 3 : (p.plano === "pro") ? 2 : 1;
+      const distW  = (dist==null) ? 0 : (dist < 2 ? 1.2 : dist < 5 ? 1.0 : 0.8);
+      const verifW = p.verificado ? 0.4 : 0;
+      p._score = (planoW * 2.5) + (p._rating * 1.5) + (distW) + verifW;
+    }
+
+    // Ordenação
+    const sort = String(req.query.sort || "score");
+    const dir  = String(req.query.dir || "desc").toLowerCase() === "asc" ? 1 : -1;
+
+    items.sort((a,b)=>{
+      if (sort === "dist") {
+        const da = (a._distKm==null ? Infinity : a._distKm);
+        const dbb= (b._distKm==null ? Infinity : b._distKm);
+        return (da - dbb) * dir;
+      }
+      // default score
+      return ((a._score||0) - (b._score||0)) * dir;
     });
+
+    // Paginação
+    const page  = Math.max(1, Number(req.query.page||1));
+    const limit = Math.max(1, Math.min(50, Number(req.query.limit||20)));
+    const total = items.length;
+    const start = (page-1)*limit;
+    const end   = start + limit;
+
+    const out = items.slice(start, end).map(p => ({
+      id: p.id,
+      nome: p.nome,
+      servico: p.servico || p.profissao || "",
+      cidade: p.cidade || "",
+      bairro: p.bairro || "",
+      foto: p.foto || "",
+      whatsapp: p.whatsapp || "",
+      rating: Number(p._rating||0),
+      avaliacoes: Array.isArray(p.avaliacoes) ? p.avaliacoes.length : Number(p.avaliacoes||0),
+      atendimentos: Number(p.atendimentos||0),
+      precoBase: p.precoBase || p.preco || "",
+      lat: p.lat ?? (p.lastPos?.lat ?? null),
+      lng: p.lng ?? (p.lastPos?.lng ?? null),
+      distanceKm: (p._distKm!=null && isFinite(p._distKm)) ? Math.round(p._distKm*10)/10 : null,
+      plano: p.plano || "free",
+      verificado: !!p.verificado
+    }));
+
+    res.json({ ok:true, total, items: out });
+  }catch(e){
+    console.error("ERR /api/profissionais", e);
+    res.status(500).json({ ok:false, error:"server_error" });
   }
-
-  const dirMul = (String(dir).toLowerCase()==="asc") ? 1 : -1;
-  list.sort((a,b)=>{
-    if (sort==="distance" && a.distanceKm!=null && b.distanceKm!=null){
-      return dirMul * ((a.distanceKm)-(b.distanceKm));
-    }
-    return dirMul * ((a.score||0)-(b.score||0));
-  });
-
-  const total = list.length;
-  const start = (page-1)*limit;
-  const end   = start+limit;
-  res.json({
-    total, page, limit,
-    items: list.slice(start,end).map(p => ({
-      id: p.id, nome:p.nome, foto:p.foto||"",
-      servico:p.servico||p.profissao||"",
-      cidade:p.cidade||"", bairro:p.bairro||"",
-      rating:p.rating||0, avaliacoes: (p.avaliacoes||[]).length,
-      atendimentos: p.atendimentos||0,
-      distanceKm: p.distanceKm,
-      verificado: !!p.verificado,
-      plano: p.plano||"free",
-      badge: p.plano==="premium"?"PREMIUM":(p.plano==="pro"?"PRO":"")
-    }))
-  });
 });
 
 // ---------- PROFISSIONAL (por ID) — compat: /api/profissionais/:id ----------
@@ -800,12 +821,11 @@ app.get("/api/qr", async (req, res) => {
 });
 
 // ----------------------------------------------------------------------------
-// Top 10 semanal (API)
+/** Top 10 semanal (API) */
 // ----------------------------------------------------------------------------
 function scoreTop10(p){
   const notas = (p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
   const rating = notas.length ? (notas.reduce((a,b)=>a+b,0)/notas.length) : 0;
-
   const thisWeek = weekKey();
   const calls = (p.callsLog||[]).filter(x=>{
     const d = new Date(x.at); if (isNaN(d)) return false;
@@ -816,13 +836,11 @@ function scoreTop10(p){
     const wkKey = `${y}-W${String(wk).padStart(2,"0")}`;
     return wkKey === thisWeek;
   }).length;
-
   const sevenAgo = Date.now() - 6*86400000;
   const visits = (p.visitsLog||[]).filter(x=>{
     const t = Date.parse(x.at);
     return Number.isFinite(t) && t >= sevenAgo;
   }).length;
-
   const planBoost = p.plano==="premium" ? 1 : (p.plano==="pro" ? 0.5 : 0);
   return (calls*2) + (visits*0.5) + (rating*3) + (p.verificado?0.5:0) + planBoost;
 }
@@ -834,12 +852,11 @@ app.get("/api/top10", (req,res)=>{
   let list = db;
   if (cidade) list = list.filter(p => norm(p.cidade).includes(cidade));
   if (serv)   list = list.filter(p => norm(p.servico||p.profissao).includes(serv));
-
   list = list.map(p => ({ ...p, topScore: scoreTop10(p) }))
              .sort((a,b)=> (b.topScore)-(a.topScore))
              .slice(0,10)
              .map(p => ({
-               id:p.id, nome:p.nome, foto:p.foto||"",
+               id: p.id, nome:p.nome, foto:p.foto||"",
                servico:p.servico||p.profissao||"",
                cidade:p.cidade||"", bairro:p.bairro||"",
                atendimentos:p.atendimentos||0,
@@ -850,7 +867,7 @@ app.get("/api/top10", (req,res)=>{
 });
 
 // ----------------------------------------------------------------------------
-// Painel do Profissional — Sessão/Estado/Login + Compat endpoints usados no painel.html
+// Painel do Profissional — Sessão/Estado/Login + Compat endpoints
 // ----------------------------------------------------------------------------
 app.get("/api/painel/me", (req, res) => {
   try {
@@ -861,6 +878,7 @@ app.get("/api/painel/me", (req, res) => {
     if (req.session?.painel?.ok) {
       pro = db.find(p => Number(p.id) === Number(req.session.painel.proId) && !p.excluido);
     }
+
     // Authorization: Bearer <token> (whatsapp normalizado)
     if (!pro) {
       const auth = String(req.headers.authorization || "");
@@ -872,12 +890,12 @@ app.get("/api/painel/me", (req, res) => {
         }
       }
     }
+
     if (!pro) return res.status(401).json({ ok:false });
 
     const notas = (pro.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
     const rating = notas.length ? notas.reduce((a,b)=>a+b,0)/notas.length : 0;
     const fees = { cardPercent: FEE_CARD_PERCENT, pixPercent: FEE_PIX_PERCENT };
-
     return res.json({
       ok: true,
       id: pro.id,
@@ -928,6 +946,7 @@ app.post("/api/painel/login", (req,res)=>{
   req.session.painel = { ok:true, proId: pro.id, when: Date.now() };
   res.json({ ok:true });
 });
+
 app.post("/api/painel/logout", (req,res)=>{ if (req.session) req.session.painel=null; res.json({ ok:true }); });
 
 // Estado leve
@@ -963,7 +982,13 @@ app.post("/api/painel/pos", (req,res)=>{
   res.json({ ok:true });
 });
 
-// Radar principal (compat: toggle e autooff usados no painel.html)
+// Radar principal
+function proLimits(p){
+  if (p.plano==="premium") return { maxRaio:50, maxCidades:10, uberUnlimited:true, maxUberActivations:Infinity };
+  if (p.plano==="pro")     return { maxRaio:30, maxCidades:3,  uberUnlimited:false, maxUberActivations:5 };
+  return { maxRaio:0, maxCidades:0, uberUnlimited:false, maxUberActivations:0 };
+}
+
 app.post("/api/painel/radar", (req,res)=>{
   const s = req.session?.painel;
   if (!s?.ok || !s?.proId) return res.status(401).json({ ok:false });
@@ -994,14 +1019,16 @@ app.post("/api/painel/radar", (req,res)=>{
   res.json({ ok:true, radar:p.radar });
 });
 
-// Compat: toggle e autooff simples (painel.html usa essas rotas)
+// Compat: toggle e autooff simples
 app.post("/api/painel/radar/toggle", (req,res)=>{
   const s = req.session?.painel; if (!s?.ok) return res.status(401).json({ ok:false });
   const db = readDB(); const p = db.find(x=> Number(x.id)===s.proId); if (!p) return res.status(404).json({ ok:false });
   const want = !(p.radar?.on);
-  req.body = { on: want, durationHours: p.radar?.until ? ( (Date.parse(p.radar.until)-Date.now())/3600e3 ) : null };
-  return app._router.handle(req,res, ()=>{}, "/api/painel/radar"); // reutiliza handler acima
+  const durHrs = p.radar?.until ? ( (Date.parse(p.radar.until)-Date.now())/3600e3 ) : null;
+  req.body = { on: want, durationHours: durHrs };
+  return app._router.handle(req,res, ()=>{}, "/api/painel/radar");
 });
+
 app.post("/api/painel/radar/autooff", (req,res)=>{
   const s = req.session?.painel; if (!s?.ok) return res.status(401).json({ ok:false });
   const db = readDB(); const p = db.find(x=> Number(x.id)===s.proId); if (!p) return res.status(404).json({ ok:false });
@@ -1056,7 +1083,6 @@ app.post("/api/painel/update",
   (req,res)=>{
     const s = req.session?.painel; if (!s?.ok) return res.status(401).json({ ok:false });
     const db = readDB(); const p = db.find(x=> Number(x.id)===s.proId); if (!p) return res.status(404).json({ ok:false });
-
     const nome = trim(req.body?.nome||"");
     const descricao = trim(req.body?.descricao||"");
     const precoBase = trim(req.body?.precoBase||"");
@@ -1181,6 +1207,7 @@ app.post("/api/denuncias", (req,res)=>{
 // ----------------------------------------------------------------------------
 const FAV_FILE = path.join(DATA_DIR, "favorites.json");
 if (!fs.existsSync(FAV_FILE)) writeJSON(FAV_FILE, {}); // mapa { favUid: [ids...] }
+
 const readFavMap  = ()=> readJSON(FAV_FILE, {});
 const writeFavMap = (m)=> writeJSON(FAV_FILE, m);
 
@@ -1249,11 +1276,9 @@ app.post("/api/favoritos/toggle", (req,res)=>{
     const uid = ensureFavUID(req,res);
     const id = Number((req.body && req.body.id) || (req.query && req.query.id) || "0");
     if (!Number.isFinite(id) || id<=0) return res.status(400).json({ ok:false, error:"id inválido" });
-
     const db = readDB();
     const exists = db.some(p => Number(p.id)===id && !p.excluido);
     if (!exists) return res.status(404).json({ ok:false, error:"profissional não encontrado" });
-
     const map = readFavMap();
     const list = Array.isArray(map[uid]) ? map[uid] : [];
     const i = list.findIndex(x => Number(x)===id);
@@ -1271,7 +1296,6 @@ app.delete("/api/favoritos/:id", (req,res)=>{
     const uid = ensureFavUID(req,res);
     const id = Number(req.params.id||"0");
     if (!Number.isFinite(id) || id<=0) return res.status(400).json({ ok:false, error:"id inválido" });
-
     const map = readFavMap();
     const list = Array.isArray(map[uid]) ? map[uid] : [];
     const i = list.findIndex(x => Number(x)===id);
@@ -1386,7 +1410,7 @@ app.use((req,_res,next)=>{
 });
 
 // ----------------------------------------------------------------------------
-// Inicialização
+/** Inicialização */
 // ----------------------------------------------------------------------------
 const PORT = process.env.PORT || BASE_PORT;
 app.listen(PORT, () => {
