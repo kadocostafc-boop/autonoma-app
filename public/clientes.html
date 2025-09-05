@@ -76,7 +76,6 @@
     <!-- HERO -->
     <section class="search-hero" aria-labelledby="hTitle">
       <h1 id="hTitle">Encontre profissionais qualificados</h1>
-
       <div class="gps-row">
         <label class="pill" style="gap:8px">
           <input id="useGPS" type="checkbox">
@@ -84,7 +83,6 @@
         </label>
         <span id="gpsStatus" class="small muted">GPS desativado.</span>
       </div>
-
       <form id="formBusca" class="filters" role="search" aria-label="Filtros de busca" novalidate>
         <div>
           <label for="cidade">Cidade</label>
@@ -115,7 +113,6 @@
           <button class="btn ghost" type="button" id="btnLimpar">Limpar</button>
         </div>
       </form>
-
       <div class="gps-row">
         <span class="tag" id="tagCidade" style="display:none"></span>
         <span class="tag" id="tagBairro" style="display:none"></span>
@@ -289,6 +286,7 @@
       const id = encodeURIComponent(item.id);
       const local = [item.bairro, item.cidade].filter(Boolean).join(' • ');
       const price = (item.precoBase!=null && item.precoBase!=="") ? `R$ ${String(item.precoBase).toString().replace('.',',')}` : null;
+
       return `
         <article class="pro-card">
           <img class="pro-avatar" src="${esc(fotoSrc)}" alt="Foto de ${esc(item.nome)}"
@@ -310,7 +308,17 @@
       `;
     }
 
-    // Busca
+    // Busca (com tolerância de formato de resposta)
+    function normalizeListResponse(js){
+      if (!js) return {items:[], total:0, page:1, pages:1};
+      if (Array.isArray(js)) return {items:js, total:js.length, page:1, pages:1};
+      const items = Array.isArray(js.items) ? js.items : (js.item ? [js.item] : []);
+      const total = Number(js.total ?? items.length ?? 0);
+      const page  = Number(js.page  ?? 1);
+      const pages = Number(js.pages ?? 1);
+      return {items,total,page,pages};
+    }
+
     async function fetchProfissionais(isLoadMore=false){
       const params = new URLSearchParams();
       if(lastQuery.cidade) params.set('cidade', lastQuery.cidade);
@@ -324,14 +332,24 @@
         params.set('userLng', String(userLng));
       }
       params.set('ts', Date.now());
-
+      const urls = [
+        '/api/profissionais?'+params.toString(),
+        '/api/public/profissionais?'+params.toString()
+      ];
       try{
         $('loader').style.display='';
-        const r = await fetch('/api/profissionais?'+params.toString(), NO_STORE);
-        const js = await r.json();
-        const items = js.items||[];
-        total = js.total ?? items.length ?? 0;
+        let js=null, ok=false;
+        for(const u of urls){
+          try{
+            const r=await fetch(u, NO_STORE);
+            if(r.ok){ js = await r.json(); ok=true; break; }
+          }catch{}
+        }
+        if(!ok){ throw new Error('No endpoint'); }
 
+        const data = normalizeListResponse(js);
+        const items = data.items;
+        total = data.total;
         if(items.length===0 && !isLoadMore){
           const alt = await tryFeaturedFallback();
           if(alt && alt.length){
@@ -342,23 +360,24 @@
             return;
           }
         }
-
         renderResults(items, isLoadMore);
         acumulados += items.length;
         $('paginacao').style.display = (acumulados<total)?'':'none';
         $('contagem').textContent = (acumulados<total)? `${acumulados}/${total} exibidos` : '';
       }catch{
-        if(!isLoadMore) $('results').innerHTML = `<div class="card"><p class="err">Falha ao carregar resultados. Tente novamente.</p></div>`;
+        if(!isLoadMore) $('results').innerHTML = `<div class="card"><p class="meta">Falha ao carregar resultados. Tente novamente.</p></div>`;
       }finally{
         $('loader').style.display='none';
       }
     }
+
     function renderResults(items, isLoadMore){
       const grid = $('results');
       const html = (items||[]).map(cardHTML).join('');
       if(isLoadMore) grid.insertAdjacentHTML('beforeend', html);
       else grid.innerHTML = html || `<div class="card"><p class="meta">Nenhum profissional encontrado com os filtros atuais.</p></div>`;
     }
+
     function applyStateTags(q){
       hideTags();
       if(q.cidade) showTag('tagCidade','Cidade: '+q.cidade);
@@ -366,6 +385,7 @@
       if(q.servico) showTag('tagServico','Serviço: '+q.servico);
       if(q.minRating) showTag('tagRating','Avaliação: '+q.minRating+'+');
     }
+
     function submitBusca(){
       lastQuery = {
         cidade: $('cidade').value.trim(),
@@ -377,13 +397,16 @@
       resetResults();
       fetchProfissionais(false);
     }
+
     document.getElementById('formBusca').addEventListener('submit', (e)=>{ e.preventDefault(); submitBusca(); });
     document.getElementById('btnLimpar').addEventListener('click', async ()=>{
       $('cidade').value=''; $('bairro').value=''; $('servico').value=''; $('minRating').value='';
       hideTags(); resetResults();
       await fillCidades(); fetchProfissionais(false);
     });
-    document.getElementById('btnMais').addEventListener('click', ()=>{ if(acumulados < total){ page++; fetchProfissionais(true); } });
+    document.getElementById('btnMais').addEventListener('click', ()=>{
+      if(acumulados < total){ page++; fetchProfissionais(true); }
+    });
 
     // Destaques
     async function tryFeaturedFallback(){
@@ -391,11 +414,14 @@
         const url1 = `/api/profissionais?featured=1&limit=6&sort=score&dir=desc&${ts()}`;
         let r = await fetch(url1, NO_STORE);
         let js = r.ok ? await r.json() : null;
-        if(js && Array.isArray(js.items) && js.items.length) return js.items;
+        let data = normalizeListResponse(js);
+        if(data.items.length) return data.items;
+
         const url2 = `/api/profissionais?limit=6&sort=score&dir=desc&${ts()}`;
         r = await fetch(url2, NO_STORE);
-        js = r.ok ? await r.json() : {items:[]};
-        return js.items || [];
+        js = r.ok ? await r.json() : null;
+        data = normalizeListResponse(js);
+        return data.items || [];
       }catch{ return []; }
     }
     async function loadDestaques(){
@@ -424,6 +450,8 @@
         }catch{}
       }
       await fillCidades();
+
+      // Querystring inicial
       const u=new URL(location.href);
       const cid=u.searchParams.get('cidade')||'';
       const bai=u.searchParams.get('bairro')||'';
