@@ -41,6 +41,8 @@
     .btn.inline{padding:6px 10px;font-size:14px}
     .qr{width:160px;height:160px;border-radius:8px;border:1px dashed #cbd5e1;background:#f8fafc}
     .ghost-danger{border-color:#fecaca;color:#b91c1c}
+    .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;max-width:92vw;background:#111827;color:#fff;border-radius:12px;padding:10px 14px;font-size:14px;box-shadow:0 10px 24px rgba(0,0,0,.25);z-index:9999;display:none}
+    .toast.show{display:block}
   </style>
 </head>
 <body>
@@ -51,8 +53,7 @@
     <div class="home">
       <a class="btn ghost" href="/">Início</a>
       <a class="btn outline" href="/painel_login.html">Trocar conta</a>
-      <!-- ❌ Removido botão Admin -->
-      <a class="btn outline" href="/painel/logout">Sair</a>
+      <button id="btnSair" class="btn outline" type="button">Sair</button>
     </div>
   </header>
 
@@ -84,7 +85,8 @@
           <div class="panel">
             <h2 style="margin-top:0">Radar (receba clientes por proximidade)</h2>
             <div class="row">
-              <button id="radarToggle" class="btn">Ligar Radar</button>
+              <button id="posBtn" class="btn inline" type="button" title="Atualizar minha posição (GPS)">Atualizar posição</button>
+              <button id="radarToggle" class="btn" type="button">Ligar Radar</button>
               <span id="radarStatus" class="pill">Desligado</span>
             </div>
             <div class="row" style="margin-top:8px">
@@ -96,9 +98,9 @@
                 <option value="6">6h</option>
                 <option value="8">8h</option>
               </select>
-              <button id="saveAutoOff" class="btn inline">Salvar</button>
+              <button id="saveAutoOff" class="btn inline" type="button">Salvar</button>
             </div>
-            <p class="hint" id="radarHint">Dica: no plano Free o Radar pode ficar limitado. Planos PRO/PREMIUM ampliam seus limites.</p>
+            <p class="hint" id="radarHint">Dica: no plano Free o Radar é bloqueado. Planos PRO/PREMIUM liberam.</p>
           </div>
 
           <!-- Raio & cidades -->
@@ -109,9 +111,9 @@
               <input type="range" id="raio" min="0" max="50" step="1" value="0">
               <div class="row">
                 <div class="pill">Raio atual: <strong id="raioVal">0 km</strong></div>
-                <button id="raioSave" class="btn inline">Salvar raio</button>
+                <button id="raioSave" class="btn inline" type="button">Salvar raio</button>
               </div>
-              <p class="hint" id="raioHint">No plano Free, o raio pode ser 0 km (somente bairro). PRO: até 30 km • PREMIUM: até 50 km.</p>
+              <p class="hint" id="raioHint">No plano Free, o raio é 0 km (somente bairro). PRO: até 30 km • PREMIUM: até 50 km.</p>
             </div>
             <div class="divider"></div>
             <div>
@@ -119,7 +121,7 @@
               <div class="row">
                 <input id="cidadeExtra" class="input" placeholder="Ex.: Niterói/RJ" list="dl-cidades">
                 <datalist id="dl-cidades"></datalist>
-                <button id="addCidade" class="btn inline">Adicionar</button>
+                <button id="addCidade" class="btn inline" type="button">Adicionar</button>
               </div>
               <div id="cidadesList" class="list" style="margin-top:8px"></div>
             </div>
@@ -136,9 +138,9 @@
               </label>
               <span class="pill" id="payMode">Direto com o cliente</span>
             </div>
-            <p class="hint">Ao ativar, seus clientes podem pagar pelo app. Taxas: <strong id="feesInfo">4% do app</strong> + taxas do cartão (se usar cartão).</p>
+            <p class="hint">Ao ativar, seus clientes podem pagar pelo app. Taxas: <strong id="feesInfo">4% do app</strong>.</p>
             <div class="row">
-              <button id="savePayPrefs" class="btn inline">Salvar preferência</button>
+              <button id="savePayPrefs" class="btn inline" type="button">Salvar preferência</button>
               <a class="btn ghost" href="/planos.html">Ver planos</a>
             </div>
           </div>
@@ -151,11 +153,11 @@
               <span class="meta" id="planoDesc">Recursos básicos.</span>
             </div>
             <div class="row" style="margin-top:8px">
-              <button id="toPro" class="btn">Upgrade para PRO</button>
-              <button id="toPremium" class="btn outline">Upgrade para PREMIUM</button>
-              <button id="toFree" class="btn ghost ghost-danger">Voltar ao FREE</button>
+              <a id="toPro" class="btn" href="/planos.html">Upgrade para PRO</a>
+              <a id="toPremium" class="btn outline" href="/planos.html">Upgrade para PREMIUM</a>
+              <button id="toFree" class="btn ghost ghost-danger" type="button" disabled>Voltar ao FREE</button>
             </div>
-            <p class="hint">Os botões de plano são ilustrativos até o gateway real.</p>
+            <p class="hint">Os upgrades direcionam para a página de planos.</p>
           </div>
         </div>
 
@@ -194,43 +196,47 @@
           <div class="stat"><div class="meta">Avaliações</div><strong id="m_aval">—</strong></div>
           <div class="stat"><div class="meta">Nota média</div><strong id="m_rate">—</strong></div>
         </div>
-
         <div class="divider"></div>
-
         <h3>QR do WhatsApp</h3>
         <div class="center"><div id="qrBox" class="qr center">—</div></div>
         <div class="row center" style="margin-top:8px">
-          <button id="copyWa" class="btn inline">Copiar link</button>
+          <button id="copyWa" class="btn inline" type="button">Copiar link</button>
           <a id="openWa" class="btn inline" target="_blank" rel="noopener">Abrir Web</a>
         </div>
-        <p class="hint" style="margin-top:8px">Compartilhe o QR no seu Instagram/Stories para receber contatos diretos.</p>
-
+        <p class="hint" style="margin-top:8px">Compartilhe o QR no Instagram/Stories para receber contatos diretos.</p>
         <div class="divider"></div>
-
         <h3>Exportar</h3>
         <div class="row">
-          <a id="expCSV" class="btn ghost" href="#" onclick="alert('Export do painel ainda não habilitado.');return false;">Minhas métricas (.csv)</a>
+          <a id="expCSV" class="btn ghost" href="/api/painel/export.csv">Minhas métricas (.csv)</a>
         </div>
       </aside>
     </div>
   </main>
 
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
   <script>
   (function(){
-    // ========== Utilidades ==========
+    // ===== Utilidades =====
     const $ = sel => document.querySelector(sel);
     const esc = s => String(s||"")
       .replace(/&/g,"&amp;").replace(/</g,"&lt;")
       .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+
+    const toast = (msg, ms=3000)=>{
+      const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+      setTimeout(()=> t.classList.remove('show'), ms);
+    };
+
     const flash = (msg, type='ok')=>{
       const box = $('#flash');
       box.style.display='';
       box.className = 'panel ' + (type==='ok'?'ok':'warn');
       box.innerHTML = msg;
-      setTimeout(()=>{ box.style.display='none'; }, 3200);
+      setTimeout(()=>{ box.style.display='none'; }, 3600);
     };
 
-    // -------- Token: pega ?token= uma vez e guarda; usa Authorization: Bearer --------
+    // ---- Token: pega ?token= e guarda local; envia como Bearer ----
     function getToken(){
       try{
         const u = new URL(location.href);
@@ -263,8 +269,17 @@
       if(!r.ok) throw new Error('HTTP '+r.status);
       return r.json();
     }
+    async function postForm(url, formData){
+      const r = await fetch(url, {
+        method:'POST',
+        headers:{ 'Authorization':'Bearer '+AUTH_TOKEN },
+        body: formData
+      });
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return r.json();
+    }
 
-    // ========= Estado / Pintura =========
+    // ===== Estado =====
     let ME = null;
 
     function setPlanBadges(plano){
@@ -272,7 +287,7 @@
       const p = String(plano||'free').toLowerCase();
       let text='FREE', cls='plan-badge', desc='Recursos básicos.';
       if (p==='pro'){ text='PRO'; cls='plan-badge PRO'; desc='Mais alcance, recursos extras e Radar ampliado.'; }
-      if (p==='premium'){ text='PREMIUM'; cls='plan-badge PREMIUM'; desc='Máximo alcance, Radar ilimitado e prioridade nas buscas.'; }
+      if (p==='premium'){ text='PREMIUM'; cls='plan-badge PREMIUM'; desc='Máximo alcance, Radar e prioridade nas buscas.'; }
       el.textContent = text;
       if (badge){ badge.textContent = text; badge.className = cls; }
       if (d){ d.textContent = desc; }
@@ -293,15 +308,15 @@
         const d = String(me.whatsapp).replace(/\D/g,'');
         const link = 'https://wa.me/' + d;
         $('#openWhats').href = link;
-        $('#openWa').href = link;
+        $('#openWa').href = link + '?ts=' + Date.now();
         $('#copyWa').onclick = async ()=>{
-          try{ await navigator.clipboard.writeText(link); flash('Link do WhatsApp copiado!'); }
-          catch{ flash('Não foi possível copiar.', 'warn'); }
+          try{ await navigator.clipboard.writeText(link); toast('Link do WhatsApp copiado!'); }
+          catch{ toast('Não foi possível copiar'); }
         };
-        // QR (fallback se o back não tiver /api/qr)
+        // QR com cache-buster
         const qri = document.createElement('img');
         qri.alt='QR do WhatsApp'; qri.width=160; qri.height=160; qri.style.display='block';
-        qri.src = '/api/qr?phone='+encodeURIComponent(d);
+        qri.src = '/api/qr?phone='+encodeURIComponent(d)+'&ts='+Date.now();
         qri.onerror = ()=>{ $('#qrBox').textContent='QR indisponível'; };
         $('#qrBox').innerHTML=''; $('#qrBox').appendChild(qri);
       }
@@ -323,9 +338,24 @@
       $('#radarStatus').textContent = on ? 'Ligado' : 'Desligado';
       $('#radarStatus').style.background = on ? '#ecfccb' : '#f1f5f9';
       $('#radarStatus').style.borderColor = on ? '#bbf7d0' : '#e5e7eb';
-      $('#radarHint').textContent = (String(me.plano).toLowerCase()==='free')
-        ? 'Seu plano atual limita o Radar. Faça upgrade para estender tempo e alcance.'
+      $('#radarHint').textContent =
+        (String(me.plano).toLowerCase()==='free')
+        ? 'Seu plano atual não permite ativar Radar. Faça upgrade para PRO ou PREMIUM.'
         : 'Radar ativo melhora seu posicionamento para clientes próximos.';
+    }
+
+    function maxRaioByPlan(plan){
+      const p = String(plan||'free').toLowerCase();
+      if (p==='premium') return 50;
+      if (p==='pro') return 30;
+      return 0;
+    }
+
+    function maxCidadesByPlan(plan){
+      const p = String(plan||'free').toLowerCase();
+      if (p==='premium') return 10;
+      if (p==='pro') return 3;
+      return 0;
     }
 
     function paintArea(me){
@@ -334,7 +364,7 @@
       $('#raioVal').textContent = r+' km';
       const hint = (String(me.plano).toLowerCase()==='premium') ? 'Seu plano permite até 50 km.'
            : (String(me.plano).toLowerCase()==='pro') ? 'Seu plano permite até 30 km.'
-           : 'No plano Free, o raio pode ser 0 km (somente bairro).';
+           : 'No plano Free, o raio é 0 km (somente bairro).';
       $('#raioHint').textContent = hint;
 
       const box = $('#cidadesList');
@@ -347,10 +377,10 @@
         div.querySelector('button').onclick = async ()=>{
           try{
             const list = extras.filter((_,idx)=> idx!==i);
-            await postJSON('/api/painel/settings', { cidadesExtras: list });
-            flash('Cidade removida.');
+            await postJSON('/api/painel/cidades', { action:'set', list });
+            toast('Cidade removida');
             await reload();
-          }catch{ flash('Falha ao remover cidade.', 'warn'); }
+          }catch{ toast('Falha ao remover cidade'); }
         };
         box.appendChild(div);
       });
@@ -379,17 +409,54 @@
       }catch{}
     }
 
-    // ===== Ações (alinhadas ao server.js) =====
-    $('#radarToggle').addEventListener('click', async ()=>{
+    // ===== Regras de Plano (gating) =====
+    function requirePlan(planNeeded){
+      const have = String(ME?.plano||'free').toLowerCase();
+      const need = String(planNeeded).toLowerCase();
+      const order = { free:0, pro:1, premium:2 };
+      if ((order[have]??0) >= (order[need]??0)) return true;
+      toast(`Recurso disponível no plano ${need.toUpperCase()}. Faça upgrade em Planos.`);
+      return false;
+    }
+
+    // ===== Ações =====
+    // Sair (POST /api/painel/logout)
+    $('#btnSair').addEventListener('click', async ()=>{
       try{
-        const onNow = ($('#radarStatus').textContent||'').toLowerCase()==='ligado';
-        await postJSON('/api/painel/radar', { on: !onNow });
+        await fetch('/api/painel/logout',{method:'POST'});
+      }catch{}
+      try{ localStorage.removeItem('auth_token'); }catch{}
+      location.href = '/painel_login.html';
+    });
+
+    // Atualizar posição (GPS) -> /api/painel/pos
+    $('#posBtn').addEventListener('click', ()=>{
+      if (!('geolocation' in navigator)){ toast('Seu navegador não permite GPS'); return; }
+      navigator.geolocation.getCurrentPosition(async pos=>{
+        try{
+          await postJSON('/api/painel/pos', { lat: pos.coords.latitude, lng: pos.coords.longitude });
+          toast('Posição atualizada');
+        }catch{ toast('Não foi possível salvar a posição'); }
+      }, ()=> toast('Falha ao obter a localização'), {enableHighAccuracy:true,timeout:12000,maximumAge:30000});
+    });
+
+    // Radar
+    $('#radarToggle').addEventListener('click', async ()=>{
+      const isOn = ($('#radarStatus').textContent||'').toLowerCase()==='ligado';
+      if (!isOn){
+        // tentar ligar — checar plano
+        if (!requirePlan('pro')) return;
+      }
+      try{
+        await postJSON('/api/painel/radar', { on: !isOn });
         flash('Radar atualizado.');
         await reload();
       } catch{ flash('Falha ao acionar Radar.', 'warn'); }
     });
 
+    // Auto-off
     $('#saveAutoOff').addEventListener('click', async ()=>{
+      if (!requirePlan('pro')) return;
       try{
         const h = ($('#autoOff').value||'').trim();
         if (!h){ await postJSON('/api/painel/radar', { on:true, durationHours: null }); }
@@ -399,50 +466,69 @@
       }catch{ flash('Falha ao salvar auto-desligar.', 'warn'); }
     });
 
+    // Raio
     $('#raio').addEventListener('input', (e)=>{ $('#raioVal').textContent = e.target.value + ' km'; });
-
     $('#raioSave').addEventListener('click', async ()=>{
+      const want = Number($('#raio').value||0);
+      const max = maxRaioByPlan(ME?.plano);
+      if (want > max){
+        toast(`Seu plano permite até ${max} km. Faça upgrade em Planos.`);
+        return;
+      }
       try{
-        await postJSON('/api/painel/settings', { raioKm: Number($('#raio').value||0) });
+        await postJSON('/api/painel/raio', { raioKm: want });
         flash('Raio atualizado.');
         await reload();
       }catch{ flash('Falha ao salvar raio.', 'warn'); }
     });
 
+    // Cidades extras
     $('#addCidade').addEventListener('click', async ()=>{
       const c = ($('#cidadeExtra').value||'').trim();
       if(!c) return;
+      const list = Array.isArray(ME?.cidadesExtras)? [...ME.cidadesExtras] : [];
+      const max = maxCidadesByPlan(ME?.plano);
+      if (!list.includes(c) && list.length >= max){
+        toast(`Seu plano permite até ${max} cidades extras. Faça upgrade em Planos.`);
+        return;
+      }
       try{
-        const list = Array.isArray(ME.cidadesExtras)? [...ME.cidadesExtras] : [];
-        if (!list.includes(c)) list.push(c);
-        await postJSON('/api/painel/settings', { cidadesExtras: list });
+        await postJSON('/api/painel/cidades', { action:'add', cidade:c });
         $('#cidadeExtra').value='';
         flash('Cidade adicionada.');
         await reload();
       }catch{ flash('Falha ao adicionar cidade.', 'warn'); }
     });
 
+    // Pagamento prefs
     $('#savePayPrefs').addEventListener('click', async ()=>{
       try{
         const receiveViaApp = !!$('#receiveViaApp').checked;
-        await postJSON('/api/painel/settings', { receiveViaApp });
+        await postJSON('/api/painel/payment-prefs', { receiveViaApp });
         flash('Preferência de pagamento salva.');
         await reload();
       }catch{ flash('Não foi possível salvar as preferências.', 'warn'); }
     });
 
-    // Plano — placeholders
-    $('#toPro').addEventListener('click', async ()=>{ flash('Upgrade PRO: aguardando gateway real.'); });
-    $('#toPremium').addEventListener('click', async ()=>{ flash('Upgrade PREMIUM: aguardando gateway real.'); });
-    $('#toFree').addEventListener('click', async ()=>{ flash('Downgrade para FREE: aguardando backend.'); });
-
-    // Perfil (placeholder até existir endpoint /api/painel/update)
+    // Perfil (envio real para /api/painel/update)
     $('#formPerfil').addEventListener('submit', async (e)=>{
       e.preventDefault();
-      $('#perfilMsg').style.display='';
-      $('#perfilMsg').textContent='Salvar perfil: backend ainda não disponível.';
-      $('#perfilMsg').className='meta warn';
-      flash('Endpoint de atualização de perfil não está disponível no servidor atual.', 'warn');
+      const fd = new FormData();
+      fd.append('nome', ($('#p_nome').value||'').trim());
+      fd.append('descricao', ($('#p_desc').value||'').trim());
+      fd.append('precoBase', ($('#p_preco').value||'').trim());
+      fd.append('site', ($('#p_site').value||'').trim());
+      const file = $('#p_foto').files && $('#p_foto').files[0];
+      if (file) fd.append('foto', file);
+      $('#perfilMsg').style.display=''; $('#perfilMsg').className='meta'; $('#perfilMsg').textContent='Salvando...';
+      try{
+        await postForm('/api/painel/update', fd);
+        $('#perfilMsg').className='meta ok'; $('#perfilMsg').textContent='Perfil atualizado com sucesso.';
+        flash('Perfil salvo.');
+        await reload();
+      }catch{
+        $('#perfilMsg').className='meta warn'; $('#perfilMsg').textContent='Não foi possível salvar o perfil.';
+      }
     });
 
     // ===== Reload principal =====
@@ -457,7 +543,6 @@
         paintPayPrefs(ME);
         paintProfileForm(ME);
       }catch(e){
-        // Evita loop para login — mostra aviso e mantém na página
         const box = $('#flash');
         box.style.display='';
         box.className='panel warn';
@@ -466,6 +551,10 @@
     }
 
     (async function init(){
+      // força atualização do SW no mobile
+      if('serviceWorker' in navigator){
+        try{ const regs=await navigator.serviceWorker.getRegistrations(); regs.forEach(r=>r.update()); }catch{}
+      }
       await loadCidadesOnce();
       await reload();
     })();
