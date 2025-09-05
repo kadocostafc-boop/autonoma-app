@@ -17,7 +17,7 @@
   <meta property="og:description" content="Profissionais por perto, com avaliações e contato direto.">
   <meta property="og:image" content="https://autonomaapp.com.br/img/og-cover.png">
   <meta property="og:url" content="https://autonomaapp.com.br/clientes.html">
-  <link rel="stylesheet" href="/css/app.css?v=clients-2025-09-08">
+  <link rel="stylesheet" href="/css/app.css?v=clients-2025-09-07">
   <style>
     :root{ --azul-escuro:#0b1f63; --azul-brilho:#2D81FF; --azul-brilho-2:#1E6EF2; --cinza:#64748b; --cinza-claro:#f1f5f9; --borda:#e5e7eb; }
     .wrap{max-width:1120px;margin:0 auto;padding:16px}
@@ -59,8 +59,6 @@
     .section-title{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
     .section-title h2{ margin:0; font-size:18px }
     .card{ background:#fff; border:1px solid var(--borda); border-radius:16px; padding:14px; }
-    /* Flash error */
-    #flashErr{display:none;margin:0 0 12px;background:#fff1f2;border:1px solid #fecdd3;color:#991b1b;border-radius:12px;padding:10px}
     footer { padding: 28px 12px; background:var(--azul-escuro); margin-top:16px }
     .foot-links { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
     .foot-links a { color:#cde1ff; font-size:14px; text-decoration:none; }
@@ -72,8 +70,8 @@
     <a class="nav-btn" href="/top10.html">Top 10</a>
     <a class="nav-btn" href="/painel_login.html">Entrar</a>
   </header>
+
   <main class="wrap" role="main">
-    <div id="flashErr" role="alert"></div>
     <!-- HERO -->
     <section class="search-hero" aria-labelledby="hTitle">
       <h1 id="hTitle">Encontre profissionais qualificados</h1>
@@ -84,6 +82,7 @@
         </label>
         <span id="gpsStatus" class="small muted">GPS desativado.</span>
       </div>
+
       <form id="formBusca" class="filters" role="search" aria-label="Filtros de busca" novalidate>
         <div>
           <label for="cidade">Cidade</label>
@@ -114,6 +113,7 @@
           <button class="btn ghost" type="button" id="btnLimpar">Limpar</button>
         </div>
       </form>
+
       <div class="gps-row">
         <span class="tag" id="tagCidade" style="display:none"></span>
         <span class="tag" id="tagBairro" style="display:none"></span>
@@ -154,10 +154,9 @@
   (function(){
     // Utils
     const $ = (id)=> document.getElementById(id);
-    const flashErr = (msg)=>{ const el=$('flashErr'); el.textContent=msg; el.style.display=''; setTimeout(()=>{ el.style.display='none'; }, 6000); };
     const esc = (s)=> String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
     const estrelas = (n)=>{ const r=Math.round((Number(n)||0)*2)/2; const f=Math.floor(r),h=(r%1!==0); return "★".repeat(f)+(h?"½":"")+"☆".repeat(5-f-(h?1:0)); };
-    const kmFmt = (d)=> (d==null ? "—" : (d<1 ? ((d*1000).toFixed(0)+" m") : (Number(d).toFixed(d<10?1:0)+" km")));
+    const kmFmt = (d)=> (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${Number(d).toFixed(d<10?1:0)} km`));
     const NO_STORE = { cache:'no-store' };
     const ts = () => `ts=${Date.now()}`;
 
@@ -263,21 +262,24 @@
     // UI helpers
     function showTag(id, txt){ const el=$(id); el.textContent=txt; el.style.display='inline-flex'; }
     function hideTags(){ ['tagCidade','tagBairro','tagServico','tagRating'].forEach(id=>$(id).style.display='none'); }
-    function resetResults(){ $('results').innerHTML=''; page=1; total=0; acumulados=0; $('paginacao').style.display='none'; $('contagem').textContent=''; }
+    function resetResults(){ $('results').innerHTML='<div class="card"><p class="meta">Carregando…</p></div>'; page=1; total=0; acumulados=0; $('paginacao').style.display='none'; $('contagem').textContent=''; }
 
-    // Card
+    // Template Card
     function cardHTML(p){
       const item = {
-        id: p.id, nome: p.nome,
+        id: p.id,
+        nome: p.nome,
         servico: p.servico || p.profissao || '',
-        bairro: p.bairro || '', cidade: p.cidade || '',
+        bairro: p.bairro || '',
+        cidade: p.cidade || '',
         foto: p.foto || '',
-        rating: Number(p.rating||0), avaliacoes: Number(p.avaliacoes||0),
-        precoBase: p.precoBase || p.preco || null,
+        rating: Number(p.rating||0),
+        avaliacoes: Array.isArray(p.avaliacoes) ? p.avaliacoes.length : Number(p.avaliacoes||0),
+        precoBase: (p.precoBase ?? p.preco ?? null),
         distanceKm: (p.distanceKm ?? p.dist ?? p.distanciaKm ?? null),
         lat: p.lat, lng: p.lng
       };
-      // distância (fallback)
+      // distância (fallback via Haversine)
       if((item.distanceKm==null || !isFinite(item.distanceKm)) &&
          Number.isFinite(userLat) && Number.isFinite(userLng) &&
          Number.isFinite(item.lat) && Number.isFinite(item.lng)){
@@ -287,17 +289,18 @@
       const fotoSrc = item.foto || '/icons/icon-192.png';
       const id = encodeURIComponent(item.id);
       const local = [item.bairro, item.cidade].filter(Boolean).join(' • ');
-      const price = (item.precoBase!=null && item.precoBase!=="") ? `R$ ${String(item.precoBase).toString().replace('.',',')}` : null;
+      const price = (item.precoBase!=null && String(item.precoBase)!=="") ? `R$ ${String(item.precoBase).toString().replace('.',',')}` : null;
+
       return `
         <article class="pro-card">
           <img class="pro-avatar" src="${esc(fotoSrc)}" alt="Foto de ${esc(item.nome)}"
                loading="lazy" onerror="this.src='/icons/icon-192.png'">
           <div class="pro-main">
-            <h3 class="pro-name">${esc(item.nome)}</h3>
+            <h3 class="pro-name">${esc(item.nome||'—')}</h3>
             <div class="pro-sub">
               ${esc(item.servico||'')} • <span class="muted">${esc(local||'—')}</span>
               <span class="rating"> ${estrelas(item.rating)} </span>
-              <span class="muted">(${item.avaliacoes})</span>
+              <span class="muted">(${item.avaliacoes||0})</span>
             </div>
           </div>
           <div class="pro-right">
@@ -309,19 +312,20 @@
       `;
     }
 
-    // Normaliza resposta do backend em vários formatos
-    function normalizeItems(js){
-      try{
-        if (Array.isArray(js)) return js;
-        if (js && Array.isArray(js.items)) return js.items;
-        if (js && js.data && Array.isArray(js.data.items)) return js.data.items;
-        if (js && Array.isArray(js.result)) return js.result;
-        if (js && js.item) return [js.item];
-      }catch{}
-      return [];
+    // Busca
+    function normalizeListResponse(js){
+      // Aceita {items,total} OU [] diretamente
+      if (Array.isArray(js)) {
+        return { items: js, total: js.length, page: 1, pages: 1 };
+      }
+      if (js && typeof js === 'object') {
+        const items = js.items || js.data || [];
+        const total = js.total ?? items.length ?? 0;
+        return { items, total, page: js.page||1, pages: js.pages||1 };
+      }
+      return { items: [], total: 0, page: 1, pages: 1 };
     }
 
-    // Busca
     async function fetchProfissionais(isLoadMore=false){
       const params = new URLSearchParams();
       if(lastQuery.cidade) params.set('cidade', lastQuery.cidade);
@@ -335,13 +339,17 @@
         params.set('userLng', String(userLng));
       }
       params.set('ts', Date.now());
+
       try{
         $('loader').style.display='';
         const r = await fetch('/api/profissionais?'+params.toString(), NO_STORE);
-        if(!r.ok) throw new Error('HTTP '+r.status);
-        const js = await r.json();
-        const items = normalizeItems(js);
-        total = Number(js?.total ?? items.length ?? 0);
+        if(!r.ok){
+          throw new Error('HTTP '+r.status);
+        }
+        const raw = await r.json();
+        const js = normalizeListResponse(raw);
+        const items = js.items || [];
+        total = js.total ?? items.length ?? 0;
 
         if(items.length===0 && !isLoadMore){
           const alt = await tryFeaturedFallback();
@@ -358,12 +366,8 @@
         acumulados += items.length;
         $('paginacao').style.display = (acumulados<total)?'':'none';
         $('contagem').textContent = (acumulados<total)? `${acumulados}/${total} exibidos` : '';
-      }catch(e){
-        console.error('Falha /api/profissionais', e);
-        if(!isLoadMore){
-          $('results').innerHTML = `<div class="card"><p class="err">Falha ao carregar resultados. Tente novamente.</p></div>`;
-          flashErr('Erro ao buscar profissionais. Verifique sua conexão ou tente novamente mais tarde.');
-        }
+      }catch{
+        if(!isLoadMore) $('results').innerHTML = `<div class="card"><p class="meta">Falha ao carregar resultados. Tente novamente.</p></div>`;
       }finally{
         $('loader').style.display='none';
       }
@@ -371,7 +375,8 @@
 
     function renderResults(items, isLoadMore){
       const grid = $('results');
-      const html = (items||[]).map(cardHTML).join('');
+      const sanitized = (items||[]).filter(x => x && (x.id!=null || x.nome)); // mínimo
+      const html = sanitized.map(cardHTML).join('');
       if(isLoadMore) grid.insertAdjacentHTML('beforeend', html);
       else grid.innerHTML = html || `<div class="card"><p class="meta">Nenhum profissional encontrado com os filtros atuais.</p></div>`;
     }
@@ -402,22 +407,22 @@
       hideTags(); resetResults();
       await fillCidades(); fetchProfissionais(false);
     });
-    document.getElementById('btnMais').addEventListener('click', ()=>{ if(acumulados < total){ page++; fetchProfissionais(true); } });
+    document.getElementById('btnMais').addEventListener('click', ()=>{
+      if(acumulados < total){ page++; fetchProfissionais(true); }
+    });
 
     // Destaques
     async function tryFeaturedFallback(){
       try{
         const url1 = `/api/profissionais?featured=1&limit=6&sort=score&dir=desc&${ts()}`;
         let r = await fetch(url1, NO_STORE);
-        let js = r.ok ? await r.json() : null;
-        let items = normalizeItems(js);
-        if(items && items.length) return items;
+        let js = normalizeListResponse(r.ok ? await r.json() : null);
+        if(js.items && js.items.length) return js.items;
 
         const url2 = `/api/profissionais?limit=6&sort=score&dir=desc&${ts()}`;
         r = await fetch(url2, NO_STORE);
-        js = r.ok ? await r.json() : {items:[]};
-        items = normalizeItems(js);
-        return items || [];
+        js = normalizeListResponse(r.ok ? await r.json() : null);
+        return js.items || [];
       }catch{ return []; }
     }
     async function loadDestaques(){
@@ -438,7 +443,7 @@
 
     // Boot
     (async function init(){
-      // força atualização do SW
+      // força atualização do SW (se houver)
       if('serviceWorker' in navigator){
         try{
           const regs=await navigator.serviceWorker.getRegistrations();
@@ -446,7 +451,6 @@
         }catch{}
       }
       await fillCidades();
-
       const u=new URL(location.href);
       const cid=u.searchParams.get('cidade')||'';
       const bai=u.searchParams.get('bairro')||'';
@@ -456,7 +460,6 @@
       if(bai) $('bairro').value=bai;
       if(ser) $('servico').value=ser;
       if(mr) $('minRating').value=mr;
-
       submitBusca();
       loadDestaques();
     })();
@@ -464,11 +467,75 @@
   </script>
 
   <script>
-    /* SW */
-    if ('serviceWorker' in navigator){
-      window.addEventListener('load', ()=>{
-        navigator.serviceWorker.register('/sw.js?v=clients-2025-09-08').catch(()=>{});
-      });
+// ...
+async function fetchProfissionais(isLoadMore=false){
+  const params = new URLSearchParams();
+  if(lastQuery.cidade)  params.set('cidade', lastQuery.cidade);
+  if(lastQuery.bairro)  params.set('bairro', lastQuery.bairro);
+  if(lastQuery.servico) params.set('servico', lastQuery.servico);
+  if(lastQuery.minRating) params.set('minRating', lastQuery.minRating);
+  params.set('sort','score'); params.set('dir','desc');
+  params.set('page', String(page)); params.set('limit', String(limit));
+  if(useGPS && userLat!=null && userLng!=null){
+    params.set('userLat', String(userLat));
+    params.set('userLng', String(userLng));
+  }
+  params.set('ts', Date.now());
+
+  try{
+    $('loader').style.display='';
+    const r = await fetch('/api/profissionais?'+params.toString(), NO_STORE);
+    const js = await r.json();
+
+    // Aceita items/itens/data
+    const items = Array.isArray(js.items) ? js.items
+                : Array.isArray(js.itens) ? js.itens
+                : Array.isArray(js.data)  ? js.data
+                : [];
+
+    total = Number.isFinite(js.total) ? js.total : items.length;
+
+    if(items.length===0 && !isLoadMore){
+      const alt = await tryFeaturedFallback();
+      if(alt && alt.length){
+        renderResults(alt, false);
+        acumulados = alt.length;
+        $('paginacao').style.display='none';
+        $('contagem').textContent='';
+        return;
+      }
     }
-  </script>
+
+    renderResults(items, isLoadMore);
+    acumulados += items.length;
+    $('paginacao').style.display = (acumulados<total)?'':'none';
+    $('contagem').textContent = (acumulados<total)? `${acumulados}/${total} exibidos` : '';
+  }catch(e){
+    console.warn('clientes erro:', e);
+    if(!isLoadMore){
+      $('results').innerHTML = `<div class="card"><p class="err">Falha ao carregar resultados. Tente novamente.</p></div>`;
+    }
+  }finally{
+    $('loader').style.display='none';
+  }
+}
+
+async function tryFeaturedFallback(){
+  try{
+    const url1 = `/api/profissionais?featured=1&limit=6&sort=score&dir=desc&${ts()}`;
+    let r = await fetch(url1, NO_STORE);
+    let js = r.ok ? await r.json() : null;
+    if(js){
+      const items1 = js.items || js.itens || js.data || [];
+      if (Array.isArray(items1) && items1.length) return items1;
+    }
+    const url2 = `/api/profissionais?limit=6&sort=score&dir=desc&${ts()}`;
+    r = await fetch(url2, NO_STORE);
+    js = r.ok ? await r.json() : {items:[]};
+    return js.items || js.itens || js.data || [];
+  }catch{
+    return [];
+  }
+}
+</script>
 </body></html>

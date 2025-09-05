@@ -42,69 +42,40 @@
     <div id="err" class="card meta" style="display:none">Não foi possível carregar o Top 10.</div>
   </main>
 
-  <script>
-  (function(){
-    const list = document.getElementById('list');
-    const err  = document.getElementById('err');
-    const NO_STORE = { cache:'no-store' };
-    const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-    const estrelas = (n)=>{ const r=Math.round((Number(n)||0)*2)/2; const f=Math.floor(r),h=(r%1!==0); return "★".repeat(f)+(h?"½":"")+"☆".repeat(5-f-(h?1:0)); };
+<script>
+async function fetchTop10(){
+  const q = new URLSearchParams();
+  const cidade = $('cidade').value.trim();
+  const servico = $('servico').value.trim();
+  if (cidade) q.set('cidade', cidade);
+  if (servico) q.set('servico', servico);
+  q.set('ts', Date.now());
 
-    function card(p, idx){
-      const id = p.id;
-      const foto = p.foto || '/icons/icon-192.png';
-      const nome = p.nome || 'Profissional';
-      const serv = p.servico || p.profissao || '';
-      const local = [p.bairro,p.cidade].filter(Boolean).join(' • ');
-      const rate = Number(p.rating||0);
-      const avals = Number(p.avaliacoes||0);
-      return `
-        <article class="card-pro">
-          <div class="pill" style="min-width:32px;text-align:center;font-weight:800">#${idx+1}</div>
-          <img class="photo" src="${esc(foto)}" alt="Foto de ${esc(nome)}" onerror="this.src='/icons/icon-192.png'">
-          <div style="flex:1 1 auto;min-width:0">
-            <h3 class="name">${esc(nome)}</h3>
-            <div class="muted">${esc(serv)} • ${esc(local)}</div>
-            <div class="rating">${estrelas(rate)} <span class="muted">(${avals})</span></div>
-          </div>
-          <a class="btn" href="/profissional/${encodeURIComponent(id)}">Ver</a>
-        </article>
-      `;
-    }
+  try{
+    $('loader').style.display='';
+    const r = await fetch('/api/top10?'+q.toString(), NO_STORE);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const js = await r.json();
 
-    async function loadTop(){
-      list.innerHTML = `<div class="meta">Carregando…</div>`;
-      err.style.display='none';
-      try{
-        // 1) endpoint dedicado se existir
-        let r = await fetch('/api/profissionais/top?limit=10&ts='+Date.now(), NO_STORE);
-        let js = r.ok ? await r.json() : null;
-        let items = (js && (js.items || js.top)) || [];
+    // Aceita Ok/ok e items/itens/data
+    const week = js.week || js.semana || '';
+    $('weekLabel').textContent = week ? `Semana: ${week}` : 'Semana atual';
 
-        // 2) fallback por score/featured
-        if(!items.length){
-          r = await fetch('/api/profissionais?featured=1&limit=10&sort=score&dir=desc&ts='+Date.now(), NO_STORE);
-          js = r.ok ? await r.json() : null;
-          items = js?.items || [];
-        }
-        // 3) fallback geral
-        if(!items.length){
-          r = await fetch('/api/profissionais?limit=10&sort=score&dir=desc&ts='+Date.now(), NO_STORE);
-          js = r.ok ? await r.json() : null;
-          items = js?.items || [];
-        }
+    const items = Array.isArray(js.items) ? js.items
+                : Array.isArray(js.itens) ? js.itens
+                : Array.isArray(js.data)  ? js.data
+                : [];
 
-        if(!items.length){ list.innerHTML = `<div class="meta">Sem dados para exibir.</div>`; return; }
-        list.innerHTML = items.map((p,i)=>card(p,i)).join('');
-      }catch(_){
-        list.innerHTML='';
-        err.style.display='';
-      }
-    }
-
-    // atualiza SW para evitar cache teimoso
-    if('serviceWorker' in navigator){ navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.update())).catch(()=>{}); }
-    loadTop();
-  })();
-  </script>
+    setCount(items.length);
+    $('results').innerHTML = items.length
+      ? items.map((p,i)=>cardHTML(p,i)).join('')
+      : `<div class="muted" style="padding:10px">Nenhum profissional no Top 10 com os filtros atuais.</div>`;
+  }catch(e){
+    console.warn('top10 erro:', e);
+    $('results').innerHTML = `<div class="muted" style="padding:10px">Falha ao carregar o ranking. Tente novamente.</div>`;
+  }finally{
+    $('loader').style.display='none';
+  }
+}
+</script>
 </body></html>
