@@ -1,8 +1,8 @@
 // ============================================================================
 // Autônoma.app • server.js (CONSOLIDADO)
-// Data: 2025-09-07
+// Data: 2025-09-07 (auth admin com hash + avaliações JSON)
 // - Páginas públicas + PWA + SEO
-// - Admin (login obrigatório) + export CSV
+// - Admin (login obrigatório) + export CSV (suporta ADMIN_PASS_HASH com bcrypt)
 // - Painel do Profissional (login via token WhatsApp, Radar on/off, raio, cidades extras)
 // - Busca com ranking (planos + distância + Radar)
 // - Perfil público (/perfil.html?id=... e /profissional/:id)
@@ -14,8 +14,9 @@
 // - Compat: /api/profissionais/:id
 // - Respeita .env: PRIMARY_HOST, FORCE_HTTPS, SECURE_COOKIES, REDIRECTS_DISABLED
 // ============================================================================
-
 require("dotenv").config();
+  console.log("🔑 ADMIN_USER atual:", process.env.ADMIN_USER);
+console.log("🔑 ADMIN_PASS atual:", process.env.ADMIN_PASS);
 const express = require("express");
 const session = require("express-session");
 const multer  = require("multer");
@@ -24,18 +25,20 @@ const fs      = require("fs");
 const crypto  = require("crypto");
 const compression = require("compression");
 const QRCode  = require("qrcode");
+const rateLimit = require("express-rate-limit");
+const bcrypt = require("bcryptjs");
+const cookieParser = require("cookie-parser");
 
 // ----------------------------------------------------------------------------
 // App base
 // ----------------------------------------------------------------------------
 const app = express();
 app.set("trust proxy", 1);
-
 const HOST = "0.0.0.0";
 const BASE_PORT = Number(process.env.PORT || 3000);
 
 // Canonical/redirects
-const PRIMARY_HOST       = (process.env.PRIMARY_HOST || "").trim(); // ex.: "autonomaapp.com.br"
+const PRIMARY_HOST       = (process.env.PRIMARY_HOST || "").trim();
 const FORCE_HTTPS        = String(process.env.FORCE_HTTPS || "false").toLowerCase() === "true";
 const REDIRECTS_DISABLED = String(process.env.REDIRECTS_DISABLED || "false").toLowerCase() === "true";
 
@@ -65,16 +68,17 @@ const METRICS_FILE  = path.join(DATA_DIR, "metrics.json");
 function readJSON(file, fallback){ try{ return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file,"utf8")) : fallback; }catch{ return fallback; } }
 function writeJSON(file, data){ fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf8"); }
 
-// Inicia arquivos essenciais se faltarem
-if (!fs.existsSync(DB_FILE))        writeJSON(DB_FILE, []);
-if (!fs.existsSync(DENUNCIAS_FILE)) writeJSON(DENUNCIAS_FILE, []);
-if (!fs.existsSync(PAYMENTS_FILE))  writeJSON(PAYMENTS_FILE, []);
-if (!fs.existsSync(METRICS_FILE))   writeJSON(METRICS_FILE, {});
+// Inicia arquivos essenciais
+if (!fs.existsSync(DB_FILE))         writeJSON(DB_FILE, []);
+if (!fs.existsSync(DENUNCIAS_FILE))  writeJSON(DENUNCIAS_FILE, []);
+if (!fs.existsSync(PAYMENTS_FILE))   writeJSON(PAYMENTS_FILE, []);
+if (!fs.existsSync(METRICS_FILE))    writeJSON(METRICS_FILE, {});
 
 // ----------------------------------------------------------------------------
-const ADMIN_USER     = process.env.ADMIN_USER || "admin";
-const ADMIN_PASS     = process.env.ADMIN_PASS || process.env.ADMIN_PASSWORD || "admin123";
-const SESSION_SECRET = process.env.SESSION_SECRET || "troque-isto";
+const ADMIN_USER      = process.env.ADMIN_USER || "admin";
+const ADMIN_PASS      = process.env.ADMIN_PASS || process.env.ADMIN_PASSWORD || "admin123";
+const ADMIN_PASS_HASH = process.env.ADMIN_PASS_HASH || ""; // se existir, tem prioridade
+const SESSION_SECRET  = process.env.SESSION_SECRET || "troque-isto";
 
 // Helpers
 const trim = (s)=> (s??"").toString().trim();
@@ -86,9 +90,12 @@ const ensureBR  = (d)=> (d && /^\d{10,13}$/.test(d) ? (d.startsWith("55")? d : "
 const isWhatsappValid = (w)=> { const d=onlyDigits(w); const br=ensureBR(d); return !!(br && /^\d{12,13}$/.test(br)); };
 const nowISO = ()=> new Date().toISOString();
 const monthRefOf = (d)=> (d||nowISO()).slice(0,7); // "YYYY-MM"
-const weekKey = ()=>{ const d=new Date(); const onejan=new Date(d.getFullYear(),0,1);
-  const day=Math.floor((d - onejan) / 86400000); const week=Math.ceil((day + onejan.getDay() + 1) / 7);
-  return `${d.getFullYear()}-W${String(week).padStart(2,"0")}`; };
+const weekKey = ()=>{
+  const d=new Date(); const onejan=new Date(d.getFullYear(),0,1);
+  const day=Math.floor((d - onejan) / 86400000);
+  const week=Math.ceil((day + onejan.getDay() + 1) / 7);
+  return `${d.getFullYear()}-W${String(week).padStart(2,"0")}`;
+};
 
 // Haversine
 function haversineKm(aLat, aLng, bLat, bLng){
@@ -106,8 +113,9 @@ function haversineKm(aLat, aLng, bLat, bLng){
 app.use(compression());
 app.use(express.urlencoded({ extended:true }));
 app.use(express.json({ limit:"1.2mb" }));
+app.use(cookieParser());
 
-// Canonical/HTTPS (respeita REDIRECTS_DISABLED)
+// Canonical/HTTPS
 if (!REDIRECTS_DISABLED){
   app.use((req,res,next)=>{
     try{
@@ -133,8 +141,8 @@ if (!REDIRECTS_DISABLED){
 app.use(express.static(PUBLIC_DIR, { maxAge:"7d", fallthrough: true }));
 app.use("/uploads", express.static(UPLOAD_DIR, { maxAge:"30d", immutable:true }));
 
-// Evita cache dos endpoints /api/* (especialmente em mobile/PWA)
-app.use(/^\/api\//, (req, res, next) => {
+// Evita cache dos endpoints /api/*
+app.use(/^\/api\//, (_req, res, next) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.set("Pragma", "no-cache");
   res.set("Expires", "0");
@@ -142,112 +150,7 @@ app.use(/^\/api\//, (req, res, next) => {
   next();
 });
 
-// ----------------------------------------------------------------------------
-// GEO / AUTOCOMPLETE / GPS
-// ----------------------------------------------------------------------------
-
-// Lista básica de cidades BR com coordenadas (suficiente para dev)
-const CIDADES_BASE = [
-  { nome: "Rio de Janeiro/RJ", lat: -22.9068, lng: -43.1729,
-    bairros: ["Copacabana","Ipanema","Botafogo","Tijuca","Barra da Tijuca","Leblon","Centro"] },
-  { nome: "São Paulo/SP", lat: -23.5505, lng: -46.6333,
-    bairros: ["Pinheiros","Vila Mariana","Moema","Tatuapé","Santana","Itaim Bibi","Centro"] },
-  { nome: "Belo Horizonte/MG", lat: -19.9167, lng: -43.9345,
-    bairros: ["Savassi","Lourdes","Funcionários","Pampulha","Centro","Cidade Nova"] },
-  { nome: "Brasília/DF", lat: -15.7939, lng: -47.8828,
-    bairros: ["Asa Sul","Asa Norte","Lago Sul","Lago Norte","Sudoeste","Noroeste"] },
-  { nome: "Salvador/BA", lat: -12.9711, lng: -38.5108,
-    bairros: ["Barra","Ondina","Rio Vermelho","Pituba","Itapuã","Stella Maris"] },
-  { nome: "Porto Alegre/RS", lat: -30.0346, lng: -51.2177,
-    bairros: ["Moinhos de Vento","Centro","Cidade Baixa","Petrópolis","Tristeza"] },
-  { nome: "Curitiba/PR", lat: -25.4284, lng: -49.2733,
-    bairros: ["Batel","Centro","Água Verde","Bigorrilho","Cabral","Portão"] },
-  { nome: "Recife/PE", lat: -8.0476, lng: -34.8770,
-    bairros: ["Boa Viagem","Casa Forte","Graças","Espinheiro","Pina","Boa Vista"] },
-  { nome: "Fortaleza/CE", lat: -3.7319, lng: -38.5267,
-    bairros: ["Meireles","Aldeota","Praia de Iracema","Praia do Futuro","Centro"] },
-  { nome: "Manaus/AM", lat: -3.1190, lng: -60.0217,
-    bairros: ["Adrianópolis","Centro","Ponta Negra","Flores","Parque 10"] },
-];
-
-// Serviços base
-const SERVICOS_BASE = [
-  "Eletricista","Hidráulico","Pintor","Marceneiro","Diarista","Pedreiro","Técnico em informática",
-  "Manicure","Cabeleireiro","Encanador","Chaveiro","Jardineiro","Fotógrafo","Personal Trainer"
-];
-
-// --- /api/geo/cidades ---------------------------------------------------------
-app.get('/api/geo/cidades', (_req, res) => {
-  try{
-    res.json(CIDADES_BASE.map(c => c.nome));
-  }catch{ res.json([]); }
-});
-
-// --- /api/geo/cidades/suggest -------------------------------------------------
-app.get('/api/geo/cidades/suggest', (req, res) => {
-  try{
-    const q = trim(req.query.q||"");
-    if (!q) return res.json([]);
-    const QQ = norm(q);
-    const out = CIDADES_BASE
-      .map(c=>c.nome)
-      .filter(c => norm(c).includes(QQ) || norm(c.split("/")[0]).includes(QQ))
-      .slice(0, 20);
-    res.json(out);
-  }catch{ res.json([]); }
-});
-
-// --- /api/geo/servicos --------------------------------------------------------
-app.get('/api/geo/servicos', (_req, res) => {
-  try{ res.json(SERVICOS_BASE); }catch{ res.json([]); }
-});
-
-// --- /api/geo/bairros?cidade=Nome/UF -----------------------------------------
-app.get('/api/geo/bairros', (req, res) => {
-  const cidade = String(req.query.cidade || '').trim().toLowerCase();
-  if (!cidade) return res.json([]);
-  const item = CIDADES_BASE.find(c => c.nome.toLowerCase() === cidade);
-  return res.json(item ? item.bairros : []);
-});
-
-// --- /api/geo/bairros/suggest?cidade=...&q=... --------------------------------
-app.get('/api/geo/bairros/suggest', (req, res) => {
-  const cidade = String(req.query.cidade || '').trim().toLowerCase();
-  const q = String(req.query.q || '').trim().toLowerCase();
-  if (!cidade || !q) return res.json([]);
-  const item = CIDADES_BASE.find(c => c.nome.toLowerCase() === cidade);
-  if (!item) return res.json([]);
-  const out = item.bairros.filter(b => b.toLowerCase().includes(q)).slice(0, 15);
-  return res.json(out);
-});
-
-// --- /api/geo/servicos/suggest?q=... ------------------------------------------
-app.get('/api/geo/servicos/suggest', (req, res) => {
-  const q = String(req.query.q || '').trim().toLowerCase();
-  if (!q) return res.json([]);
-  const out = SERVICOS_BASE.filter(s => s.toLowerCase().includes(q)).slice(0, 15);
-  return res.json(out);
-});
-
-// --- /api/geo/closest-city?lat=...&lng=... ------------------------------------
-// Retorna { ok:true, cidade:"Nome/UF", distKm:number } ou { ok:false }.
-app.get('/api/geo/closest-city', (req, res) => {
-  const lat = Number(req.query.lat);
-  const lng = Number(req.query.lng);
-  if (!isFinite(lat) || !isFinite(lng)) {
-    return res.json({ ok:false, error:"coords_invalid" });
-  }
-  let best = null;
-  let bestD = Infinity;
-  for (const c of CIDADES_BASE) {
-    const d = haversineKm(lat, lng, c.lat, c.lng);
-    if (d!=null && d < bestD) { best = c; bestD = d; }
-  }
-  if (!best) return res.json({ ok:false });
-  return res.json({ ok:true, cidade: best.nome, distKm: Math.round(bestD*10)/10 });
-});
-
-// Sessões (compatível com mobile/HTTPS)
+// Sessões
 app.use(session({
   name: "aut_sess",
   secret: SESSION_SECRET,
@@ -260,24 +163,90 @@ app.use(session({
   }
 }));
 
+// Limiter básico
+const loginLimiter = rateLimit({ windowMs: 15*60*1000, max: 20, standardHeaders: true, legacyHeaders: false });
+const reviewsLimiter = rateLimit({ windowMs: 5*60*1000,  max: 40, standardHeaders: true, legacyHeaders: false });
+
+// ----------------------------------------------------------------------------
+// GEO / AUTOCOMPLETE / GPS (base simples)
+// ----------------------------------------------------------------------------
+const CIDADES_BASE = [
+  { nome: "Rio de Janeiro/RJ", lat: -22.9068, lng: -43.1729,    bairros: ["Copacabana","Ipanema","Botafogo","Tijuca","Barra da Tijuca","Leblon","Centro"] },
+  { nome: "São Paulo/SP",      lat: -23.5505, lng: -46.6333,    bairros: ["Pinheiros","Vila Mariana","Moema","Tatuapé","Santana","Itaim Bibi","Centro"] },
+  { nome: "Belo Horizonte/MG", lat: -19.9167, lng: -43.9345,    bairros: ["Savassi","Lourdes","Funcionários","Pampulha","Centro","Cidade Nova"] },
+  { nome: "Brasília/DF",       lat: -15.7939, lng: -47.8828,    bairros: ["Asa Sul","Asa Norte","Lago Sul","Lago Norte","Sudoeste","Noroeste"] },
+  { nome: "Salvador/BA",       lat: -12.9711, lng: -38.5108,    bairros: ["Barra","Ondina","Rio Vermelho","Pituba","Itapuã","Stella Maris"] },
+  { nome: "Porto Alegre/RS",   lat: -30.0346, lng: -51.2177,    bairros: ["Moinhos de Vento","Centro","Cidade Baixa","Petrópolis","Tristeza"] },
+  { nome: "Curitiba/PR",       lat: -25.4284, lng: -49.2733,    bairros: ["Batel","Centro","Água Verde","Bigorrilho","Cabral","Portão"] },
+  { nome: "Recife/PE",         lat: -8.0476,  lng: -34.8770,    bairros: ["Boa Viagem","Casa Forte","Graças","Espinheiro","Pina","Boa Vista"] },
+  { nome: "Fortaleza/CE",      lat: -3.7319,  lng: -38.5267,    bairros: ["Meireles","Aldeota","Praia de Iracema","Praia do Futuro","Centro"] },
+  { nome: "Manaus/AM",         lat: -3.1190,  lng: -60.0217,    bairros: ["Adrianópolis","Centro","Ponta Negra","Flores","Parque 10"] },
+];
+const SERVICOS_BASE = [
+  "Eletricista","Hidráulico","Pintor","Marceneiro","Diarista","Pedreiro","Técnico em informática",
+  "Manicure","Cabeleireiro","Encanador","Chaveiro","Jardinheiro","Fotógrafo","Personal Trainer"
+];
+
+app.get('/api/geo/cidades', (_req, res) => { try{ res.json(CIDADES_BASE.map(c => c.nome)); }catch{ res.json([]); }});
+app.get('/api/geo/cidades/suggest', (req, res) => {
+  try{
+    const q = trim(req.query.q||""); if (!q) return res.json([]);
+    const QQ = norm(q);
+    const out = CIDADES_BASE.map(c=>c.nome)
+      .filter(c => norm(c).includes(QQ) || norm(c.split("/")[0]).includes(QQ))
+      .slice(0, 20);
+    res.json(out);
+  }catch{ res.json([]); }
+});
+app.get('/api/geo/servicos', (_req, res) => { try{ res.json(SERVICOS_BASE); }catch{ res.json([]); }});
+app.get('/api/geo/bairros', (req, res) => {
+  const cidade = String(req.query.cidade || '').trim().toLowerCase();
+  if (!cidade) return res.json([]);
+  const item = CIDADES_BASE.find(c => c.nome.toLowerCase() === cidade);
+  return res.json(item ? item.bairros : []);
+});
+app.get('/api/geo/bairros/suggest', (req, res) => {
+  const cidade = String(req.query.cidade || '').trim().toLowerCase();
+  const q = String(req.query.q || '').trim().toLowerCase();
+  if (!cidade || !q) return res.json([]);
+  const item = CIDADES_BASE.find(c => c.nome.toLowerCase() === cidade);
+  if (!item) return res.json([]);
+  const out = item.bairros.filter(b => b.toLowerCase().includes(q)).slice(0, 15);
+  return res.json(out);
+});
+app.get('/api/geo/servicos/suggest', (req, res) => {
+  const q = String(req.query.q || '').trim().toLowerCase();
+  if (!q) return res.json([]);
+  const out = SERVICOS_BASE.filter(s => s.toLowerCase().includes(q)).slice(0, 15);
+  return res.json(out);
+});
+app.get('/api/geo/closest-city', (req, res) => {
+  const lat = Number(req.query.lat);
+  const lng = Number(req.query.lng);
+  if (!isFinite(lat) || !isFinite(lng)) return res.json({ ok:false, error:"coords_invalid" });
+  let best = null, bestD = Infinity;
+  for (const c of CIDADES_BASE) {
+    const d = haversineKm(lat, lng, c.lat, c.lng);
+    if (d!=null && d < bestD) { best = c; bestD = d; }
+  }
+  if (!best) return res.json({ ok:false });
+  return res.json({ ok:true, cidade: best.nome, distKm: Math.round(bestD*10)/10 });
+});
+
 // ----------------------------------------------------------------------------
 // HTML helpers
 // ----------------------------------------------------------------------------
 const htmlMsg = (title, text, backHref="/") =>
 `<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="/css/app.css">
-<div class="wrap"><div class="card"><h1>${escapeHTML(title)}</h1><p class="meta">${escapeHTML(text||"")}</p>
-<a class="btn" href="${escapeHTML(backHref)}">Voltar</a></div></div>`;
-
+<div class="wrap"><div class="card"><h1>${escapeHTML(title)}</h1><p class="meta">${escapeHTML(text||"")}</p><a class="btn" href="${escapeHTML(backHref)}">Voltar</a></div></div>`;
 const htmlErrors = (title, list, backHref="/") =>
 `<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="/css/app.css">
-<div class="wrap"><div class="card"><h1>${escapeHTML(title)}</h1><ul>${(list||[]).map(e=>`<li>${escapeHTML(e)}</li>`).join("")}</ul>
-<a class="btn" href="${escapeHTML(backHref)}">Voltar</a></div></div>`;
+<div class="wrap"><div class="card"><h1>${escapeHTML(title)}</h1><ul>${(list||[]).map(e=>`<li>${escapeHTML(e)}</li>`).join("")}</ul><a class="btn" href="${escapeHTML(backHref)}">Voltar</a></div></div>`;
 
 // ----------------------------------------------------------------------------
 // Health / Diagnóstico
 // ----------------------------------------------------------------------------
 app.get("/healthz", (_req,res)=> res.type("text").send("ok"));
-
 app.get("/admin/check", (req,res)=>{
   const info = {
     session: !!(req.session && req.session.isAdmin),
@@ -299,27 +268,24 @@ app.get("/admin/check", (req,res)=>{
 // ----------------------------------------------------------------------------
 // Páginas estáticas
 // ----------------------------------------------------------------------------
-app.get("/",                (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "index.html")));
-app.get("/clientes.html",   (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "clientes.html")));
-app.get("/cadastro.html",   (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "cadastro.html")));
-app.get("/favoritos.html",  (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "favoritos.html")));
+app.get("/",                 (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "index.html")));
+app.get("/clientes.html",    (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "clientes.html")));
+app.get("/cadastro.html",    (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "cadastro.html")));
+app.get("/favoritos.html",   (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "favoritos.html")));
 app.get("/cadastro_sucesso.html", (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "cadastro_sucesso.html")));
-app.get("/denunciar.html",  (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "denunciar.html")));
-app.get("/top10.html",      (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "top10.html")));
-app.get("/planos.html",     (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "planos.html")));
-app.get("/checkout.html",   (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "checkout.html")));
-app.get("/painel_login.html", (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "painel_login.html")));
-app.get("/perfil.html",     (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "perfil.html"))); // mantém perfil HTML
+app.get("/denunciar.html",   (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "denunciar.html")));
+app.get("/top10.html",       (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "top10.html")));
+app.get("/planos.html",      (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "planos.html")));
+app.get("/checkout.html",    (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "checkout.html")));
+app.get("/painel_login.html",(_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "painel_login.html")));
+app.get("/perfil.html",      (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "perfil.html"))); // mantém perfil HTML
 
-// ----------------------------------------------------------------------------
-// Redirects legados/canônicos de rotas
-// ----------------------------------------------------------------------------
+// Redirects legados/canônicos
 app.get(["/perfil.html","/perfil"], (req,res)=>{
   const id = Number(req.query.id||"");
   if (id) return res.redirect(301, `/profissional/${id}`);
   return res.redirect(302, "/clientes.html");
 });
-
 app.get("/clientes", (_req,res)=> res.redirect(301, "/clientes.html"));
 app.get("/cadastro", (_req,res)=> res.redirect(301, "/cadastro.html"));
 app.get("/admin.html", (_req,res)=> res.redirect(302, "/admin"));
@@ -329,12 +295,8 @@ app.get("/admin.html", (_req,res)=> res.redirect(302, "/admin"));
 // ----------------------------------------------------------------------------
 const readDB  = ()=> readJSON(DB_FILE, []);
 const writeDB = (data)=> writeJSON(DB_FILE, data);
+function computeVerified(p){ return !!(p?.foto && isWhatsappValid(p.whatsapp) && p.cidade && p.bairro); }
 
-function computeVerified(p){
-  return !!(p?.foto && isWhatsappValid(p.whatsapp) && p.cidade && p.bairro);
-}
-
-// migração leve
 (function fixDB(){
   const db = readDB();
   let changed=false;
@@ -356,18 +318,15 @@ function computeVerified(p){
     if(!p.excluidoEm && p.excluido) p.excluidoEm=nowISO();
     if(p.lat!=null && typeof p.lat!=="number"){ p.lat=Number(p.lat); changed=true; }
     if(p.lng!=null && typeof p.lng!=="number"){ p.lng=Number(p.lng); changed=true; }
-    const newVer = computeVerified(p);
-    if(p.verificado!==newVer){ p.verificado=newVer; changed=true; }
+    const newVer = computeVerified(p); if(p.verificado!==newVer){ p.verificado=newVer; changed=true; }
     if(!p.plano) p.plano = "free";
     if(typeof p.raioKm!=="number") p.raioKm = 0;
     if(!Array.isArray(p.cidadesExtras)) p.cidadesExtras=[];
     if(typeof p.uber!=="object" || p.uber==null){
-      p.uber = { on:false, until:null, lastOnAt:null, monthlyUsed:0, monthRef: monthRefOf() };
-      changed=true;
+      p.uber = { on:false, until:null, lastOnAt:null, monthlyUsed:0, monthRef: monthRefOf() }; changed=true;
     }
     if(!p.radar){
-      p.radar = { on:false, until:null, lastOnAt:null, monthlyUsed:0, monthRef: monthRefOf() };
-      changed=true;
+      p.radar = { on:false, until:null, lastOnAt:null, monthlyUsed:0, monthRef: monthRefOf() }; changed=true;
     }
     if(!p.lastPos) p.lastPos = { lat:null, lng:null, at:null };
     if(typeof p.receiveViaApp!=="boolean") p.receiveViaApp=false;
@@ -398,6 +357,7 @@ function loadGeoMaps(){
   if (!Array.isArray(cidades)){ cidades = Object.keys(cidades||{}); }
   if (!cidades.length && bairrosMap && typeof bairrosMap==="object"){ cidades = Object.keys(bairrosMap); }
   cidades = (cidades||[]).filter(Boolean).sort((a,b)=> a.localeCompare(b,"pt-BR"));
+
   const baseServ = [
     "Eletricista","Encanador","Diarista","Passadeira","Marido de aluguel",
     "Pintor","Pedreiro","Gesseiro","Marceneiro","Serralheiro","Montador de móveis",
@@ -409,19 +369,15 @@ function loadGeoMaps(){
   const servExtra = readJSON(SERVICOS_FILE, []);
   const fromDB = new Set(readDB().map(p => (p.servico||p.profissao||"").toString().trim()).filter(Boolean));
   const servicos = Array.from(new Set([...baseServ, ...(Array.isArray(servExtra)?servExtra:[]), ...Array.from(fromDB)]
-                    .map(s=>s.trim()).filter(Boolean))).sort((a,b)=> a.localeCompare(b,"pt-BR"));
+                      .map(s=>s.trim()).filter(Boolean))).sort((a,b)=> a.localeCompare(b,"pt-BR"));
   return { bairrosMap, cidades, servicos };
 }
-
 function normalizeCidadeUF(input){
   const { cidades } = loadGeoMaps();
   const q = norm(input); if (!q) return "";
-  let hit = cidades.find(c => norm(c) === q);
-  if (hit) return hit;
-  hit = cidades.find(c => norm(c.split("/")[0]) === q);
-  if (hit) return hit;
-  hit = cidades.find(c => norm(c).startsWith(q) || norm(c.split("/")[0]).startsWith(q));
-  if (hit) return hit;
+  let hit = cidades.find(c => norm(c) === q); if (hit) return hit;
+  hit = cidades.find(c => norm(c.split("/")[0]) === q); if (hit) return hit;
+  hit = cidades.find(c => norm(c).startsWith(q) || norm(c.split("/")[0]).startsWith(q)); if (hit) return hit;
   hit = cidades.find(c => norm(c).includes(q));
   return hit || input;
 }
@@ -473,7 +429,6 @@ function validateCadastro(body){
     }
   };
 }
-
 function isDuplicate(db, novo){
   return db.some(p =>
     p.whatsapp===novo.whatsapp &&
@@ -488,7 +443,6 @@ app.post("/cadastrar",
   (req,res)=>{
     try{
       const { ok, errors, values } = validateCadastro(req.body);
-      // Foto obrigatória
       if (!req.file?.filename) errors.push("Foto é obrigatória.");
       if (!ok || errors.length) return res.status(400).send(htmlErrors("Dados inválidos", errors, "/cadastro.html"));
 
@@ -523,7 +477,7 @@ app.post("/cadastrar",
 );
 
 // ----------------------------------------------------------------------------
-// Busca pública de profissionais (reimplementada p/ mobile + filtros extra)
+// Busca pública de profissionais
 // ----------------------------------------------------------------------------
 function isRecent(iso, mins=15){ if (!iso) return false; const t=new Date(iso).getTime(); if (!Number.isFinite(t)) return false; return (Date.now()-t) <= (mins*60*1000); }
 
@@ -538,9 +492,8 @@ app.get("/api/profissionais", (req, res) => {
     const minRating = Number(req.query.minRating || 0);
     const featured  = String(req.query.featured || "").trim() === "1";
     const photoOnly = String(req.query.photoOnly || "").trim() === "1";
-
-    const userLat  = Number(req.query.userLat);
-    const userLng  = Number(req.query.userLng);
+    const userLat   = Number(req.query.userLat);
+    const userLng   = Number(req.query.userLng);
     const hasUserPos = Number.isFinite(userLat) && Number.isFinite(userLng);
 
     let items = db;
@@ -548,7 +501,6 @@ app.get("/api/profissionais", (req, res) => {
     if (featured) {
       items = items.filter(p => p.verificado || (p.plano && p.plano !== 'free'));
     }
-
     if (cidade) {
       const alvo = normalizeCidadeUF(cidade);
       const N = norm(alvo);
@@ -585,9 +537,7 @@ app.get("/api/profissionais", (req, res) => {
       if (!Number.isFinite(plat) || !Number.isFinite(plng)) {
         if (p.lastPos && Number.isFinite(p.lastPos.lat) && Number.isFinite(p.lastPos.lng)) {
           plat = Number(p.lastPos.lat); plng = Number(p.lastPos.lng);
-        } else {
-          plat = null; plng = null;
-        }
+        } else { plat = null; plng = null; }
       }
       let dist = null;
       if (hasUserPos && Number.isFinite(plat) && Number.isFinite(plng)) {
@@ -605,14 +555,12 @@ app.get("/api/profissionais", (req, res) => {
     // Ordenação
     const sort = String(req.query.sort || "score");
     const dir  = String(req.query.dir || "desc").toLowerCase() === "asc" ? 1 : -1;
-
     items.sort((a,b)=>{
       if (sort === "dist") {
         const da = (a._distKm==null ? Infinity : a._distKm);
         const dbb= (b._distKm==null ? Infinity : b._distKm);
         return (da - dbb) * dir;
       }
-      // default score
       return ((a._score||0) - (b._score||0)) * dir;
     });
 
@@ -656,10 +604,8 @@ app.get("/api/profissionais/:id", (req, res) => {
   const db = readDB();
   const p = db.find(x => Number(x.id) === id && !x.excluido);
   if (!p) return res.status(404).json({ ok:false });
-
   const notas = (p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
   const rating = notas.length ? notas.reduce((a,b)=>a+b,0)/notas.length : 0;
-
   res.json({
     ok: true,
     id: p.id,
@@ -689,13 +635,11 @@ app.get("/api/profissional/:id", (req, res) => {
   const db = readDB();
   const p = db.find(x => Number(x.id) === id && !x.excluido);
   if (!p) return res.status(404).json({ ok: false });
-
   const notas = (p.avaliacoes || []).map(a => Number(a.nota)).filter(n => n >= 1 && n <= 5);
   const rating = notas.length ? notas.reduce((a,b)=>a+b,0)/notas.length : 0;
   const experiencia = (typeof p.experiencia === "number")
     ? p.experiencia
     : Number(String(p.experiencia||"").replace(/\D/g,"")) || null;
-
   res.json({
     ok: true,
     id: p.id,
@@ -720,7 +664,74 @@ app.get("/api/profissional/:id", (req, res) => {
   });
 });
 
-// POST avaliação (form do perfil)
+// -------------------- AVALIAÇÕES (APIs JSON novas) --------------------
+// GET /api/avaliacoes/:id?page=1&limit=20
+app.get("/api/avaliacoes/:id", (req,res)=>{
+  const id = Number(req.params.id||"0");
+  if (!Number.isFinite(id) || id<=0) return res.status(400).json({ ok:false, error:"id inválido" });
+  const db = readDB();
+  const p = db.find(x=> Number(x.id)===id && !x.excluido);
+  if (!p) return res.status(404).json({ ok:false, error:"não encontrado" });
+  const page = Math.max(1, Number(req.query.page||1));
+  const limit = Math.max(1, Math.min(50, Number(req.query.limit||20)));
+  const list = Array.isArray(p.avaliacoes)? p.avaliacoes : [];
+  const total = list.length;
+  const start = (page-1)*limit;
+  const end   = start + limit;
+  const slice = list.slice(start,end);
+  res.json({ ok:true, total, items:slice });
+});
+
+// Anti-spam simples por cookie/IP
+function ensureReviewCookie(req,res){
+  const raw = req.cookies || {};
+  if (raw && raw.rev_uid) return raw.rev_uid;
+  const uid = crypto.randomBytes(12).toString("hex");
+  res.cookie("rev_uid", uid, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: (process.env.SECURE_COOKIES === "true"),
+    maxAge: 180*24*3600*1000,
+    path: "/"
+  });
+  return uid;
+}
+
+// POST /api/avaliacoes  { proId, nota, comentario, autor }
+app.post("/api/avaliacoes", reviewsLimiter, (req,res)=>{
+  try{
+    const proId = Number(req.body?.proId||"0");
+    const nota = Number(req.body?.nota||0);
+    const comentario = trim(req.body?.comentario||"");
+    const autor = trim(req.body?.autor||"Cliente");
+    if (!Number.isFinite(proId) || proId<=0) return res.status(400).json({ ok:false, error:"proId inválido" });
+    if (!(nota>=1 && nota<=5)) return res.status(400).json({ ok:false, error:"nota inválida" });
+    if (comentario.length < 5) return res.status(400).json({ ok:false, error:"comentário muito curto" });
+
+    const db = readDB();
+    const p = db.find(x=> Number(x.id)===proId && !x.excluido);
+    if (!p) return res.status(404).json({ ok:false, error:"profissional não encontrado" });
+
+    const uid = ensureReviewCookie(req,res);
+    const ip = getIP(req);
+
+    // Bloqueio simples: mesmo cookie/ip não avalia o mesmo profissional em 12h
+    const twelveH = Date.now()-12*3600*1000;
+    const recent = (p.avaliacoes||[]).some(a=>{
+      const t = Date.parse(a.at||"");
+      return a.meta && (a.meta.ip===ip || a.meta.uid===uid) && Number.isFinite(t) && t>=twelveH;
+    });
+    if (recent) return res.status(429).json({ ok:false, error:"aguarde para avaliar novamente" });
+
+    (p.avaliacoes ||= []).push({ autor, nota, comentario, at: nowISO(), meta: { ip, uid } });
+    writeDB(db);
+    res.json({ ok:true });
+  }catch(e){
+    res.status(500).json({ ok:false, error:String(e) });
+  }
+});
+
+// POST avaliação (form do perfil) — HTML
 app.post("/profissional/:id/avaliar", (req,res)=>{
   const id = Number(req.params.id || "0");
   try{
@@ -741,7 +752,7 @@ app.post("/profissional/:id/avaliar", (req,res)=>{
   }
 });
 
-// SSR leve /profissional/:id -> redireciona ao perfil.html?id=...
+// SSR leve /profissional/:id
 app.get("/profissional/:id", (req,res)=>{
   const idNum = Number(req.params.id || "0");
   if (!Number.isFinite(idNum) || idNum <= 0) return res.redirect("/clientes.html");
@@ -759,7 +770,6 @@ function appendMetric(key, payload){
   metr[key][day].push(payload);
   writeJSON(METRICS_FILE, metr);
 }
-
 app.post("/api/track/visit/:id", (req,res)=>{
   const id = Number(req.params.id||"0");
   const db = readDB();
@@ -772,7 +782,6 @@ app.post("/api/track/visit/:id", (req,res)=>{
   }
   res.json({ ok:true });
 });
-
 app.post("/api/track/call/:id", (req,res)=>{
   const id = Number(req.params.id||"0");
   const db = readDB();
@@ -785,14 +794,13 @@ app.post("/api/track/call/:id", (req,res)=>{
   }
   res.json({ ok:true });
 });
-
 app.post("/api/track/qr/:id", (req,res)=>{
   const id = Number(req.params.id||"0");
   const db = readDB();
   const p = db.find(x=> Number(x.id)===id && !x.excluido);
   if (p){
     (p.qrLog ||= []).push({ at: nowISO(), ip:getIP(req) });
-    writeDB(db);
+    writeDB(db); // <— FIX: usar writeDB para persistir
     appendMetric("qr", { id, at: nowISO() });
   }
   res.json({ ok:true });
@@ -821,11 +829,12 @@ app.get("/api/qr", async (req, res) => {
 });
 
 // ----------------------------------------------------------------------------
-/** Top 10 semanal (API) */
+// Top 10 semanal (API)
 // ----------------------------------------------------------------------------
 function scoreTop10(p){
   const notas = (p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
   const rating = notas.length ? (notas.reduce((a,b)=>a+b,0)/notas.length) : 0;
+
   const thisWeek = weekKey();
   const calls = (p.callsLog||[]).filter(x=>{
     const d = new Date(x.at); if (isNaN(d)) return false;
@@ -836,11 +845,13 @@ function scoreTop10(p){
     const wkKey = `${y}-W${String(wk).padStart(2,"0")}`;
     return wkKey === thisWeek;
   }).length;
+
   const sevenAgo = Date.now() - 6*86400000;
   const visits = (p.visitsLog||[]).filter(x=>{
     const t = Date.parse(x.at);
     return Number.isFinite(t) && t >= sevenAgo;
   }).length;
+
   const planBoost = p.plano==="premium" ? 1 : (p.plano==="pro" ? 0.5 : 0);
   return (calls*2) + (visits*0.5) + (rating*3) + (p.verificado?0.5:0) + planBoost;
 }
@@ -874,12 +885,9 @@ app.get("/api/painel/me", (req, res) => {
     const db = readDB();
     let pro = null;
 
-    // sessão
     if (req.session?.painel?.ok) {
       pro = db.find(p => Number(p.id) === Number(req.session.painel.proId) && !p.excluido);
     }
-
-    // Authorization: Bearer <token> (whatsapp normalizado)
     if (!pro) {
       const auth = String(req.headers.authorization || "");
       if (auth.startsWith("Bearer ")) {
@@ -890,7 +898,6 @@ app.get("/api/painel/me", (req, res) => {
         }
       }
     }
-
     if (!pro) return res.status(401).json({ ok:false });
 
     const notas = (pro.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
@@ -929,7 +936,7 @@ app.get("/painel.html", (req, res) => {
     const pro = db.find(p => ensureBR(onlyDigits(p.whatsapp)) === token && !p.excluido);
     if (pro) {
       req.session.painel = { ok:true, proId: pro.id, when: Date.now() };
-      return res.redirect("/painel.html"); // limpa query
+      return res.redirect("/painel.html");
     }
   }
   if (!(req.session?.painel?.ok)) return res.redirect("/painel_login.html");
@@ -946,7 +953,6 @@ app.post("/api/painel/login", (req,res)=>{
   req.session.painel = { ok:true, proId: pro.id, when: Date.now() };
   res.json({ ok:true });
 });
-
 app.post("/api/painel/logout", (req,res)=>{ if (req.session) req.session.painel=null; res.json({ ok:true }); });
 
 // Estado leve
@@ -958,16 +964,11 @@ app.get("/api/painel/state", (req,res)=>{
   if (!p) return res.json({ ok:false });
   res.json({
     ok:true,
-    pro:{
-      id:p.id, nome:p.nome, plano:p.plano,
-      raioKm:p.raioKm, cidadesExtras:p.cidadesExtras||[],
-      radar:p.radar||p.uber||{},
-      receiveViaApp: !!p.receiveViaApp
-    }
+    pro:{ id:p.id, nome:p.nome, plano:p.plano, raioKm:p.raioKm, cidadesExtras:p.cidadesExtras||[], radar:p.radar||p.uber||{}, receiveViaApp: !!p.receiveViaApp }
   });
 });
 
-// Atualizações do painel (posição, radar, raio, cidades, prefs, update perfil)
+// Atualizações do painel
 app.post("/api/painel/pos", (req,res)=>{
   const s = req.session?.painel;
   if (!s?.ok || !s?.proId) return res.status(401).json({ ok:false });
@@ -982,13 +983,11 @@ app.post("/api/painel/pos", (req,res)=>{
   res.json({ ok:true });
 });
 
-// Radar principal
 function proLimits(p){
   if (p.plano==="premium") return { maxRaio:50, maxCidades:10, uberUnlimited:true, maxUberActivations:Infinity };
   if (p.plano==="pro")     return { maxRaio:30, maxCidades:3,  uberUnlimited:false, maxUberActivations:5 };
   return { maxRaio:0, maxCidades:0, uberUnlimited:false, maxUberActivations:0 };
 }
-
 app.post("/api/painel/radar", (req,res)=>{
   const s = req.session?.painel;
   if (!s?.ok || !s?.proId) return res.status(401).json({ ok:false });
@@ -996,11 +995,9 @@ app.post("/api/painel/radar", (req,res)=>{
   const db = readDB();
   const p = db.find(x=> Number(x.id)===s.proId);
   if (!p) return res.status(404).json({ ok:false });
-
   const nowRef = monthRefOf();
   p.radar ||= { on:false, until:null, lastOnAt:null, monthlyUsed:0, monthRef:nowRef };
   if (p.radar.monthRef !== nowRef){ p.radar.monthRef=nowRef; p.radar.monthlyUsed=0; }
-
   const lim = proLimits(p);
   if (on===true){
     if (p.plano==="free") return res.status(403).json({ ok:false, error:"Somente Pro/Premium" });
@@ -1018,8 +1015,6 @@ app.post("/api/painel/radar", (req,res)=>{
   writeDB(db);
   res.json({ ok:true, radar:p.radar });
 });
-
-// Compat: toggle e autooff simples
 app.post("/api/painel/radar/toggle", (req,res)=>{
   const s = req.session?.painel; if (!s?.ok) return res.status(401).json({ ok:false });
   const db = readDB(); const p = db.find(x=> Number(x.id)===s.proId); if (!p) return res.status(404).json({ ok:false });
@@ -1028,7 +1023,6 @@ app.post("/api/painel/radar/toggle", (req,res)=>{
   req.body = { on: want, durationHours: durHrs };
   return app._router.handle(req,res, ()=>{}, "/api/painel/radar");
 });
-
 app.post("/api/painel/radar/autooff", (req,res)=>{
   const s = req.session?.painel; if (!s?.ok) return res.status(401).json({ ok:false });
   const db = readDB(); const p = db.find(x=> Number(x.id)===s.proId); if (!p) return res.status(404).json({ ok:false });
@@ -1038,8 +1032,6 @@ app.post("/api/painel/radar/autooff", (req,res)=>{
   writeDB(db);
   res.json({ ok:true, radar:p.radar });
 });
-
-// Raio
 app.post("/api/painel/raio", (req,res)=>{
   const s = req.session?.painel; if (!s?.ok) return res.status(401).json({ ok:false });
   const db = readDB(); const p = db.find(x=> Number(x.id)===s.proId); if (!p) return res.status(404).json({ ok:false });
@@ -1049,8 +1041,6 @@ app.post("/api/painel/raio", (req,res)=>{
   writeDB(db);
   res.json({ ok:true, raioKm:p.raioKm });
 });
-
-// Cidades extras
 app.post("/api/painel/cidades", (req,res)=>{
   const s = req.session?.painel; if (!s?.ok) return res.status(401).json({ ok:false });
   const db = readDB(); const p = db.find(x=> Number(x.id)===s.proId); if (!p) return res.status(404).json({ ok:false });
@@ -1067,8 +1057,6 @@ app.post("/api/painel/cidades", (req,res)=>{
   writeDB(db);
   res.json({ ok:true, cidadesExtras:p.cidadesExtras });
 });
-
-// Preferência de pagamento
 app.post("/api/painel/payment-prefs", (req,res)=>{
   const s = req.session?.painel; if (!s?.ok) return res.status(401).json({ ok:false });
   const db = readDB(); const p = db.find(x=> Number(x.id)===s.proId); if (!p) return res.status(404).json({ ok:false });
@@ -1076,8 +1064,6 @@ app.post("/api/painel/payment-prefs", (req,res)=>{
   p.receiveViaApp = receiveViaApp; writeDB(db);
   res.json({ ok:true, receiveViaApp });
 });
-
-// Atualiza perfil (com/sem foto)
 app.post("/api/painel/update",
   (req,res,next)=> upload.single("foto")(req,res,(err)=> { if (err) return res.status(400).json({ ok:false, error:err.message }); next(); }),
   (req,res)=>{
@@ -1096,8 +1082,6 @@ app.post("/api/painel/update",
     res.json({ ok:true });
   }
 );
-
-// Export do próprio painel (CSV simples)
 app.get("/api/painel/export.csv", (req,res)=>{
   const s = req.session?.painel; if (!s?.ok) return res.status(401).type("text").send("login requerido");
   const db = readDB();
@@ -1118,14 +1102,12 @@ app.get("/api/painel/export.csv", (req,res)=>{
 });
 
 // ----------------------------------------------------------------------------
-// Pagamentos (STUB) — Pix/Cartão + taxas
+// Pagamentos (STUB)
 // ----------------------------------------------------------------------------
 function newPaymentId(){ return crypto.randomBytes(10).toString("hex"); }
-
 app.get("/api/checkout/options", (_req,res)=>{
   res.json({ ok:true, pix: PIX_ENABLED, card: CARD_ENABLED, fees: { cardPercent:FEE_CARD_PERCENT, pixPercent:FEE_PIX_PERCENT } });
 });
-
 app.post("/api/checkout/intent", (req,res)=>{
   try{
     const { proId, amount, method } = req.body||{};
@@ -1145,7 +1127,6 @@ app.post("/api/checkout/intent", (req,res)=>{
     res.json({ ok:true, payment: pay });
   }catch(e){ res.status(500).json({ ok:false, error:String(e) }); }
 });
-
 app.post("/api/checkout/pay/:pid", (req,res)=>{
   const pid = String(req.params.pid||"");
   const store = readJSON(PAYMENTS_FILE, []);
@@ -1156,7 +1137,6 @@ app.post("/api/checkout/pay/:pid", (req,res)=>{
   writeJSON(PAYMENTS_FILE, store);
   res.json({ ok:true, payment:it });
 });
-
 app.get("/api/checkout/payment/:pid", (req,res)=>{
   const pid = String(req.params.pid||"");
   const store = readJSON(PAYMENTS_FILE, []);
@@ -1164,7 +1144,6 @@ app.get("/api/checkout/payment/:pid", (req,res)=>{
   if (!it) return res.status(404).json({ ok:false });
   res.json({ ok:true, payment:it });
 });
-
 app.get("/api/checkout/pro/:id", (req,res)=>{
   const id = Number(req.params.id||"0");
   const db = readDB();
@@ -1188,12 +1167,7 @@ app.post("/api/denuncias", (req,res)=>{
     const detalhes = trim(body.detalhes);
     if (!proId || !motivo) return res.status(400).json({ ok:false, error:"Dados inválidos" });
     const arr = readJSON(DENUNCIAS_FILE, []);
-    arr.push({
-      id: arr.length? arr[arr.length-1].id+1 : 1,
-      proId, motivo, detalhes,
-      at: nowISO(), ip:getIP(req),
-      resolved:false
-    });
+    arr.push({ id: arr.length? arr[arr.length-1].id+1 : 1, proId, motivo, detalhes, at: nowISO(), ip:getIP(req), resolved:false });
     writeJSON(DENUNCIAS_FILE, arr);
     appendMetric("report", { proId, at: nowISO() });
     res.json({ ok:true });
@@ -1207,20 +1181,13 @@ app.post("/api/denuncias", (req,res)=>{
 // ----------------------------------------------------------------------------
 const FAV_FILE = path.join(DATA_DIR, "favorites.json");
 if (!fs.existsSync(FAV_FILE)) writeJSON(FAV_FILE, {}); // mapa { favUid: [ids...] }
-
 const readFavMap  = ()=> readJSON(FAV_FILE, {});
 const writeFavMap = (m)=> writeJSON(FAV_FILE, m);
-
 function parseCookies(req){
   const raw = req.headers.cookie || "";
   const out = {};
   raw.split(";").forEach(p=>{
-    const i = p.indexOf("=");
-    if (i>0){
-      const k = p.slice(0,i).trim();
-      const v = decodeURIComponent(p.slice(i+1).trim());
-      out[k] = v;
-    }
+    const i = p.indexOf("="); if (i>0){ const k = p.slice(0,i).trim(); const v = decodeURIComponent(p.slice(i+1).trim()); out[k] = v; }
   });
   return out;
 }
@@ -1242,8 +1209,6 @@ function ensureFavUID(req, res){
   }
   return uid;
 }
-
-// GET /api/favoritos
 app.get("/api/favoritos", (req,res)=>{
   try{
     const uid = ensureFavUID(req,res);
@@ -1256,21 +1221,11 @@ app.get("/api/favoritos", (req,res)=>{
       .map(p=>{
         const notas = (p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
         const rating = notas.length ? (notas.reduce((a,b)=>a+b,0)/notas.length) : 0;
-        return {
-          id: p.id,
-          nome: p.nome,
-          servico: p.servico || p.profissao || "",
-          cidade: p.cidade || "",
-          bairro: p.bairro || "",
-          foto: p.foto || "",
-          rating
-        };
+        return { id: p.id, nome: p.nome, servico: p.servico || p.profissao || "", cidade: p.cidade || "", bairro: p.bairro || "", foto: p.foto || "", rating };
       });
     res.json({ ok:true, ids, items });
   }catch(e){ res.status(500).json({ ok:false, error:String(e) }); }
 });
-
-// POST /api/favoritos/toggle {id}
 app.post("/api/favoritos/toggle", (req,res)=>{
   try{
     const uid = ensureFavUID(req,res);
@@ -1289,8 +1244,6 @@ app.post("/api/favoritos/toggle", (req,res)=>{
     res.json({ ok:true, action, ids:list });
   }catch(e){ res.status(500).json({ ok:false, error:String(e) }); }
 });
-
-// DELETE /api/favoritos/:id
 app.delete("/api/favoritos/:id", (req,res)=>{
   try{
     const uid = ensureFavUID(req,res);
@@ -1305,7 +1258,7 @@ app.delete("/api/favoritos/:id", (req,res)=>{
 });
 
 // ----------------------------------------------------------------------------
-// Admin APIs + páginas (protegidas)
+// Admin páginas + APIs (protegidas)
 // ----------------------------------------------------------------------------
 function requireAdmin(req,res,next){ if (req.session?.isAdmin) return next(); return res.status(401).json({ ok:false }); }
 
@@ -1330,26 +1283,36 @@ app.get("/admin/login", (_req,res)=>{
         <button class="btn" type="submit">Entrar</button>
         <a class="btn ghost" href="/">Início</a>
       </div>
-      <p class="meta" style="margin-top:8px;text-align:center">Defina ADMIN_USER e ADMIN_PASS no arquivo .env</p>
+      <p class="meta" style="margin-top:8px;text-align:center">
+        Use ADMIN_PASS simples no .env ou ADMIN_PASS_HASH (bcrypt) para maior segurança.
+      </p>
     </form>
   </div></div>`);
 });
 
-app.post("/admin/login", (req,res)=>{
+app.post("/admin/login", loginLimiter, async (req,res)=>{
   const user = trim(req.body.user);
-  const pass = trim(req.body.password);
-  if (user === ADMIN_USER && pass === ADMIN_PASS){
+  const pass = trim(req.body.password || "");
+  try{
+    if (user !== ADMIN_USER) {
+      return res.status(401).send(htmlMsg("Falha no login","Usuário ou senha incorretos.","/admin/login"));
+    }
+    let ok = false;
+    if (ADMIN_PASS_HASH) ok = await bcrypt.compare(pass, ADMIN_PASS_HASH);
+    else ok = (pass === ADMIN_PASS);
+    if (!ok) return res.status(401).send(htmlMsg("Falha no login","Usuário ou senha incorretos.","/admin/login"));
+
     req.session.isAdmin = true;
     req.session.adminUser = user;
     return res.redirect("/admin");
+  }catch(e){
+    return res.status(500).send(htmlMsg("Erro", String(e), "/admin/login"));
   }
-  res.status(401).send(htmlMsg("Falha no login","Usuário ou senha incorretos.","/admin/login"));
 });
 
 app.get("/admin/logout", (req,res)=>{ req.session.destroy(()=> res.redirect("/admin/login")); });
 
 app.get("/api/admin/denuncias", requireAdmin, (_req,res)=> res.json(readJSON(DENUNCIAS_FILE, [])));
-
 app.post("/api/admin/denuncias/:id/resolve", requireAdmin, (req,res)=>{
   const id = Number(req.params.id||"0");
   const arr = readJSON(DENUNCIAS_FILE, []);
@@ -1359,7 +1322,6 @@ app.post("/api/admin/denuncias/:id/resolve", requireAdmin, (req,res)=>{
   writeJSON(DENUNCIAS_FILE, arr);
   res.json({ ok:true });
 });
-
 app.get("/admin/export.csv", requireAdmin, (_req,res)=>{
   const db = readDB();
   const header = ["id","nome","whatsapp","cidade","bairro","servico","profissao","plano","raioKm","atendimentos","visitas","chamadas","rating"].join(",");
@@ -1410,8 +1372,7 @@ app.use((req,_res,next)=>{
 });
 
 // -------------------- INÍCIO DO SERVIDOR --------------------
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+const PORT = process.env.PORT || BASE_PORT || 3000;
+app.listen(PORT, HOST, () => {
+  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
 });
