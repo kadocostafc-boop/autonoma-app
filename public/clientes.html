@@ -7,7 +7,7 @@
 
   <!-- SEO/PWA -->
   <link rel="canonical" href="https://autonomaapp.com.br/clientes.html">
-  <meta name="description" content="Busque profissionais perto de você. Filtre por bairro e tipo de serviço. Veja distância, preço, atendimentos e avaliações.">
+  <meta name="description" content="Busque profissionais perto de você. Filtre por serviço. Veja distância, preço, atendimentos e avaliações.">
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#0b1f63">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
@@ -21,7 +21,7 @@
   <meta property="og:image" content="https://autonomaapp.com.br/img/og-cover.png">
   <meta property="og:url" content="https://autonomaapp.com.br/clientes.html">
 
-  <link rel="stylesheet" href="/css/app.css?v=clients-compact-2025-09-07">
+  <link rel="stylesheet" href="/css/app.css?v=clients-std-cards-2025-09-07">
 
   <style>
     :root{
@@ -64,12 +64,11 @@
     @media(min-width:720px){ .results-grid{ grid-template-columns:1fr 1fr } }
     @media(min-width:1060px){ .results-grid{ grid-template-columns:1fr 1fr 1fr } }
 
-    /* CARD HORIZONTAL COMPACTO */
+    /* === CARD PADRÃO (usar em todas as páginas) === */
     .pro-card{
       background:#fff; border:1px solid var(--borda); border-radius:14px; padding:10px 12px;
       display:flex; align-items:center; gap:10px; box-shadow: 0 4px 12px rgba(0,0,0,.05);
-      transition:transform .16s ease, box-shadow .16s ease;
-      min-height:84px;
+      transition:transform .16s ease, box-shadow .16s ease; min-height:84px;
     }
     .pro-card:hover{ transform:translateY(-1px); box-shadow:0 8px 18px rgba(0,0,0,.08) }
     .pro-avatar{ width:62px; height:62px; border-radius:999px; object-fit:cover; border:1px solid var(--borda); background:#f8fafc; flex:0 0 62px }
@@ -90,6 +89,9 @@
     .foot-links { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
     .foot-links a { color:#cde1ff; font-size:14px; text-decoration:none; }
     .foot-links a:hover { text-decoration:underline; }
+
+    /* paginação */
+    .pager{ display:flex; gap:8px; align-items:center; justify-content:center; margin:10px 0 0 }
   </style>
 </head>
 <body>
@@ -156,10 +158,17 @@
     <!-- RESULTADOS -->
     <section id="results" class="results-grid" aria-live="polite"></section>
 
-    <!-- Sem paginação: máximo 10 -->
+    <!-- Paginação (apenas durante BUSCA: 15 por página) -->
+    <div id="paginacao" class="pager" style="display:none">
+      <button id="prev" class="btn ghost">« Anterior</button>
+      <span id="pageInfo" class="small muted">1/1</span>
+      <button id="next" class="btn ghost">Próxima »</button>
+    </div>
+
+    <!-- Info -->
     <div id="info" class="small muted" style="text-align:center;margin-top:8px"></div>
 
-    <!-- DESTAQUES (fallback quando não houver resultados) -->
+    <!-- DESTAQUES (fallback quando não houver busca/resultado) -->
     <section class="card" aria-labelledby="destaquesTitle" style="margin-top:12px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <h2 id="destaquesTitle" style="margin:0;font-size:18px">Profissionais em destaque</h2>
@@ -191,7 +200,7 @@
     const NO_STORE = { cache:'no-store' };
     const ts = () => `ts=${Date.now()}`;
 
-    // ===== Haversine =====
+    // Haversine
     function hav(lat1, lon1, lat2, lon2){
       if([lat1,lon1,lat2,lon2].some(v=>!Number.isFinite(v))) return null;
       const toRad = d=> d*Math.PI/180, R=6371;
@@ -200,11 +209,14 @@
       return 2*R*Math.asin(Math.sqrt(a));
     }
 
-    // ===== Estado =====
+    // Estado
     let userLat=null, userLng=null, useGPS=false;
     let lastQuery={ cidade:"", bairro:"", servico:"", minRating:"" };
+    let page=1, pages=1, isSearching=false;
+    const INITIAL_MAX = 10;
+    const SEARCH_PAGE_SIZE = 15;
 
-    // ===== Autocomplete =====
+    // Autocomplete
     async function fillCidades(){
       try{
         const r=await fetch(`/api/geo/cidades?${ts()}`, NO_STORE);
@@ -248,7 +260,7 @@
       $('listaServicos').innerHTML=list.map(s=>`<option value="${esc(s)}">`).join('');
     });
 
-    // ===== GPS =====
+    // GPS
     function isSecureForGeo(){
       return location.hostname==='localhost' || location.hostname==='127.0.0.1' || (window.isSecureContext===true);
     }
@@ -260,7 +272,6 @@
           $('cidade').value=js.cidade;
           showTag('tagCidade','Cidade: '+js.cidade);
           await loadBairrosDaCidade(js.cidade);
-          // quando GPS definir cidade e não tiver busca, aplicamos cidade
           if(!lastQuery.cidade){ lastQuery.cidade = js.cidade; }
         }
       }catch{}
@@ -279,7 +290,7 @@
         userLat=pos.coords.latitude; userLng=pos.coords.longitude;
         $('gpsStatus').innerHTML='<span class="gps-ok">Localização ativada.</span>';
         if(!$('cidade').value.trim()) await resolveCityByGPS(userLat,userLng);
-        if(useGPS) submitBusca();
+        if(useGPS && isSearching) submitBusca(); // se já estiver buscando, refaz com coords
       }, _=>{
         $('gpsStatus').innerHTML='<span class="gps-warn">Não foi possível obter a localização.</span>';
         useGPS=false; $('useGPS').checked=false;
@@ -291,12 +302,16 @@
       else { $('gpsStatus').textContent='GPS desativado.'; userLat=null; userLng=null; }
     });
 
-    // ===== UI helpers =====
+    // UI helpers
     function showTag(id, txt){ const el=$(id); el.textContent=txt; el.style.display='inline-flex'; }
     function hideTags(){ ['tagCidade','tagBairro','tagServico','tagRating'].forEach(id=>$(id).style.display='none'); }
-    function resetResults(){ $('results').innerHTML=''; $('info').textContent=''; }
+    function resetResults(){
+      $('results').innerHTML=''; $('info').textContent='';
+      $('paginacao').style.display='none'; $('pageInfo').textContent='1/1';
+      page=1; pages=1;
+    }
 
-    // ===== CARD (horizontal compacto) =====
+    // Card padrão
     function cardHTML(p){
       const foto = p.foto || '/icons/icon-192.png';
       const nome = p.nome || 'Profissional';
@@ -331,29 +346,12 @@
       `;
     }
 
-    // ===== Regras de FILTRO e ORDEM =====
-    function sameCityFilter(item, cidade){
-      if(!cidade) return true;
-      return norm(item.cidade) === norm(cidade);
-    }
-    function serviceMatchFilter(item, servTerm){
-      if(!servTerm) return true;
-      const t = norm(servTerm);
-      const a = norm(item.servico || item.profissao || '');
-      return a.includes(t);
-    }
-    function minRatingFilter(item, minR){
-      if(!minR) return true;
-      return Number(item.rating||0) >= Number(minR);
-    }
+    // Regras: Premium > Pro > Free; depois distância; depois rating
     function planRank(p){
       const v = String(p.plano||'').toLowerCase();
       if (v==='premium') return 3;
       if (v==='pro') return 2;
-      return 1; // free e demais
-    }
-    function radarFlag(p){
-      return !!(p.radar || p.radarLigado || p.online || p.disponivel);
+      return 1; // free ou vazio
     }
     function distanceValue(p){
       let d = p.distanceKm;
@@ -362,83 +360,112 @@
       }
       return Number.isFinite(d) ? d : 9e9;
     }
-    function sortByRules(a,b){
-      // 1) Radar ligado primeiro
-      const ra = radarFlag(a), rb = radarFlag(b);
-      if (ra !== rb) return rb - ra;
-      // 2) Plano: PREMIUM > PRO > FREE
+    function sortByPlanDistance(a,b){
       const pa = planRank(a), pb = planRank(b);
-      if (pa !== pb) return pb - pa;
-      // 3) Distância crescente
+      if (pa !== pb) return pb - pa;               // Premium > Pro > Free
       const da = distanceValue(a), db = distanceValue(b);
-      if (da !== db) return da - db;
-      // 4) Rating desc (desempate)
-      const rA = Number(a.rating||0), rB = Number(b.rating||0);
-      if (rA !== rB) return rB - rA;
-      // 5) Atendimentos desc (desempate)
-      const ta = Number(a.atendimentos||0), tb = Number(b.atendimentos||0);
-      if (ta !== tb) return tb - ta;
-      return 0;
+      if (da !== db) return da - db;               // menor distância primeiro
+      const ra = Number(a.rating||0), rb = Number(b.rating||0);
+      if (ra !== rb) return rb - ra;               // maior rating
+      return (Number(b.atendimentos||0) - Number(a.atendimentos||0));
     }
 
-    // ===== Busca =====
-    async function fetchProfissionais(){
-      const params = new URLSearchParams();
-      if(lastQuery.cidade) params.set('cidade', lastQuery.cidade);
-      if(lastQuery.bairro)  params.set('bairro', lastQuery.bairro);
-      if(lastQuery.servico) params.set('servico', lastQuery.servico);
-      if(lastQuery.minRating) params.set('minRating', lastQuery.minRating);
+    // Busca do backend
+    async function fetchAll(params){
+      const r = await fetch('/api/profissionais?'+params.toString(), NO_STORE);
+      return r.json();
+    }
 
-      // dica ao backend (se suportar): ordenar por score/nearby
-      if(useGPS && userLat!=null && userLng!=null){
-        params.set('userLat', String(userLat));
-        params.set('userLng', String(userLng));
-      }
-      params.set('limit', '50'); // pegamos mais e filtramos/ordenamos aqui; depois cortamos em 10
-      params.set('ts', Date.now());
-
+    // Lista inicial (sem busca): mostrar até 10 (qualquer serviço), priorizando planos e proximidade
+    async function loadInitial(){
+      resetResults();
       try{
+        const params = new URLSearchParams();
+        params.set('limit','60');
+        if($('cidade').value.trim()) params.set('cidade', $('cidade').value.trim());
+        if(useGPS && userLat!=null && userLng!=null){ params.set('userLat', userLat); params.set('userLng', userLng); }
+        params.set('ts', Date.now());
+
         $('loader').style.display='';
-        const r = await fetch('/api/profissionais?'+params.toString(), NO_STORE);
-        const js = await r.json();
+        const js = await fetchAll(params);
         const items = js.items || js.itens || [];
-        renderResults(items);
+        items.sort(sortByPlanDistance);
+        const top = items.slice(0, INITIAL_MAX);
+        $('results').innerHTML = top.length
+          ? top.map(cardHTML).join('')
+          : `<div class="card"><p class="muted">Nenhum profissional disponível.</p></div>`;
+        $('info').textContent = top.length ? `Exibindo ${top.length} de ${items.length} encontrados` : '';
       }catch{
-        $('results').innerHTML = `<div class="card"><p class="muted">Falha ao carregar resultados. Tente novamente.</p></div>`;
+        $('results').innerHTML = `<div class="card"><p class="muted">Falha ao carregar.</p></div>`;
       }finally{
         $('loader').style.display='none';
       }
     }
 
-    function renderResults(items){
-      // FILTROS ESTRITOS
-      let arr = (items||[]).filter(p=>{
-        if(lastQuery.cidade && !sameCityFilter(p, lastQuery.cidade)) return false;
-        if(lastQuery.servico && !serviceMatchFilter(p, lastQuery.servico)) return false;
-        if(lastQuery.minRating && !minRatingFilter(p, lastQuery.minRating)) return false;
-        if(lastQuery.bairro){
-          // bairro opcional: contém (case/acento-insensitive)
-          const nb = norm(p.bairro||'');
-          if(!nb.includes(norm(lastQuery.bairro))) return false;
-        }
+    // BUSCA: apenas serviço correspondente, 15 por página
+    let SEARCH_POOL = []; // resultados completos desta busca
+    function applyFiltersForSearch(items){
+      const svc = norm(lastQuery.servico);
+      const city = lastQuery.cidade.trim();
+      const bairro = norm(lastQuery.bairro);
+      const minR = lastQuery.minRating ? Number(lastQuery.minRating) : 0;
+
+      return (items||[]).filter(p=>{
+        // Serviço OBRIGATÓRIO na busca
+        const a = norm(p.servico || p.profissao || '');
+        if (!a.includes(svc)) return false;
+
+        // Cidade se preenchida (igual exata normalizada)
+        if (city && norm(p.cidade) !== norm(city)) return false;
+
+        // Bairro se preenchido (contém)
+        if (bairro && !norm(p.bairro||'').includes(bairro)) return false;
+
+        // Rating mínimo
+        if (minR && Number(p.rating||0) < minR) return false;
+
         return true;
       });
+    }
+    function renderSearchPage(){
+      // ordena e pagina
+      SEARCH_POOL.sort(sortByPlanDistance);
+      pages = Math.max(1, Math.ceil(SEARCH_POOL.length / SEARCH_PAGE_SIZE));
+      if (page > pages) page = pages;
 
-      // ORDENAR POR REGRAS
-      arr.sort(sortByRules);
+      const start = (page-1)*SEARCH_PAGE_SIZE;
+      const slice = SEARCH_POOL.slice(start, start + SEARCH_PAGE_SIZE);
 
-      // CORTAR PARA MÁXIMO 10
-      const top = arr.slice(0, 10);
+      $('results').innerHTML = slice.length
+        ? slice.map(cardHTML).join('')
+        : `<div class="card"><p class="muted">Nenhum profissional encontrado para o serviço buscado.</p></div>`;
 
-      // RENDER
-      const grid = $('results');
-      grid.innerHTML = top.length
-        ? top.map(cardHTML).join('')
-        : `<div class="card"><p class="muted">Nenhum profissional encontrado com os filtros atuais.</p></div>`;
+      $('paginacao').style.display = (SEARCH_POOL.length > SEARCH_PAGE_SIZE) ? '' : 'none';
+      $('pageInfo').textContent = `${page}/${pages}`;
+      $('info').textContent = slice.length ? `Exibindo ${slice.length} de ${SEARCH_POOL.length} resultados` : '';
+    }
+    async function performSearch(){
+      // busca ampla do backend e filtra aqui
+      try{
+        const params = new URLSearchParams();
+        params.set('limit', '120');
+        if(useGPS && userLat!=null && userLng!=null){ params.set('userLat', userLat); params.set('userLng', userLng); }
+        params.set('ts', Date.now());
 
-      $('info').textContent = top.length ? `Exibindo ${top.length} de ${arr.length} encontrados` : '';
+        $('loader').style.display='';
+        const js = await fetchAll(params);
+        const items = js.items || js.itens || [];
+        SEARCH_POOL = applyFiltersForSearch(items);
+        page = 1;
+        renderSearchPage();
+      }catch{
+        $('results').innerHTML = `<div class="card"><p class="muted">Falha ao buscar.</p></div>`;
+      }finally{
+        $('loader').style.display='none';
+      }
     }
 
+    // Tags de estado
     function applyStateTags(q){
       hideTags();
       if(q.cidade) $('tagCidade').style.display='', $('tagCidade').textContent='Cidade: '+q.cidade;
@@ -447,6 +474,7 @@
       if(q.minRating) $('tagRating').style.display='', $('tagRating').textContent='Avaliação: '+q.minRating+'+';
     }
 
+    // Submit / limpar
     function submitBusca(){
       lastQuery = {
         cidade: $('cidade').value.trim(),
@@ -454,21 +482,31 @@
         servico: $('servico').value.trim(),
         minRating: $('minRating').value.trim()
       };
-      applyStateTags(lastQuery);
       resetResults();
-      fetchProfissionais();
-    }
+      applyStateTags(lastQuery);
 
+      isSearching = !!lastQuery.servico; // busca só vale se tiver SERVIÇO
+      if (isSearching){
+        performSearch();                // mostra 15/página e ordena Premium>Pro>Free
+      } else {
+        loadInitial();                  // sem busca → mostra até 10
+      }
+    }
     $('formBusca').addEventListener('submit', (e)=>{ e.preventDefault(); submitBusca(); });
     $('btnLimpar').addEventListener('click', async ()=>{
       $('cidade').value=''; $('bairro').value=''; $('servico').value=''; $('minRating').value='';
       lastQuery = { cidade:'', bairro:'', servico:'', minRating:'' };
       hideTags(); resetResults();
       await fillCidades();
-      fetchProfissionais();
+      isSearching = false;
+      loadInitial();
     });
 
-    // ===== Destaques =====
+    // paginação
+    $('prev').addEventListener('click', ()=>{ if(isSearching && page>1){ page--; renderSearchPage(); } });
+    $('next').addEventListener('click', ()=>{ if(isSearching && page<pages){ page++; renderSearchPage(); } });
+
+    // Destaques
     async function tryFeaturedFallback(){
       try{
         const url1 = `/api/profissionais?featured=1&limit=6&${ts()}`;
@@ -500,19 +538,17 @@
       }
     }
 
-    // ===== Boot =====
+    // Boot
     (async function init(){
-      // SW update
       if('serviceWorker' in navigator){
         try{
           const regs=await navigator.serviceWorker.getRegistrations();
           regs.forEach(r=>r.update());
         }catch{}
       }
-
       await fillCidades();
 
-      // Query inicial (compartilhável)
+      // query compartilhável (opcional)
       const u=new URL(location.href);
       const cid=u.searchParams.get('cidade')||'';
       const bai=u.searchParams.get('bairro')||'';
@@ -523,7 +559,7 @@
       if(ser) $('servico').value=ser;
       if(mr) $('minRating').value=mr;
 
-      // se o usuário estiver no RJ e a cidade estiver vazia, GPS vai preencher e filtrar
+      // inicial: sem busca -> até 10
       submitBusca();
       loadDestaques();
     })();
@@ -534,7 +570,7 @@
   <script>
     if ('serviceWorker' in navigator){
       window.addEventListener('load', ()=>{
-        navigator.serviceWorker.register('/sw.js?v=clients-compact-2025-09-07').catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=clients-std-cards-2025-09-07').catch(()=>{});
       });
     }
   </script>
