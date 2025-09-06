@@ -18,49 +18,42 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
 
   <!-- CSS global -->
-  <link rel="stylesheet" href="/css/app.css?v=favs-ios-2025-09-07">
+  <link rel="stylesheet" href="/css/app.css?v=std-cards-2025-09-07">
   <style>
-    :root{
-      --azul-escuro:#0b1f63;
-      --azul-brilho:#2D81FF;
-      --borda:#e5e7eb;
-      --cinza:#64748b;
-    }
-    /* Cabeçalho */
-    .header{ background:var(--azul-escuro); padding:12px 16px; display:flex; gap:8px; align-items:center; justify-content:flex-end }
-    .nav-btn{ appearance:none; border:none; cursor:pointer; background:var(--azul-brilho); color:#fff; font-weight:800; padding:8px 12px; border-radius:10px; text-decoration:none; font-size:14px; display:inline-flex; align-items:center; justify-content:center }
-    .nav-btn:hover{ filter:brightness(.96) }
+    :root{ --borda:#e5e7eb; --cinza:#64748b; --azul:#0b49c8 }
+    .header{ display:flex; align-items:center; gap:12px; padding:12px 16px }
+    .header .logo{ height:32px }
+    .nav{ display:flex; gap:8px; margin-left:auto; flex-wrap:wrap }
     .wrap{ max-width:1120px; margin:0 auto; padding:16px; }
 
-    /* Grid + Card (iOS) */
-    .grid{ display:grid; gap:12px; grid-template-columns:1fr }
+    /* Grid responsivo */
+    .grid{ display:grid; gap:10px; grid-template-columns:1fr; }
     @media (min-width:720px){ .grid{ grid-template-columns:1fr 1fr } }
-    @media (min-width:1100px){ .grid{ grid-template-columns:1fr 1fr 1fr } }
-    @media (min-width:1400px){ .grid{ grid-template-columns:1fr 1fr 1fr 1fr } }
-
-    .pro-card{
-      background:#fff; border:1px solid var(--borda); border-radius:16px; padding:12px;
-      display:flex; align-items:center; gap:12px; box-shadow:0 6px 16px rgba(0,0,0,.06);
-      transition:transform .16s ease, box-shadow .16s ease;
-    }
-    .pro-card:hover{ transform:translateY(-1px); box-shadow:0 10px 22px rgba(0,0,0,.09) }
-    .pro-avatar{ width:56px; height:56px; border-radius:999px; object-fit:cover; border:1px solid var(--borda); background:#f8fafc; flex:0 0 56px }
-    .pro-main{ flex:1 1 auto; min-width:0 }
-    .pro-name{ margin:0; font-size:16px; font-weight:900; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-    .pro-sub{ margin:2px 0 0; font-size:13px; color:var(--cinza) }
-    .rating{ color:#f59e0b; font-size:13px }
-    .right{ text-align:right; min-width:110px; display:flex; flex-direction:column; gap:6px; align-items:flex-end }
-    .chip{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid var(--borda); background:#f8fafc; color:#0f172a }
-    .chip.blue{ background:#eef2ff; border-color:#c7d2fe }
-    .chip.green{ background:#ecfccb; border-color:#bbf7d0 }
-    .chip.yellow{ background:#fffbeb; border-color:#fde68a }
-    .btn.icon{ display:inline-flex; align-items:center; gap:6px }
+    @media (min-width:1060px){ .grid{ grid-template-columns:1fr 1fr 1fr } }
 
     .card{ background:#fff; border:1px solid var(--borda); border-radius:16px; padding:14px; }
-    .meta{ color:#64748b }
-    .row{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center }
 
-    footer { padding:28px 12px; background:#0b1f63; margin-top:16px }
+    /* === CARD PADRÃO === */
+    .pro-card{
+      background:#fff; border:1px solid var(--borda); border-radius:14px; padding:10px 12px;
+      display:flex; align-items:center; gap:10px; box-shadow: 0 4px 12px rgba(0,0,0,.05);
+      transition:transform .16s ease, box-shadow .16s ease; min-height:84px;
+    }
+    .pro-card:hover{ transform:translateY(-1px); box-shadow:0 8px 18px rgba(0,0,0,.08) }
+    .pro-avatar{ width:62px; height:62px; border-radius:999px; object-fit:cover; border:1px solid var(--borda); background:#f8fafc; flex:0 0 62px }
+    .pro-main{ flex:1 1 auto; min-width:0 }
+    .pro-name{ margin:0; font-size:15px; font-weight:900; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+    .pro-sub{ margin:2px 0 0; font-size:12.5px; color:var(--cinza); overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+    .meta-line{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px }
+    .pill{ font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--borda); background:#f8fafc }
+    .rating{ color:#f59e0b; }
+    .right{ display:flex; flex-direction:column; gap:6px; align-items:flex-end; min-width:148px }
+    .btn{ border:none; background:#0b1f63; color:#fff; padding:8px 10px; border-radius:10px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:13px }
+    .btn.ghost{ background:#fff; color:#0f172a; border:1px solid var(--borda) }
+    .btn.outline{ background:#fff; color:#0f172a; border:1px solid var(--borda) }
+    .btn.icon{ display:inline-flex; align-items:center; gap:6px; }
+
+    footer { padding: 28px 12px; background:#0b1f63; margin-top:16px }
     .foot-links { display:flex; flex-wrap:wrap; gap:12px; justify-content:center }
     .foot-links a { color:#cde1ff; font-size:14px; text-decoration:none }
     .foot-links a:hover { text-decoration:underline }
@@ -68,33 +61,35 @@
 </head>
 <body>
 <header class="header" role="banner">
-  <a class="nav-btn" href="/">Início</a>
-  <a class="nav-btn" href="/clientes.html">Buscar</a>
-  <a class="nav-btn" href="/top10.html">Top 10</a>
+  <a href="/"><img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display='none'"></a>
+  <nav class="nav" aria-label="Links">
+    <a class="btn ghost" href="/">Início</a>
+    <a class="btn ghost" href="/clientes.html">Buscar</a>
+    <a class="btn ghost" href="/top10.html">🏆 Top 10</a>
+    <a class="btn" href="/planos.html">💼 Planos</a>
+  </nav>
 </header>
 
 <div class="wrap">
-  <div class="card" style="text-align:center">
+  <div class="card">
     <h1 style="margin:0">Meus Favoritos</h1>
     <p class="meta">Perfis salvos neste dispositivo para acesso rápido.</p>
     <div class="row" style="gap:8px; flex-wrap:wrap">
-      <button id="btnShareAll" class="nav-btn" type="button" style="background:#fff;color:#0f172a;border:1px solid var(--borda)">🔗 Compartilhar lista</button>
-      <button id="btnClear" class="nav-btn" type="button" style="background:#fff;color:#0f172a;border:1px solid var(--borda)">🗑️ Limpar todos</button>
+      <button id="btnShareAll" class="btn outline" type="button">🔗 Compartilhar lista</button>
+      <button id="btnClear" class="btn ghost" type="button">🗑️ Limpar todos</button>
     </div>
   </div>
 
   <div id="list" class="grid" aria-live="polite"></div>
   <div id="empty" class="card meta" style="display:none">Você ainda não adicionou favoritos.</div>
 
-  <!-- Rodapé organizado -->
   <div class="card" style="text-align:center">
     <div class="row" style="justify-content:center; gap:8px; flex-wrap:wrap">
-      <a class="nav-btn" href="/">Início</a>
-      <a class="nav-btn" href="/clientes.html">Buscar</a>
-      <a class="nav-btn" href="/top10.html">Top 10</a>
-      <a class="nav-btn" href="/planos.html">Planos</a>
-      <a class="nav-btn" href="/termos-de-uso.html" style="background:#fff;color:#0f172a;border:1px solid var(--borda)">Termos</a>
-      <a class="nav-btn" href="/politica-de-privacidade.html" style="background:#fff;color:#0f172a;border:1px solid var(--borda)">Privacidade</a>
+      <a class="btn ghost" href="/">Início</a>
+      <a class="btn ghost" href="/clientes.html">Buscar profissionais</a>
+      <a class="btn ghost" href="/top10.html">🏆 Top 10</a>
+      <a class="btn ghost" href="/termos.html">Termos</a>
+      <a class="btn ghost" href="/privacidade.html">Privacidade</a>
     </div>
   </div>
 </div>
@@ -110,13 +105,6 @@
   const KEY_OLD = 'favIds';
   const NO_STORE = { cache:'no-store' };
 
-  const esc = (s)=> String(s||'')
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-  const estrelas = (n)=>{ const r=Math.round((Number(n||0))*2)/2; const f=Math.floor(r),h=(r%1!==0); return '★'.repeat(f)+(h?'½':'')+'☆'.repeat(5-f-(h?1:0)); };
-  const kmFmt = (d)=> (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${Number(d).toFixed(d<10?1:0)} km`));
-
-  // Migração automática favIds -> autonoma_favs
   function migrateFavsIfNeeded(){
     try{
       const hasNew = !!localStorage.getItem(KEY_NEW);
@@ -141,12 +129,22 @@
   }
   function removeFav(id){
     const arr = getFavs();
-    const idx = arr.findIndex(x => Number(x?.id) === Number(id));
+    const idx = arr.findIndex(x => String(x?.id) === String(id));
     if (idx >= 0){ arr.splice(idx,1); setFavs(arr); }
     render();
   }
+  function esc(s){
+    return String(s||'')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  function estrelas(n){
+    const r = Math.round((Number(n||0))*2)/2;
+    const f = Math.floor(r);
+    const half = (r%1!==0);
+    return '★'.repeat(f) + (half?'½':'') + '☆'.repeat(5 - f - (half?1:0));
+  }
 
-  // Enriquecimento: busca dados atuais para quem só tem {id}
   async function fetchProfileById(id){
     const tries = [
       `/api/profissionais/${encodeURIComponent(id)}`,
@@ -165,7 +163,7 @@
           if(js.item) return js.item;
           if(js.id || js.nome) return js;
         }
-      }catch{}
+      }catch(_){}
     }
     return null;
   }
@@ -189,7 +187,8 @@
             avaliacoes: Number(full.avaliacoes||0),
             atendimentos: Number(full.atendimentos||0),
             precoBase: full.precoBase || full.preco || null,
-            distanceKm: (full.distanceKm ?? full.dist ?? full.distanciaKm ?? null)
+            distanceKm: (full.distanceKm ?? full.dist ?? full.distanciaKm ?? null),
+            lat: full.lat, lng: full.lng
           });
         }else{
           out.push({ id: p.id });
@@ -201,42 +200,8 @@
     return out;
   }
 
-  // Card iOS
-  function cardHTML(p){
-    const id   = p.id;
-    const foto = p.foto || '/icons/icon-192.png';
-    const nome = p.nome || 'Profissional';
-    const serv = p.servico || p.profissao || '';
-    const local = p.local || [p.bairro, p.cidade].filter(Boolean).join(' • ');
-    const rating = Number(p.rating||0);
-    const avals = (p.avaliacoes!=null) ? Number(p.avaliacoes) : 0;
-    const atend = (p.atendimentos!=null) ? Number(p.atendimentos) : null;
-    const dist  = kmFmt(p.distanceKm);
-    const price = (p.precoBase!=null && p.precoBase!=="") ? `R$ ${String(p.precoBase).toString().replace('.',',')}` : null;
-
-    return `
-      <article class="pro-card" data-id="${esc(id)}">
-        <img class="pro-avatar" src="${esc(foto)}" alt="Foto de ${esc(nome)}" loading="lazy" onerror="this.src='/icons/icon-192.png'">
-        <div class="pro-main">
-          <h3 class="pro-name">${esc(nome)}</h3>
-          <div class="pro-sub">
-            ${esc(serv)} • <span class="meta">${esc(local)}</span>
-            <span class="rating"> ${estrelas(rating)} </span>
-            <span class="meta">(${avals})</span>
-          </div>
-        </div>
-        <div class="right">
-          ${dist ? `<span class="chip blue">📍 ${esc(dist)}</span>`:''}
-          ${price ? `<span class="chip yellow">💵 ${esc(price)}</span>`:''}
-          ${atend!=null ? `<span class="chip green">🧰 ${atend} trab.</span>`:''}
-          <div style="display:flex; gap:6px">
-            <a class="nav-btn" style="padding:6px 10px; font-size:13px" href="/profissional/${encodeURIComponent(id)}">Ver</a>
-            <button class="nav-btn btn-share" type="button" title="Compartilhar" style="padding:6px 10px;font-size:13px;background:#fff;color:#0f172a;border:1px solid var(--borda)">🔗</button>
-            <button class="nav-btn btn-remove" type="button" title="Remover" style="padding:6px 10px;font-size:13px;background:#fff;color:#0f172a;border:1px solid var(--borda)">🗑️</button>
-          </div>
-        </div>
-      </article>
-    `;
+  function kmFmt(d){
+    return (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${Number(d).toFixed(1)} km`));
   }
 
   function renderCards(arr){
@@ -246,27 +211,67 @@
       return;
     }
     empty.style.display = 'none';
-    list.innerHTML = arr.map(cardHTML).join('');
+    list.innerHTML = arr.map(p=>{
+      const id = p.id;
+      const foto = p.foto || '/icons/icon-192.png';
+      const nome = p.nome || 'Profissional';
+      const local = [p.bairro, p.cidade].filter(Boolean).join(' • ');
+      const serv  = p.servico || p.profissao || '';
+      const rating = Number(p.rating||0);
+      const avals = Number(p.avaliacoes||0);
+      const atend = Number(p.atendimentos||0);
+      const price = (p.precoBase!=null && p.precoBase!=="") ? `R$ ${String(p.precoBase)}` : null;
+      const dist  = (p.distanceKm!=null && isFinite(p.distanceKm)) ? kmFmt(Number(p.distanceKm)) : '—';
+      let wa = '';
+      if (p.whatsapp){
+        const d = String(p.whatsapp).replace(/\D/g,'');
+        const num = d.startsWith('55') ? d : ('55'+d);
+        const txt = 'Olá, vi seu perfil no Autônoma.app. Podemos falar?';
+        wa = `https://wa.me/${num}?text=${encodeURIComponent(txt)}`;
+      }
+      return `
+        <div class="pro-card" data-id="${esc(id)}">
+          <img class="pro-avatar" src="${esc(foto)}" alt="Foto de ${esc(nome)}" onerror="this.src='/icons/icon-192.png'">
+          <div class="pro-main">
+            <h3 class="pro-name">${esc(nome)}</h3>
+            <div class="pro-sub">${esc(serv)} • <span>${esc(local)}</span></div>
+            <div class="meta-line">
+              <span class="pill"><span class="rating">⭐ ${estrelas(rating)}</span> <span>(${avals})</span></span>
+              <span class="pill">Distância: ${dist}</span>
+              <span class="pill">Atendimentos: ${isFinite(atend)?atend:0}</span>
+              ${price ? `<span class="pill">Valor: ${esc(price)}</span>`:''}
+            </div>
+          </div>
+          <div class="right">
+            <a class="btn" href="/profissional/${encodeURIComponent(id)}">Ver Perfil</a>
+            ${wa?`<a class="btn ghost" target="_blank" rel="noopener" href="${esc(wa)}">WhatsApp</a>`:''}
+            <button class="btn ghost btn-share" type="button">Recomendar</button>
+            <button class="btn ghost btn-remove" type="button">Remover</button>
+          </div>
+        </div>
+      `;
+    }).join('');
 
+    // Eventos
     list.querySelectorAll('.pro-card').forEach(card=>{
-      const id = Number(card.getAttribute('data-id'));
+      const id = card.getAttribute('data-id');
       const btnShare = card.querySelector('.btn-share');
       const btnRemove = card.querySelector('.btn-remove');
 
       btnShare.addEventListener('click', async ()=>{
         const name = card.querySelector('.pro-name')?.textContent || 'Profissional';
-        const meta = card.querySelector('.pro-sub')?.textContent || '';
-        const url = location.origin + '/profissional/' + id;
-        const text = `Indicação no Autônoma: ${name} — ${meta}`;
+        const sub  = card.querySelector('.pro-sub')?.textContent || '';
+        const url  = location.origin + '/profissional/' + encodeURIComponent(id);
+        const text = `Indicação no Autônoma: ${name} — ${sub}.`;
         try{
           if (navigator.share){
             await navigator.share({ title:'Autônoma • '+name, text, url });
           } else {
             await navigator.clipboard.writeText(text + ' ' + url);
-            btnShare.textContent = '✅';
-            setTimeout(()=> btnShare.textContent = '🔗', 1200);
+            btnShare.textContent = '✅ Link copiado';
+            setTimeout(()=> btnShare.textContent = 'Recomendar', 1600);
           }
-        }catch{}
+        }catch(_){}
       });
 
       btnRemove.addEventListener('click', ()=>{
@@ -277,12 +282,11 @@
 
   async function render(){
     const arr = getFavs();
-    if(!arr.length){ empty.style.display=''; list.innerHTML=''; return; }
-
-    // mostra rápido
-    renderCards(arr);
-
-    // enriquece em background
+    if(!arr.length){
+      empty.style.display=''; list.innerHTML=''; return;
+    }
+    empty.style.display='none';
+    renderCards(arr); // imediato
     try{
       const full = await enrichIfNeeded(arr);
       setFavs(full);
@@ -297,8 +301,8 @@
     const lines = arr.slice(0,20).map(p=>{
       const name  = p.nome || 'Profissional';
       const serv  = p.servico || p.profissao || '';
-      const local = p.local || [p.bairro, p.cidade].filter(Boolean).join(' • ');
-      const url   = location.origin + '/profissional/' + p.id;
+      const local = [p.bairro, p.cidade].filter(Boolean).join(' • ');
+      const url   = location.origin + '/profissional/' + encodeURIComponent(p.id);
       return `• ${name} — ${serv} (${local}) → ${url}`;
     });
     const text = `Minhas indicações no Autônoma:\n\n${lines.join('\n')}`;
@@ -310,7 +314,7 @@
         BTN_SHARE_ALL.textContent = '✅ Lista copiada';
         setTimeout(()=> BTN_SHARE_ALL.textContent = '🔗 Compartilhar lista', 1600);
       }
-    }catch{}
+    }catch(_){}
   });
 
   // Limpar todos
@@ -318,21 +322,20 @@
     const arr = getFavs();
     if (!arr.length){ alert('Não há favoritos para limpar.'); return; }
     if (confirm('Tem certeza que deseja limpar todos os favoritos deste dispositivo?')){
-      setFavs([]);
-      render();
+      setFavs([]); render();
     }
   });
+
+  // SW
+  if ('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('/sw.js?ver=favs-std-cards').catch(()=>{});
+    });
+  }
 
   // Boot
   migrateFavsIfNeeded();
   render();
-
-  // PWA — registra SW (não bloqueia)
-  if ('serviceWorker' in navigator){
-    window.addEventListener('load', ()=>{
-      navigator.serviceWorker.register('/sw.js?ver=favs-ios-1').catch(()=>{});
-    });
-  }
 })();
 </script>
 </body>

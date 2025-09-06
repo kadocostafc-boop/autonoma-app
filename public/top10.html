@@ -24,15 +24,11 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
 
   <!-- CSS global -->
-  <link rel="stylesheet" href="/css/app.css?v=top10-ios-2025-09-07"/>
+  <link rel="stylesheet" href="/css/app.css?v=std-cards-2025-09-07">
 
   <style>
     :root{
-      --azul-escuro:#0b1f63;
-      --azul-brilho:#2D81FF;
-      --azul-brilho-2:#1E6EF2;
-      --cinza:#64748b;
-      --borda:#e5e7eb;
+      --azul-escuro:#0b1f63; --azul-brilho:#2D81FF; --borda:#e5e7eb; --cinza:#64748b;
     }
     .wrap{max-width:1120px;margin:0 auto;padding:16px}
 
@@ -60,47 +56,35 @@
     @media(min-width:720px){ .filters{ grid-template-columns:1.2fr 1.2fr auto } }
     .filters label{color:#0f172a; font-weight:700; font-size:13px}
     .filters input{width:100%; border:1px solid var(--borda); border-radius:12px; padding:10px 12px; background:#fff; color:#0f172a; outline:none}
-    .btn{ border:none; background:var(--azul-escuro); color:#fff; padding:11px 14px; border-radius:12px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; font-weight:800 }
+    .btn{ border:none; background:var(--azul-escuro); color:#fff; padding:10px 12px; border-radius:10px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:14px }
     .btn.ghost{ background:#fff; color:#0f172a; border:1px solid var(--borda) }
 
-    /* Chips/estado + loader */
     .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px }
     .tag{ display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:4px 8px; border:1px solid var(--borda); border-radius:999px; background:#f8fafc }
     .loader{ font-size:14px; display:none; color:#fff }
 
-    /* Grid + Card (estilo iOS) */
+    /* GRID */
     .results-grid{ display:grid; gap:10px; grid-template-columns:1fr; }
     @media(min-width:720px){ .results-grid{ grid-template-columns:1fr 1fr } }
     @media(min-width:1060px){ .results-grid{ grid-template-columns:1fr 1fr 1fr } }
 
+    /* === CARD PADRÃO === */
     .pro-card{
-      background:#fff; border:1px solid var(--borda); border-radius:16px; padding:12px;
-      display:flex; align-items:center; gap:12px; box-shadow:0 6px 16px rgba(0,0,0,.06);
-      transition:transform .16s ease, box-shadow .16s ease;
+      background:#fff; border:1px solid var(--borda); border-radius:14px; padding:10px 12px;
+      display:flex; align-items:center; gap:10px; box-shadow: 0 4px 12px rgba(0,0,0,.05);
+      transition:transform .16s ease, box-shadow .16s ease; min-height:84px;
     }
-    .pro-card:hover{ transform:translateY(-1px); box-shadow:0 10px 22px rgba(0,0,0,.09) }
-    .pro-avatar{ width:56px;height:56px;border-radius:999px;object-fit:cover;border:1px solid var(--borda);background:#f8fafc;flex:0 0 56px }
+    .pro-card:hover{ transform:translateY(-1px); box-shadow:0 8px 18px rgba(0,0,0,.08) }
+    .pro-avatar{ width:62px;height:62px;border-radius:999px;object-fit:cover;border:1px solid var(--borda);background:#f8fafc;flex:0 0 62px }
     .pro-main{ flex:1 1 auto; min-width:0 }
-    .pro-name{ margin:0; font-size:16px; font-weight:900; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-    .pro-sub{ margin:2px 0 0; font-size:13px; color:#64748b }
-    .rating{ color:#f59e0b; font-size:13px; }
+    .pro-name{ margin:0; font-size:15px; font-weight:900; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+    .pro-sub{ margin:2px 0 0; font-size:12.5px; color:var(--cinza); overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+    .meta-line{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px }
+    .pill{ font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--borda); background:#f8fafc }
+    .rating{ color:#f59e0b; }
+    .right{ display:flex; flex-direction:column; gap:6px; align-items:flex-end; min-width:98px }
 
-    .right{ text-align:right; min-width:110px; display:flex; flex-direction:column; gap:6px; align-items:flex-end }
-    .chip{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid var(--borda); background:#f8fafc; color:#0f172a }
-    .chip.blue{ background:#eef2ff; border-color:#c7d2fe }
-    .chip.green{ background:#ecfccb; border-color:#bbf7d0 }
-    .chip.yellow{ background:#fffbeb; border-color:#fde68a }
-
-    .badge{ font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--borda); background:#eef2ff; color:#3730a3; font-weight:800 }
-    .badge.PREMIUM{ background:#fffbeb; border-color:#fbbf24; color:#92400e }
-    .badge.PRO{ background:#eef2ff; border-color:#6366f1; color:#263fa1 }
-
-    .section{ background:#fff; border:1px solid var(--borda); border-radius:16px; padding:14px; }
-    .section-title{ display:flex; align-items:center; justify-content:space-between; gap:8px }
-    .section-title h2{ margin:0; font-size:18px }
-    .muted{ color:#64748b }
-
-    footer { padding:28px 12px; background:var(--azul-escuro); margin-top:16px }
+    footer { padding: 28px 12px; background:var(--azul-escuro); margin-top:16px }
     .foot-links { display:flex; flex-wrap:wrap; gap:12px; justify-content:center }
     .foot-links a { color:#cde1ff; font-size:14px; text-decoration:none }
     .foot-links a:hover { text-decoration:underline }
@@ -119,6 +103,7 @@
     <section class="hero" aria-labelledby="hTitle">
       <h1 id="hTitle">Top 10 da semana</h1>
       <div class="meta" id="weekLabel">Carregando semana…</div>
+
       <form id="formTop" class="filters" role="search" aria-label="Filtros do Top 10" novalidate>
         <div>
           <label for="cidade">Cidade</label>
@@ -135,6 +120,7 @@
           <button class="btn ghost" type="button" id="btnLimpar">Limpar</button>
         </div>
       </form>
+
       <div class="chips">
         <span class="tag" id="tagCidade" style="display:none"></span>
         <span class="tag" id="tagServico" style="display:none"></span>
@@ -143,9 +129,9 @@
     </section>
 
     <!-- Resultados -->
-    <section class="section" aria-labelledby="resTitle">
-      <div class="section-title">
-        <h2 id="resTitle">Ranking</h2>
+    <section aria-labelledby="resTitle">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <h2 id="resTitle" style="margin:0;font-size:18px">Ranking</h2>
         <small class="muted" id="count"></small>
       </div>
       <div id="results" class="results-grid" aria-live="polite"></div>
@@ -167,23 +153,18 @@
     const $ = (id)=> document.getElementById(id);
     const esc = (s)=> String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#39;");
     const estrelas = (n)=>{ const r=Math.round((Number(n)||0)*2)/2; const f=Math.floor(r),h=(r%1!==0); return "★".repeat(f)+(h?"½":"")+"☆".repeat(5-f-(h?1:0)); };
-    const kmFmt = (d)=> (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${Number(d).toFixed(d<10?1:0)} km`));
     const NO_STORE = { cache:'no-store' };
     const ts = () => `ts=${Date.now()}`;
 
-    // ---------- Autocomplete ----------
     async function fillCidades(){
-      try{
-        const r=await fetch(`/api/geo/cidades?${ts()}`, NO_STORE);
-        if(!r.ok) return;
-        const js=await r.json();
+      try{ const r=await fetch(`/api/geo/cidades?${ts()}`, NO_STORE);
+        if(!r.ok) return; const js=await r.json();
         $('listaCidades').innerHTML=(js||[]).map(c=>`<option value="${esc(c)}">`).join('');
       }catch{}
     }
     async function suggestServicos(q){
       if(!q) return [];
-      try{
-        const r=await fetch(`/api/geo/servicos/suggest?q=${encodeURIComponent(q)}&${ts()}`, NO_STORE);
+      try{ const r=await fetch(`/api/geo/servicos/suggest?q=${encodeURIComponent(q)}&${ts()}`, NO_STORE);
         return r.ok ? (await r.json()) : [];
       }catch{ return []; }
     }
@@ -192,12 +173,11 @@
       $('listaServicos').innerHTML=list.map(s=>`<option value="${esc(s)}">`).join('');
     });
 
-    // ---------- UI helpers ----------
     function showTag(id, txt){ const el=$(id); el.textContent=txt; el.style.display='inline-flex'; }
     function hideTags(){ ['tagCidade','tagServico'].forEach(id=>$(id).style.display='none'); }
     function setCount(n){ $('count').textContent = n ? `${n} no ranking` : ''; }
 
-    // ---------- Card (iOS) ----------
+    // === Card padrão ===
     function cardHTML(p, idx){
       const id = encodeURIComponent(p.id);
       const foto = p.foto || '/icons/icon-192.png';
@@ -207,43 +187,29 @@
       const rating = Number(p.rating || 0);
       const avals = Array.isArray(p.avaliacoes) ? p.avaliacoes.length : (Number(p.avaliacoes)||0);
       const atend = Number(p.atendimentos||0);
-      const price = (p.precoBase!=null && p.precoBase!=="") ? `R$ ${String(p.precoBase).toString().replace('.',',')}` : null;
-      const dist = kmFmt(p.distanceKm);
-      const badge = String(p.badge||'').toUpperCase(); // '', PRO, PREMIUM
-      const pos = (idx!=null) ? `<span class="badge" style="background:#ecfeff;border-color:#a5f3fc;color:#0e7490">#${idx+1}</span>` : '';
-
+      const price = (p.precoBase!=null && p.precoBase!=="") ? `R$ ${String(p.precoBase)}` : null;
+      const pos = (idx!=null) ? `<span class="pill" style="background:#ecfeff;border-color:#a5f3fc;color:#0e7490">#${idx+1}</span>` : '';
       return `
         <article class="pro-card">
           <img class="pro-avatar" src="${esc(foto)}" alt="Foto de ${esc(nome)}" loading="lazy" onerror="this.src='/icons/icon-192.png'">
           <div class="pro-main">
-            <h3 class="pro-name">
-              ${esc(nome)}
-              ${badge ? `<span class="badge ${badge}">${badge}</span>`: ''} ${pos}
-            </h3>
-            <div class="pro-sub">
-              ${esc(serv)} • <span class="muted">${esc(local || '—')}</span>
-              <span class="rating"> ${estrelas(rating)} </span>
-              <span class="muted">(${avals})</span>
+            <h3 class="pro-name" title="${esc(nome)}">${esc(nome)}</h3>
+            <div class="pro-sub">${esc(serv)} • <span>${esc(local || '—')}</span></div>
+            <div class="meta-line">
+              <span class="pill"><span class="rating">⭐ ${estrelas(rating)}</span> <span>(${avals})</span></span>
+              <span class="pill">Atendimentos: ${Number.isFinite(atend)?atend:0}</span>
+              ${price ? `<span class="pill">Valor: ${esc(price)}</span>`:''}
+              ${pos}
             </div>
           </div>
           <div class="right">
-            ${dist ? `<span class="chip blue">📍 ${esc(dist)}</span>`:''}
-            ${price ? `<span class="chip yellow">💵 ${esc(price)}</span>`:''}
-            <span class="chip green">🧰 ${atend} trab.</span>
-            <a class="btn" style="padding:6px 10px; font-size:13px" href="/profissional/${id}">Ver</a>
+            <a class="btn" href="/profissional/${id}">Ver Perfil</a>
           </div>
         </article>
       `;
     }
 
     // ---------- Busca Top10 ----------
-    function normalizeTop10Response(js){
-      if (!js) return { ok:false, week:'', items:[] };
-      const ok = (js.ok===true) || (js.Ok===true) || (js.OK===true);
-      const items = Array.isArray(js.items) ? js.items : (Array.isArray(js.itens) ? js.itens : []);
-      return { ok, week: js.week || js.semana || '', items };
-    }
-
     async function fetchTop10(){
       const q = new URLSearchParams();
       const cidade = $('cidade').value.trim();
@@ -251,25 +217,23 @@
       if (cidade) q.set('cidade', cidade);
       if (servico) q.set('servico', servico);
       q.set('ts', Date.now());
-
       try{
         $('loader').style.display='';
         const r = await fetch('/api/top10?'+q.toString(), NO_STORE);
         if(!r.ok) throw new Error('HTTP '+r.status);
-        const js = normalizeTop10Response(await r.json());
-        $('weekLabel').textContent = js.week ? `Semana: ${js.week}` : 'Semana atual';
-        const items = js.items || [];
+        const js = await r.json();
+        $('weekLabel').textContent = js && (js.week || js.semana) ? `Semana: ${js.week||js.semana}` : 'Semana atual';
+        const items = Array.isArray(js.items) ? js.items : (Array.isArray(js.itens) ? js.itens : []);
         setCount(items.length);
         $('results').innerHTML = items.length ? items.map((p,i)=>cardHTML(p,i)).join('') :
-          `<div class="muted" style="padding:10px">Nenhum profissional no Top 10 com os filtros atuais.</div>`;
+          `<div class="card" style="margin-top:10px"><p class="muted">Nenhum profissional no Top 10 com os filtros atuais.</p></div>`;
       }catch{
-        $('results').innerHTML = `<div class="muted" style="padding:10px">Falha ao carregar o ranking. Tente novamente.</div>`;
+        $('results').innerHTML = `<div class="card" style="margin-top:10px"><p class="muted">Falha ao carregar o ranking. Tente novamente.</p></div>`;
       }finally{
         $('loader').style.display='none';
       }
     }
 
-    // ---------- Submit / Limpar ----------
     function applyStateChips(){
       hideTags();
       const cidade = $('cidade').value.trim();
@@ -284,22 +248,17 @@
     });
     $('btnLimpar').addEventListener('click', async ()=>{
       $('cidade').value=''; $('servico').value='';
-      hideTags();
+      hideTags(); setCount(0);
       await fillCidades();
       fetchTop10();
     });
 
     // ---------- Boot ----------
     (async function init(){
-      // SW: força update em mobile
       if('serviceWorker' in navigator){
-        try{
-          const regs = await navigator.serviceWorker.getRegistrations();
-          regs.forEach(r=>r.update());
-        }catch{}
+        try{ const regs = await navigator.serviceWorker.getRegistrations(); regs.forEach(r=>r.update()); }catch{}
       }
       await fillCidades();
-      // Querystring inicial (compartilhável)
       const u=new URL(location.href);
       const cid=u.searchParams.get('cidade')||'';
       const ser=u.searchParams.get('servico')||'';
@@ -311,11 +270,11 @@
   })();
   </script>
 
-  <!-- Service Worker com cache-buster -->
+  <!-- Service Worker -->
   <script>
     if ('serviceWorker' in navigator){
       window.addEventListener('load', ()=>{
-        navigator.serviceWorker.register('/sw.js?v=top10-ios-1').catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=std-cards-2025-09-07').catch(()=>{});
       });
     }
   </script>
