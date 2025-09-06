@@ -1,81 +1,323 @@
-<!doctype html><html lang="pt-BR"><head>
+<!doctype html>
+<html lang="pt-BR">
+<head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Top 10 Profissionais • Autônoma.app</title>
+  <title>Top 10 da semana • Autônoma.app</title>
+
+  <!-- Canonical + SEO -->
+  <link rel="canonical" href="https://autonomaapp.com.br/top10.html">
+  <meta name="description" content="Veja o Top 10 de profissionais da semana no Autônoma.app. Filtros por cidade e serviço, com avaliações e atendimentos.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Autônoma.app">
+  <meta property="og:title" content="Top 10 da semana">
+  <meta property="og:description" content="Ranking semanal com avaliações, visitas e chamadas.">
+  <meta property="og:image" content="https://autonomaapp.com.br/img/og-cover.png">
+  <meta property="og:url" content="https://autonomaapp.com.br/top10.html">
+
+  <!-- PWA / Favicons -->
   <link rel="manifest" href="/manifest.webmanifest">
-  <meta name="theme-color" content="#1f4bd8">
+  <meta name="theme-color" content="#0b1f63">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/css/app.css">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+
+  <!-- CSS global -->
+  <link rel="stylesheet" href="/css/app.css?v=top10-ios-2025-09-07"/>
+
   <style>
+    :root{
+      --azul-escuro:#0b1f63;
+      --azul-brilho:#2D81FF;
+      --azul-brilho-2:#1E6EF2;
+      --cinza:#64748b;
+      --borda:#e5e7eb;
+    }
     .wrap{max-width:1120px;margin:0 auto;padding:16px}
-    .grid{display:grid;gap:12px;grid-template-columns:1fr}
-    @media(min-width:760px){.grid{grid-template-columns:1fr 1fr}}
-    @media(min-width:1100px){.grid{grid-template-columns:1fr 1fr 1fr}}
-    .card-pro{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:12px;display:flex;gap:10px;align-items:center}
-    .photo{width:64px;height:64px;border-radius:12px;object-fit:cover;border:1px solid #e5e7eb;background:#f8fafc}
-    .name{margin:0;font-weight:900}
-    .muted{color:#64748b}
-    .rating{color:#f59e0b}
-    .btn{padding:8px 12px;border-radius:10px}
+
+    /* Header enxuto */
+    .header{
+      background:var(--azul-escuro);
+      padding:12px 16px; display:flex; gap:8px; align-items:center; justify-content:flex-end;
+    }
+    .nav-btn{
+      appearance:none; border:none; cursor:pointer;
+      background:var(--azul-brilho); color:#fff; font-weight:800;
+      padding:8px 12px; border-radius:10px; text-decoration:none; font-size:14px;
+      display:inline-flex; align-items:center; justify-content:center;
+    }
+    .nav-btn:hover{ filter:brightness(.96); }
+
+    /* Hero / filtros */
+    .hero{background:linear-gradient(180deg,#2D81FF 0%,#1E6EF2 100%); color:#fff; border-radius:18px; padding:18px; margin-bottom:14px; box-shadow:0 10px 24px rgba(0,0,0,.10)}
+    .hero h1{margin:0 0 4px;font-size:24px;line-height:1.15;font-weight:900;text-shadow:0 1px 0 #e8f0ff,0 10px 24px rgba(0,0,0,.22)}
+    .hero .meta{opacity:.95}
+    .filters{
+      display:grid; gap:10px; grid-template-columns:1fr; background:#fff; border:1px solid #ffffff40;
+      border-radius:14px; padding:12px; margin-top:10px;
+    }
+    @media(min-width:720px){ .filters{ grid-template-columns:1.2fr 1.2fr auto } }
+    .filters label{color:#0f172a; font-weight:700; font-size:13px}
+    .filters input{width:100%; border:1px solid var(--borda); border-radius:12px; padding:10px 12px; background:#fff; color:#0f172a; outline:none}
+    .btn{ border:none; background:var(--azul-escuro); color:#fff; padding:11px 14px; border-radius:12px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; font-weight:800 }
+    .btn.ghost{ background:#fff; color:#0f172a; border:1px solid var(--borda) }
+
+    /* Chips/estado + loader */
+    .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px }
+    .tag{ display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:4px 8px; border:1px solid var(--borda); border-radius:999px; background:#f8fafc }
+    .loader{ font-size:14px; display:none; color:#fff }
+
+    /* Grid + Card (estilo iOS) */
+    .results-grid{ display:grid; gap:10px; grid-template-columns:1fr; }
+    @media(min-width:720px){ .results-grid{ grid-template-columns:1fr 1fr } }
+    @media(min-width:1060px){ .results-grid{ grid-template-columns:1fr 1fr 1fr } }
+
+    .pro-card{
+      background:#fff; border:1px solid var(--borda); border-radius:16px; padding:12px;
+      display:flex; align-items:center; gap:12px; box-shadow:0 6px 16px rgba(0,0,0,.06);
+      transition:transform .16s ease, box-shadow .16s ease;
+    }
+    .pro-card:hover{ transform:translateY(-1px); box-shadow:0 10px 22px rgba(0,0,0,.09) }
+    .pro-avatar{ width:56px;height:56px;border-radius:999px;object-fit:cover;border:1px solid var(--borda);background:#f8fafc;flex:0 0 56px }
+    .pro-main{ flex:1 1 auto; min-width:0 }
+    .pro-name{ margin:0; font-size:16px; font-weight:900; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+    .pro-sub{ margin:2px 0 0; font-size:13px; color:#64748b }
+    .rating{ color:#f59e0b; font-size:13px; }
+
+    .right{ text-align:right; min-width:110px; display:flex; flex-direction:column; gap:6px; align-items:flex-end }
+    .chip{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid var(--borda); background:#f8fafc; color:#0f172a }
+    .chip.blue{ background:#eef2ff; border-color:#c7d2fe }
+    .chip.green{ background:#ecfccb; border-color:#bbf7d0 }
+    .chip.yellow{ background:#fffbeb; border-color:#fde68a }
+
+    .badge{ font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--borda); background:#eef2ff; color:#3730a3; font-weight:800 }
+    .badge.PREMIUM{ background:#fffbeb; border-color:#fbbf24; color:#92400e }
+    .badge.PRO{ background:#eef2ff; border-color:#6366f1; color:#263fa1 }
+
+    .section{ background:#fff; border:1px solid var(--borda); border-radius:16px; padding:14px; }
+    .section-title{ display:flex; align-items:center; justify-content:space-between; gap:8px }
+    .section-title h2{ margin:0; font-size:18px }
+    .muted{ color:#64748b }
+
+    footer { padding:28px 12px; background:var(--azul-escuro); margin-top:16px }
+    .foot-links { display:flex; flex-wrap:wrap; gap:12px; justify-content:center }
+    .foot-links a { color:#cde1ff; font-size:14px; text-decoration:none }
+    .foot-links a:hover { text-decoration:underline }
   </style>
-</head><body>
-  <header class="header">
-    <img src="/icons/icon-192.png" alt="Autônoma.app" class="logo"/>
-    <div class="brand">
-      <strong>Autônoma<span class="dot">.app</span></strong>
-      <span class="tag">Top 10</span>
-    </div>
-    <div style="margin-left:auto;display:flex;gap:8px">
-      <a class="btn ghost" href="/">Início</a>
-      <a class="btn outline" href="/clientes.html">Buscar</a>
-      <a class="btn outline" href="/favoritos.html">Favoritos</a>
-    </div>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header" role="banner" aria-label="Cabeçalho">
+    <a class="nav-btn" href="/">Início</a>
+    <a class="nav-btn" href="/clientes.html">Buscar</a>
+    <a class="nav-btn" href="/painel_login.html">Entrar</a>
   </header>
 
-  <main class="wrap">
-    <div class="card">
-      <h1 style="margin:0">🏆 Top 10 profissionais</h1>
-      <p class="meta">Baseado em avaliações, atendimento e relevância recente.</p>
-    </div>
-    <section id="list" class="grid" aria-live="polite"></section>
-    <div id="err" class="card meta" style="display:none">Não foi possível carregar o Top 10.</div>
+  <main class="wrap" role="main">
+    <!-- Hero + filtros -->
+    <section class="hero" aria-labelledby="hTitle">
+      <h1 id="hTitle">Top 10 da semana</h1>
+      <div class="meta" id="weekLabel">Carregando semana…</div>
+      <form id="formTop" class="filters" role="search" aria-label="Filtros do Top 10" novalidate>
+        <div>
+          <label for="cidade">Cidade</label>
+          <input id="cidade" name="cidade" type="text" placeholder="Ex.: Rio de Janeiro/RJ" list="listaCidades" autocomplete="off">
+          <datalist id="listaCidades"></datalist>
+        </div>
+        <div>
+          <label for="servico">Serviço</label>
+          <input id="servico" name="servico" type="text" placeholder="Ex.: Eletricista" list="listaServicos" autocomplete="off">
+          <datalist id="listaServicos"></datalist>
+        </div>
+        <div style="display:flex; gap:8px; align-items:flex-end">
+          <button class="btn" type="submit" id="btnBuscar">Filtrar</button>
+          <button class="btn ghost" type="button" id="btnLimpar">Limpar</button>
+        </div>
+      </form>
+      <div class="chips">
+        <span class="tag" id="tagCidade" style="display:none"></span>
+        <span class="tag" id="tagServico" style="display:none"></span>
+        <span class="loader" id="loader">Carregando…</span>
+      </div>
+    </section>
+
+    <!-- Resultados -->
+    <section class="section" aria-labelledby="resTitle">
+      <div class="section-title">
+        <h2 id="resTitle">Ranking</h2>
+        <small class="muted" id="count"></small>
+      </div>
+      <div id="results" class="results-grid" aria-live="polite"></div>
+    </section>
   </main>
 
-<script>
-async function fetchTop10(){
-  const q = new URLSearchParams();
-  const cidade = $('cidade').value.trim();
-  const servico = $('servico').value.trim();
-  if (cidade) q.set('cidade', cidade);
-  if (servico) q.set('servico', servico);
-  q.set('ts', Date.now());
+  <footer>
+    <nav class="foot-links" aria-label="Links do rodapé">
+      <a href="/termos.html">Termos</a>
+      <a href="/privacidade.html">Privacidade</a>
+      <a href="/planos.html">Planos</a>
+      <a href="/favoritos.html">Favoritos</a>
+    </nav>
+  </footer>
 
-  try{
-    $('loader').style.display='';
-    const r = await fetch('/api/top10?'+q.toString(), NO_STORE);
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const js = await r.json();
+  <script>
+  (function(){
+    // ---------- Utils ----------
+    const $ = (id)=> document.getElementById(id);
+    const esc = (s)=> String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#39;");
+    const estrelas = (n)=>{ const r=Math.round((Number(n)||0)*2)/2; const f=Math.floor(r),h=(r%1!==0); return "★".repeat(f)+(h?"½":"")+"☆".repeat(5-f-(h?1:0)); };
+    const kmFmt = (d)=> (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${Number(d).toFixed(d<10?1:0)} km`));
+    const NO_STORE = { cache:'no-store' };
+    const ts = () => `ts=${Date.now()}`;
 
-    // Aceita Ok/ok e items/itens/data
-    const week = js.week || js.semana || '';
-    $('weekLabel').textContent = week ? `Semana: ${week}` : 'Semana atual';
+    // ---------- Autocomplete ----------
+    async function fillCidades(){
+      try{
+        const r=await fetch(`/api/geo/cidades?${ts()}`, NO_STORE);
+        if(!r.ok) return;
+        const js=await r.json();
+        $('listaCidades').innerHTML=(js||[]).map(c=>`<option value="${esc(c)}">`).join('');
+      }catch{}
+    }
+    async function suggestServicos(q){
+      if(!q) return [];
+      try{
+        const r=await fetch(`/api/geo/servicos/suggest?q=${encodeURIComponent(q)}&${ts()}`, NO_STORE);
+        return r.ok ? (await r.json()) : [];
+      }catch{ return []; }
+    }
+    $('servico').addEventListener('input', async e=>{
+      const v=e.target.value.trim(); const list=await suggestServicos(v);
+      $('listaServicos').innerHTML=list.map(s=>`<option value="${esc(s)}">`).join('');
+    });
 
-    const items = Array.isArray(js.items) ? js.items
-                : Array.isArray(js.itens) ? js.itens
-                : Array.isArray(js.data)  ? js.data
-                : [];
+    // ---------- UI helpers ----------
+    function showTag(id, txt){ const el=$(id); el.textContent=txt; el.style.display='inline-flex'; }
+    function hideTags(){ ['tagCidade','tagServico'].forEach(id=>$(id).style.display='none'); }
+    function setCount(n){ $('count').textContent = n ? `${n} no ranking` : ''; }
 
-    setCount(items.length);
-    $('results').innerHTML = items.length
-      ? items.map((p,i)=>cardHTML(p,i)).join('')
-      : `<div class="muted" style="padding:10px">Nenhum profissional no Top 10 com os filtros atuais.</div>`;
-  }catch(e){
-    console.warn('top10 erro:', e);
-    $('results').innerHTML = `<div class="muted" style="padding:10px">Falha ao carregar o ranking. Tente novamente.</div>`;
-  }finally{
-    $('loader').style.display='none';
-  }
-}
-</script>
-</body></html>
+    // ---------- Card (iOS) ----------
+    function cardHTML(p, idx){
+      const id = encodeURIComponent(p.id);
+      const foto = p.foto || '/icons/icon-192.png';
+      const nome = p.nome || '—';
+      const serv = p.servico || p.profissao || '';
+      const local = [p.bairro||'', p.cidade||''].filter(Boolean).join(' • ');
+      const rating = Number(p.rating || 0);
+      const avals = Array.isArray(p.avaliacoes) ? p.avaliacoes.length : (Number(p.avaliacoes)||0);
+      const atend = Number(p.atendimentos||0);
+      const price = (p.precoBase!=null && p.precoBase!=="") ? `R$ ${String(p.precoBase).toString().replace('.',',')}` : null;
+      const dist = kmFmt(p.distanceKm);
+      const badge = String(p.badge||'').toUpperCase(); // '', PRO, PREMIUM
+      const pos = (idx!=null) ? `<span class="badge" style="background:#ecfeff;border-color:#a5f3fc;color:#0e7490">#${idx+1}</span>` : '';
+
+      return `
+        <article class="pro-card">
+          <img class="pro-avatar" src="${esc(foto)}" alt="Foto de ${esc(nome)}" loading="lazy" onerror="this.src='/icons/icon-192.png'">
+          <div class="pro-main">
+            <h3 class="pro-name">
+              ${esc(nome)}
+              ${badge ? `<span class="badge ${badge}">${badge}</span>`: ''} ${pos}
+            </h3>
+            <div class="pro-sub">
+              ${esc(serv)} • <span class="muted">${esc(local || '—')}</span>
+              <span class="rating"> ${estrelas(rating)} </span>
+              <span class="muted">(${avals})</span>
+            </div>
+          </div>
+          <div class="right">
+            ${dist ? `<span class="chip blue">📍 ${esc(dist)}</span>`:''}
+            ${price ? `<span class="chip yellow">💵 ${esc(price)}</span>`:''}
+            <span class="chip green">🧰 ${atend} trab.</span>
+            <a class="btn" style="padding:6px 10px; font-size:13px" href="/profissional/${id}">Ver</a>
+          </div>
+        </article>
+      `;
+    }
+
+    // ---------- Busca Top10 ----------
+    function normalizeTop10Response(js){
+      if (!js) return { ok:false, week:'', items:[] };
+      const ok = (js.ok===true) || (js.Ok===true) || (js.OK===true);
+      const items = Array.isArray(js.items) ? js.items : (Array.isArray(js.itens) ? js.itens : []);
+      return { ok, week: js.week || js.semana || '', items };
+    }
+
+    async function fetchTop10(){
+      const q = new URLSearchParams();
+      const cidade = $('cidade').value.trim();
+      const servico = $('servico').value.trim();
+      if (cidade) q.set('cidade', cidade);
+      if (servico) q.set('servico', servico);
+      q.set('ts', Date.now());
+
+      try{
+        $('loader').style.display='';
+        const r = await fetch('/api/top10?'+q.toString(), NO_STORE);
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        const js = normalizeTop10Response(await r.json());
+        $('weekLabel').textContent = js.week ? `Semana: ${js.week}` : 'Semana atual';
+        const items = js.items || [];
+        setCount(items.length);
+        $('results').innerHTML = items.length ? items.map((p,i)=>cardHTML(p,i)).join('') :
+          `<div class="muted" style="padding:10px">Nenhum profissional no Top 10 com os filtros atuais.</div>`;
+      }catch{
+        $('results').innerHTML = `<div class="muted" style="padding:10px">Falha ao carregar o ranking. Tente novamente.</div>`;
+      }finally{
+        $('loader').style.display='none';
+      }
+    }
+
+    // ---------- Submit / Limpar ----------
+    function applyStateChips(){
+      hideTags();
+      const cidade = $('cidade').value.trim();
+      const servico = $('servico').value.trim();
+      if (cidade) showTag('tagCidade', 'Cidade: ' + cidade);
+      if (servico) showTag('tagServico', 'Serviço: ' + servico);
+    }
+    $('formTop').addEventListener('submit', (e)=>{
+      e.preventDefault();
+      applyStateChips();
+      fetchTop10();
+    });
+    $('btnLimpar').addEventListener('click', async ()=>{
+      $('cidade').value=''; $('servico').value='';
+      hideTags();
+      await fillCidades();
+      fetchTop10();
+    });
+
+    // ---------- Boot ----------
+    (async function init(){
+      // SW: força update em mobile
+      if('serviceWorker' in navigator){
+        try{
+          const regs = await navigator.serviceWorker.getRegistrations();
+          regs.forEach(r=>r.update());
+        }catch{}
+      }
+      await fillCidades();
+      // Querystring inicial (compartilhável)
+      const u=new URL(location.href);
+      const cid=u.searchParams.get('cidade')||'';
+      const ser=u.searchParams.get('servico')||'';
+      if (cid) $('cidade').value = cid;
+      if (ser) $('servico').value = ser;
+      applyStateChips();
+      fetchTop10();
+    })();
+  })();
+  </script>
+
+  <!-- Service Worker com cache-buster -->
+  <script>
+    if ('serviceWorker' in navigator){
+      window.addEventListener('load', ()=>{
+        navigator.serviceWorker.register('/sw.js?v=top10-ios-1').catch(()=>{});
+      });
+    }
+  </script>
+</body>
+</html>
