@@ -68,6 +68,7 @@
 
   <main class="wrap">
     <div id="flash" class="card-soft msg" style="display:none"></div>
+
     <div class="grid">
       <aside class="card-soft">
         <div class="avatar-box">
@@ -126,15 +127,24 @@
 
   <script>
   (function(){
-    const qs = new URL(location.href).searchParams;
-    const id = qs.get('id') || '';
-    if(!id){ location.href = '/clientes.html'; return; }
-
+    // --- Utilidades ---
     const $ = s => document.querySelector(s);
-    const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
-      .replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#39;");
+    const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#39;");
     const kmFmt = d => (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${Number(d).toFixed(d<10?1:0)} km`));
     const stars = n => { const r=Math.round((Number(n)||0)*2)/2; const f=Math.floor(r),h=(r%1!==0); return "★".repeat(f)+(h?"½":"")+"☆".repeat(5-f-(h?1:0)); };
+
+    // Pega ID via ?id=123 ou via /profissional/123
+    function getProfileId(){
+      const url = new URL(location.href);
+      const qid = url.searchParams.get('id');
+      if (qid) return qid;
+      const parts = location.pathname.split('/').filter(Boolean);
+      const i = parts.indexOf('profissional');
+      if (i>=0 && parts[i+1]) return parts[i+1];
+      return '';
+    }
+    const id = getProfileId();
+    if(!id){ location.href = '/clientes.html'; return; }
 
     function flash(msg, ok=true){
       const box = $('#flash'); box.textContent = msg;
@@ -147,6 +157,7 @@
       return r.json();
     }
 
+    // Tenta diferentes endpoints para o perfil
     async function loadProfile(pid){
       const tries = [
         `/api/profissional/${encodeURIComponent(pid)}`,
@@ -158,14 +169,14 @@
           const js = await getJSON(u);
           if(js){
             if(js.item) return js.item;
-            if(js.id || js.nome) return js;
+            if(js.id != null || js.nome) return js;
           }
         }catch(_){}
       }
-      // fallback: busca geral e filtra
+      // fallback: lista e filtra
       try{
         const list = await getJSON('/api/profissionais');
-        const arr = list.items || list || [];
+        const arr = list.items || list.itens || list || [];
         const found = arr.find(x => String(x.id)===String(pid));
         if(found) return found;
       }catch(_){}
@@ -193,6 +204,7 @@
       const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
       return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
     }
+
     function tryClientDistance(p){
       if(!(p && typeof p.lat==='number' && typeof p.lng==='number')) return;
       if(!('geolocation' in navigator)) return;
@@ -202,7 +214,7 @@
       }, ()=>{}, {enableHighAccuracy:true, timeout:10000, maximumAge:30000});
     }
 
-    // ===== Favoritos: salva OBJETO RICO =====
+    // Favoritos (objeto rico)
     const KEY_FAVS = 'autonoma_favs';
     const getFavs = ()=>{ try{return JSON.parse(localStorage.getItem(KEY_FAVS)||'[]')}catch{return[]} };
     const setFavs = v => { try{localStorage.setItem(KEY_FAVS, JSON.stringify(v||[]))}catch{} };
@@ -235,19 +247,26 @@
         $('#k_vis').textContent  = Number(PROF.visitas||0);
 
         $('#precoBase').textContent = PROF.precoBase ? String(PROF.precoBase) : '—';
-        if(PROF.site){ $('#site').textContent=PROF.site; $('#site').href=PROF.site; } else { $('#site').textContent='—'; $('#site').removeAttribute('href'); }
+        if(PROF.site){
+          $('#site').textContent=PROF.site; $('#site').href=PROF.site;
+        } else {
+          $('#site').textContent='—'; $('#site').removeAttribute('href');
+        }
+
         $('#dist').textContent = kmFmt(PROF.distanceKm);
         if (PROF.distanceKm == null) tryClientDistance(PROF);
 
         const ratingNum = Number(PROF.rating||0);
         $('#stars').textContent = stars(ratingNum);
         const avalCount = Array.isArray(PROF.avaliacoes) ? PROF.avaliacoes.length : Number(PROF.avaliacoes||0);
-        $('#count').textContent = `(${avalCount})`;
+        $('#count').textContent = `(${isNaN(avalCount)?0:avalCount})`;
+
         $('#desc').textContent = PROF.descricao || '—';
 
         if(PROF.whatsapp){
           const d = String(PROF.whatsapp).replace(/\D/g,'');
-          $('#btnWa').href = 'https://wa.me/' + (d.startsWith('55')? d : '55'+d);
+          const num = d.startsWith('55') ? d : ('55'+d);
+          $('#btnWa').href = 'https://wa.me/' + num;
         } else {
           $('#btnWa').classList.add('outline');
           $('#btnWa').textContent = 'WhatsApp indisponível';
@@ -257,7 +276,7 @@
         // Estado do botão Favoritar
         if (isFav(id)) $('#btnFav').classList.add('on');
 
-        // Avaliações (se houver)
+        // Avaliações detalhadas (se houver)
         const avals = Array.isArray(PROF.avaliacoesDetalhe)? PROF.avaliacoesDetalhe : [];
         if(avals.length){
           $('#reviews').innerHTML = avals.slice(0,10).map(a=>`
@@ -267,7 +286,8 @@
                 <span class="rating">${stars(a.nota||0)}</span>
               </div>
               <p class="meta" style="margin:6px 0 0">${esc(a.texto||'')}</p>
-            </div>`).join('');
+            </div>
+          `).join('');
         } else {
           $('#noReviews').style.display='';
         }
@@ -276,7 +296,7 @@
       }
     }
 
-    // ações
+    // Ações
     $('#btnFav').addEventListener('click', ()=>{
       const on = isFav(id);
       if (on){
@@ -285,19 +305,18 @@
         $('#msgActions').textContent = 'Removido dos favoritos.';
         $('#msgActions').className = 'msg ok';
       } else {
-        // Salva objeto rico
         const obj = {
-          id: PROF.id || id,
-          nome: PROF.nome || 'Profissional',
-          servico: PROF.servico || PROF.profissao || '',
-          bairro: PROF.bairro || '',
-          cidade: PROF.cidade || '',
-          local: [PROF.bairro, PROF.cidade].filter(Boolean).join(' • '),
-          whatsapp: PROF.whatsapp || '',
-          foto: PROF.foto || '',
-          rating: Number(PROF.rating||0),
-          atendimentos: Number(PROF.atendimentos||0),
-          distanceKm: (typeof PROF.distanceKm==='number') ? PROF.distanceKm : null
+          id: PROF?.id || id,
+          nome: PROF?.nome || 'Profissional',
+          servico: PROF?.servico || PROF?.profissao || '',
+          bairro: PROF?.bairro || '',
+          cidade: PROF?.cidade || '',
+          local: [PROF?.bairro, PROF?.cidade].filter(Boolean).join(' • '),
+          whatsapp: PROF?.whatsapp || '',
+          foto: PROF?.foto || '',
+          rating: Number(PROF?.rating||0),
+          atendimentos: Number(PROF?.atendimentos||0),
+          distanceKm: (typeof PROF?.distanceKm==='number') ? PROF.distanceKm : null
         };
         upsertFav(obj);
         $('#btnFav').classList.add('on');
@@ -311,7 +330,11 @@
       $('#msgActions').textContent = 'Obrigado! Recomendação registrada.';
       $('#msgActions').className = 'msg ok';
       try{
-        await fetch('/api/recomendacoes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
+        await fetch('/api/recomendacoes',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({id})
+        });
       }catch(_){}
     });
 

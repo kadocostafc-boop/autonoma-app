@@ -21,9 +21,13 @@
   <meta property="og:image" content="https://autonomaapp.com.br/img/og-cover.png">
   <meta property="og:url" content="https://autonomaapp.com.br/clientes.html">
 
-  <link rel="stylesheet" href="/css/app.css?v=clients-ios-2025-09-07">
+  <link rel="stylesheet" href="/css/app.css?v=clients-2025-09-07">
+
   <style>
-    :root{ --azul-escuro:#0b1f63; --azul-brilho:#2D81FF; --azul-brilho-2:#1E6EF2; --cinza:#64748b; --borda:#e5e7eb; }
+    :root{
+      --azul-escuro:#0b1f63; --azul-brilho:#2D81FF; --azul-brilho-2:#1E6EF2;
+      --cinza:#64748b; --cinza-claro:#f1f5f9; --borda:#e5e7eb;
+    }
     .wrap{max-width:1120px;margin:0 auto;padding:16px}
 
     /* HEADER */
@@ -32,43 +36,61 @@
     .nav-btn:hover{ filter:brightness(.96); }
 
     /* HERO */
-    .search-hero{ background: linear-gradient(180deg, var(--azul-brilho) 0%, var(--azul-brilho-2) 100%); color:#fff; margin:0 0 14px 0; padding: 20px 14px 16px; border-radius:18px; box-shadow: 0 10px 24px rgba(0,0,0,.10); }
+    .search-hero{
+      background: linear-gradient(180deg, var(--azul-brilho) 0%, var(--azul-brilho-2) 100%);
+      color:#fff; margin:0 0 14px 0; padding: 20px 14px 16px; border-radius:18px;
+      box-shadow: 0 10px 24px rgba(0,0,0,.10);
+    }
     .search-hero h1{ margin:0 0 10px; font-size:26px; line-height:1.15; font-weight:900; letter-spacing:.2px; text-shadow: 0 1px 0 #e8f0ff, 0 10px 24px rgba(0,0,0,.22); }
     .gps-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:8px 0 12px}
     .gps-row .pill{background:#ffffff20; border:1px solid #ffffff40; color:#fff; padding:6px 10px; border-radius:12px}
     .gps-row .muted{color:#e2ebff}
 
-    .filters{ display:grid; gap:10px; grid-template-columns:1fr; background:#fff; border:1px solid #ffffff40; border-radius:14px; padding:12px; }
-    /* + Ordenar por */
-    @media(min-width:840px){ .filters{ grid-template-columns:1.2fr 1fr 1fr .8fr 1fr auto } }
-    @media(min-width:720px) and (max-width:839px){ .filters{ grid-template-columns:1.2fr 1fr 1fr .8fr auto } } /* sem o select em telas menores */
+    .filters{
+      display:grid; gap:10px; grid-template-columns:1fr;
+      background:#fff; border:1px solid #ffffff40; border-radius:14px; padding:12px;
+    }
+    @media(min-width:720px){ .filters{ grid-template-columns:1.2fr 1fr 1fr .8fr auto } }
     .filters label{color:#0f172a; font-weight:700; font-size:13px}
-    .filters input, .filters select{ width:100%; border:1px solid var(--borda); border-radius:12px; padding:10px 12px; background:#fff; color:#0f172a; outline:none; }
+    .filters input, .filters select{
+      width:100%; border:1px solid var(--borda); border-radius:12px; padding:10px 12px;
+      background:#fff; color:#0f172a; outline:none;
+    }
+
     .btn{ border:none; background:var(--azul-brilho); color:#fff; padding:11px 14px; border-radius:12px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; font-weight:800 }
     .btn.ghost{ background:#fff; color:#0f172a; border:1px solid var(--borda) }
     .btn.dark{ background:var(--azul-escuro) }
 
-    /* CARDS */
-    .results-grid{ display:grid; gap:10px; grid-template-columns:1fr; }
+    /* GRID DE RESULTADOS */
+    .results-grid{ display:grid; gap:12px; grid-template-columns:1fr; }
     @media(min-width:720px){ .results-grid{ grid-template-columns:1fr 1fr } }
     @media(min-width:1060px){ .results-grid{ grid-template-columns:1fr 1fr 1fr } }
-    .pro-card{ background:#fff; border:1px solid var(--borda); border-radius:16px; padding:12px; display:flex; align-items:center; gap:12px; box-shadow: 0 6px 16px rgba(0,0,0,.06); transition:transform .16s ease, box-shadow .16s ease; }
+
+    /* CARD VERTICAL */
+    .pro-card{
+      background:#fff; border:1px solid var(--borda); border-radius:16px; padding:12px;
+      display:flex; flex-direction:column; align-items:center; text-align:center; gap:10px;
+      box-shadow: 0 6px 16px rgba(0,0,0,.06); transition:transform .16s ease, box-shadow .16s ease;
+    }
     .pro-card:hover{ transform:translateY(-1px); box-shadow:0 10px 22px rgba(0,0,0,.09) }
-    .pro-avatar{ width:56px; height:56px; border-radius:999px; object-fit:cover; border:1px solid var(--borda); background:#f8fafc; flex:0 0 56px }
-    .pro-main{ flex:1 1 auto; min-width:0 }
-    .pro-name{ margin:0; font-size:16px; font-weight:900; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-    .pro-sub{ margin:2px 0 0; font-size:13px; color:var(--cinza) }
-    .pro-right{ text-align:right; min-width:132px; display:flex; flex-direction:column; gap:6px; align-items:flex-end }
-    .chip{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid var(--borda); background:#f8fafc; color:#0f172a }
-    .chip.blue{ background:#eef2ff; border-color:#c7d2fe }
-    .chip.green{ background:#ecfccb; border-color:#bbf7d0 }
-    .chip.yellow{ background:#fffbeb; border-color:#fde68a }
+    .pro-photo{ width:110px; height:110px; border-radius:16px; object-fit:cover; border:1px solid var(--borda); background:#f8fafc }
+    .pro-name{ margin:0; font-size:16px; font-weight:900; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100% }
+    .pro-serv{ font-size:13px; color:#0f172a }
+    .pro-local{ font-size:13px; color:var(--cinza) }
     .rating{ color:#f59e0b; font-size:13px; }
     .muted{ color:var(--cinza) }
+
+    .meta-row{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+    .pill{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid var(--borda); background:#f8fafc }
+
+    .btn.small{ padding:8px 12px; font-size:13px }
 
     .section-title{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
     .section-title h2{ margin:0; font-size:18px }
     .card{ background:#fff; border:1px solid var(--borda); border-radius:16px; padding:14px; }
+
+    .loader{ display:none; font-size:14px }
+    .gps-ok{ color:#22c55e } .gps-warn{ color:#f59e0b }
 
     footer { padding: 28px 12px; background:var(--azul-escuro); margin-top:16px }
     .foot-links { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
@@ -122,14 +144,6 @@
             <option value="4.5">4.5+ ⭐</option>
           </select>
         </div>
-        <!-- NOVO: Ordenar por -->
-        <div class="opt-ordenar" style="display:none">
-          <label for="ordenar">Ordenar por</label>
-          <select id="ordenar" name="ordenar">
-            <option value="relevancia" selected>Relevância</option>
-            <option value="distancia">Distância</option>
-          </select>
-        </div>
         <div style="display:flex; gap:8px; align-items:flex-end">
           <button class="btn dark" type="submit" id="btnBuscar">Buscar</button>
           <button class="btn ghost" type="button" id="btnLimpar">Limpar</button>
@@ -137,27 +151,23 @@
       </form>
 
       <div class="gps-row">
-        <span class="chip" id="tagCidade" style="display:none"></span>
-        <span class="chip" id="tagBairro" style="display:none"></span>
-        <span class="chip" id="tagServico" style="display:none"></span>
-        <span class="chip" id="tagRating" style="display:none"></span>
-        <span class="muted" id="loader" style="display:none">Carregando…</span>
+        <span class="pill" id="tagCidade" style="display:none"></span>
+        <span class="pill" id="tagBairro" style="display:none"></span>
+        <span class="pill" id="tagServico" style="display:none"></span>
+        <span class="pill" id="tagRating" style="display:none"></span>
+        <span class="loader" id="loader">Carregando…</span>
       </div>
     </section>
 
     <!-- RESULTADOS -->
     <section id="results" class="results-grid" aria-live="polite"></section>
 
-    <!-- Paginação -->
     <div class="card" id="paginacao" style="text-align:center; display:none">
-      <div style="display:flex; gap:8px; justify-content:center">
-        <button id="btnPrev" class="btn ghost" type="button">« Anterior</button>
-        <span id="contagem" class="small muted" style="align-self:center"></span>
-        <button id="btnNext" class="btn" type="button">Próxima »</button>
-      </div>
+      <button id="btnMais" class="btn">Carregar mais</button>
+      <p id="contagem" class="small muted" style="margin-top:6px"></p>
     </div>
 
-    <!-- Destaques (fallback) -->
+    <!-- DESTAQUES -->
     <section class="card" aria-labelledby="destaquesTitle">
       <div class="section-title">
         <h2 id="destaquesTitle">Profissionais em destaque</h2>
@@ -180,29 +190,34 @@
 
   <script>
   (function(){
-    // ===== Utils =====
+    // Utils
     const $ = (id)=> document.getElementById(id);
-    const esc = (s)=> String(s||"").replace(/&/g,"&amp;")
-      .replace(/</g,"&lt;").replace(/>/g,"&gt;")
-      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    const esc = (s)=> String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
     const estrelas = (n)=>{ const r=Math.round((Number(n)||0)*2)/2; const f=Math.floor(r),h=(r%1!==0); return "★".repeat(f)+(h?"½":"")+"☆".repeat(5-f-(h?1:0)); };
-    const kmFmt = (d)=> {
-      if (d==null || !isFinite(d)) return "—";
-      if (d < 1) return `${(d*1000).toFixed(0)} m`;
-      return `${Number(d).toFixed(d<10?1:0)} km`;
-    };
+    const kmFmt = (d)=> (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${Number(d).toFixed(d<10?1:0)} km`));
     const NO_STORE = { cache:'no-store' };
     const ts = () => `ts=${Date.now()}`;
 
-    // ===== Estado =====
-    const PAGE_SIZE = 10;
-    let page = 1, allItems = [], filteredOrdered = [];
-    let userLat=null, userLng=null, useGPS=false;
+    // Haversine
+    function hav(lat1, lon1, lat2, lon2){
+      if([lat1,lon1,lat2,lon2].some(v=>!Number.isFinite(v))) return null;
+      const toRad = d=> d*Math.PI/180, R=6371;
+      const dLat = toRad(lat2-lat1), dLon=toRad(lon2-lon1);
+      const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+      return 2*R*Math.asin(Math.sqrt(a));
+    }
 
-    // ===== Autocomplete =====
+    // Estado
+    let userLat=null, userLng=null, useGPS=false;
+    let page=1, limit=10, total=0, acumulados=0; // <= limite 10
+    let lastQuery={ cidade:"", bairro:"", servico:"", minRating:"" };
+
+    // Autocomplete
     async function fillCidades(){
-      try{ const r=await fetch(`/api/geo/cidades?${ts()}`, NO_STORE);
-        if(!r.ok) return; const js=await r.json();
+      try{
+        const r=await fetch(`/api/geo/cidades?${ts()}`, NO_STORE);
+        if(!r.ok) return;
+        const js=await r.json();
         $('listaCidades').innerHTML=(js||[]).map(c=>`<option value="${esc(c)}">`).join('');
       }catch{}
     }
@@ -210,7 +225,8 @@
       if(!cidadeVal) { $('listaBairros').innerHTML=''; return; }
       try{
         const r = await fetch(`/api/geo/bairros?cidade=${encodeURIComponent(cidadeVal)}&${ts()}`, NO_STORE);
-        if(!r.ok) return; const js = await r.json();
+        if(!r.ok) return;
+        const js = await r.json();
         $('listaBairros').innerHTML = (js||[]).map(b=>`<option value="${esc(b)}">`).join('');
       }catch{}
     }
@@ -240,7 +256,7 @@
       $('listaServicos').innerHTML=list.map(s=>`<option value="${esc(s)}">`).join('');
     });
 
-    // ===== GPS =====
+    // GPS
     function isSecureForGeo(){
       return location.hostname==='localhost' || location.hostname==='127.0.0.1' || (window.isSecureContext===true);
     }
@@ -257,7 +273,7 @@
     }
     async function askGPS(){
       if(!isSecureForGeo()){
-        $('gpsStatus').innerHTML='<span class="muted">Para usar GPS, acesse via HTTPS ou localhost.</span>';
+        $('gpsStatus').innerHTML='<span class="gps-warn">Para usar GPS, acesse via HTTPS ou localhost.</span>';
         useGPS=false; $('useGPS').checked=false; return;
       }
       if(!('geolocation' in navigator)){
@@ -267,13 +283,11 @@
       $('gpsStatus').textContent='Solicitando localização…';
       navigator.geolocation.getCurrentPosition(async pos=>{
         userLat=pos.coords.latitude; userLng=pos.coords.longitude;
-        $('gpsStatus').innerHTML='<span style="color:#22c55e">Localização ativada.</span>';
-        // mostra seletor Ordenar por quando há chance de distância
-        document.querySelector('.opt-ordenar').style.display='';
+        $('gpsStatus').innerHTML='<span class="gps-ok">Localização ativada.</span>';
         if(!$('cidade').value.trim()) await resolveCityByGPS(userLat,userLng);
         if(useGPS && ( $('bairro').value || $('servico').value )) submitBusca();
       }, _=>{
-        $('gpsStatus').innerHTML='<span style="color:#f59e0b">Não foi possível obter a localização.</span>';
+        $('gpsStatus').innerHTML='<span class="gps-warn">Não foi possível obter a localização.</span>';
         useGPS=false; $('useGPS').checked=false;
       }, {enableHighAccuracy:true,timeout:12000,maximumAge:30000});
     }
@@ -283,188 +297,125 @@
       else { $('gpsStatus').textContent='GPS desativado.'; userLat=null; userLng=null; }
     });
 
-    // ===== UI helpers =====
+    // UI helpers
     function showTag(id, txt){ const el=$(id); el.textContent=txt; el.style.display='inline-flex'; }
     function hideTags(){ ['tagCidade','tagBairro','tagServico','tagRating'].forEach(id=>$(id).style.display='none'); }
-    function resetResults(){
-      $('results').innerHTML=''; page=1;
-      $('paginacao').style.display='none'; $('contagem').textContent='';
-    }
+    function resetResults(){ $('results').innerHTML=''; page=1; total=0; acumulados=0; $('paginacao').style.display='none'; $('contagem').textContent=''; }
 
-    // ===== Distância auxiliar =====
-    function hav(lat1, lon1, lat2, lon2){
-      if([lat1,lon1,lat2,lon2].some(v=>!Number.isFinite(v))) return null;
-      const toRad = d=> d*Math.PI/180, R=6371;
-      const dLat = toRad(lat2-lat1), dLon=toRad(lon2-lon1);
-      const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
-      return 2*R*Math.asin(Math.sqrt(a));
-    }
-    function enrichDistances(items){
-      // se não há distanceKm e temos GPS + coords, calcula
-      return items.map(p=>{
-        const out = {...p};
-        const has = out.distanceKm!=null && isFinite(out.distanceKm);
-        if (!has && Number.isFinite(userLat) && Number.isFinite(userLng) && Number.isFinite(out.lat) && Number.isFinite(out.lng)){
-          try{ out.distanceKm = hav(userLat,userLng,out.lat,out.lng); }catch{}
-        }
-        return out;
+    // Ordenação local por distância se GPS estiver ativo
+    function sortByDistanceIfPossible(arr){
+      if(!useGPS) return arr;
+      return [...arr].sort((a,b)=>{
+        const da = (a.distanceKm ?? a.dist ?? a.distanciaKm);
+        const db = (b.distanceKm ?? b.dist ?? b.distanciaKm);
+        if(Number.isFinite(da) && Number.isFinite(db)) return da - db;
+        if(Number.isFinite(da)) return -1;
+        if(Number.isFinite(db)) return 1;
+        return 0;
       });
     }
 
-    // ===== Card =====
+    // CARD
     function cardHTML(p){
-      const foto = p.foto || '/icons/icon-192.png';
-      const local = [p.bairro||'', p.cidade||''].filter(Boolean).join(' • ');
-      const price = (p.precoBase!=null && p.precoBase!=="") ? `R$ ${String(p.precoBase).toString().replace('.',',')}` : null;
-      const dist  = kmFmt(p.distanceKm);
-      const id = encodeURIComponent(p.id);
-      const atend = Number(p.atendimentos||0);
+      const item = {
+        id: p.id, nome: p.nome,
+        servico: p.servico || p.profissao || '',
+        bairro: p.bairro || '', cidade: p.cidade || '',
+        foto: p.foto || '',
+        rating: Number(p.rating||0),
+        avaliacoes: Number(p.avaliacoes||0),
+        atendimentos: (p.atendimentos!=null)? Number(p.atendimentos) : null,
+        precoBase: p.precoBase || p.preco || null,
+        distanceKm: (p.distanceKm ?? p.dist ?? p.distanciaKm ?? null),
+        lat: p.lat, lng: p.lng
+      };
+      // distância (fallback local)
+      if((item.distanceKm==null || !isFinite(item.distanceKm)) &&
+         Number.isFinite(userLat) && Number.isFinite(userLng) &&
+         Number.isFinite(item.lat) && Number.isFinite(item.lng)){
+        try{ item.distanceKm = hav(userLat,userLng,item.lat,item.lng); }catch{}
+      }
+      const fotoSrc = item.foto || '/icons/icon-192.png';
+      const id = encodeURIComponent(item.id);
+      const local = [item.bairro, item.cidade].filter(Boolean).join(' • ');
+      const price = (item.precoBase!=null && item.precoBase!=="") ? `R$ ${String(item.precoBase).toString().replace('.',',')}` : null;
+      const dist = kmFmt(item.distanceKm);
+
       return `
         <article class="pro-card">
-          <img class="pro-avatar" src="${esc(foto)}" alt="Foto de ${esc(p.nome||'Profissional')}" loading="lazy" onerror="this.src='/icons/icon-192.png'">
-          <div class="pro-main">
-            <h3 class="pro-name">${esc(p.nome||'—')}</h3>
-            <div class="pro-sub">
-              ${esc(p.servico||p.profissao||'')} • <span class="muted">${esc(local||'—')}</span>
-              <span class="rating"> ${estrelas(Number(p.rating||0))} </span>
-              <span class="muted">(${Number(p.avaliacoes||0)})</span>
-            </div>
+          <img class="pro-photo" src="${esc(fotoSrc)}" alt="Foto de ${esc(item.nome)}" loading="lazy" onerror="this.src='/icons/icon-192.png'">
+          <h3 class="pro-name" title="${esc(item.nome)}">${esc(item.nome)}</h3>
+          <div class="pro-serv">${esc(item.servico||'')}</div>
+          <div class="pro-local">${esc(local||'—')}</div>
+          <div class="meta-row">
+            <span class="pill">⭐ ${estrelas(item.rating)} <span class="muted">(${item.avaliacoes})</span></span>
+            <span class="pill">Distância: ${dist}</span>
+            ${item.atendimentos!=null ? `<span class="pill">Atend.: ${item.atendimentos}</span>` : ''}
+            ${price ? `<span class="pill">${esc(price)}</span>` : ''}
           </div>
-          <div class="pro-right">
-            <span class="chip blue">📍 Distância: ${esc(dist)}</span>
-            ${price ? `<span class="chip yellow">💵 ${esc(price)}</span>`:''}
-            <span class="chip green">🧰 ${atend} trab.</span>
-            <a class="btn" style="padding:6px 10px; font-size:13px" href="/profissional/${id}">Ver</a>
-          </div>
+          <a class="btn small" href="/profissional/${id}">Ver Perfil</a>
         </article>
       `;
     }
 
-    // ===== Ranking/Filtragem/Paginação =====
-    function norm(s){ return String(s||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().trim(); }
-
-    function calcWeights(p){
-      const radarOn = !!(p.radar && (p.radar.on===true || p.radar===true));
-      const plan = String(p.plano||'free').toLowerCase();
-      const planWeight = (plan==='premium'||plan==='pro') ? (plan==='premium'?2:1) : 0; // premium > pro > free
-      const rating = Number(p.rating||0);
-      const atend  = Number(p.atendimentos||0);
-      const visitas= Number(p.visitas||0);
-      return { radarOn, planWeight, rating, atend, visitas };
-    }
-
-    function matchesServico(p, wanted){
-      if(!wanted) return true;
-      const a = norm(p.servico || p.profissao);
-      const b = norm(wanted);
-      if(!a || !b) return false;
-      return a===b || a.startsWith(b);
-    }
-
-    function byRelevancia(a,b){
-      const A=calcWeights(a), B=calcWeights(b);
-      if (A.radarOn!==B.radarOn) return A.radarOn? -1 : 1;
-      if (A.planWeight!==B.planWeight) return B.planWeight - A.planWeight;
-      if (A.rating!==B.rating) return B.rating - A.rating;
-      if (A.atend!==B.atend) return B.atend - A.atend;
-      return B.visitas - A.visitas;
-    }
-    function byDistancia(a,b){
-      const da = (isFinite(a.distanceKm)?a.distanceKm:Infinity);
-      const db = (isFinite(b.distanceKm)?b.distanceKm:Infinity);
-      if (da!==db) return da - db;
-      // empate por relevância
-      return byRelevancia(a,b);
-    }
-
-    function filterAndOrder(items, q, ordenar){
-      const wantedCidade = norm(q.cidade);
-      const wantedBairro = norm(q.bairro);
-      const wantedServ   = norm(q.servico);
-      const minRating    = q.minRating ? Number(q.minRating) : null;
-
-      // 1) Filtra cidade obrigatória (mesma cidade do cliente)
-      let arr = items.filter(p => wantedCidade ? norm(p.cidade)===wantedCidade : true);
-
-      // 2) Serviço correspondente (se pediu buscar)
-      arr = arr.filter(p => matchesServico(p, wantedServ));
-
-      // 3) Bairro (opcional)
-      if (wantedBairro) arr = arr.filter(p => norm(p.bairro)===wantedBairro);
-
-      // 4) Min rating
-      if (minRating!=null && !Number.isNaN(minRating)) arr = arr.filter(p => Number(p.rating||0) >= minRating);
-
-      // 5) Ordenação
-      if (ordenar==='distancia'){
-        arr.sort(byDistancia);
-      } else {
-        arr.sort(byRelevancia);
-      }
-
-      // 6) Se não há assinantes (premium/pro) entre os primeiros e ordenar=relevância, limita 5
-      if (ordenar!=='distancia'){
-        const hasSubscriber = arr.some(p=>['premium','pro'].includes(String(p.plano||'').toLowerCase()));
-        if (!hasSubscriber) arr = arr.slice(0, Math.min(5, arr.length));
-      }
-
-      return arr;
-    }
-
-    function renderPage(){
-      const total = filteredOrdered.length;
-      const start = (page-1)*PAGE_SIZE;
-      const slice = filteredOrdered.slice(start, start+PAGE_SIZE);
-      $('results').innerHTML = slice.length ? slice.map(cardHTML).join('') :
-        `<div class="card"><p class="muted">Nenhum profissional encontrado com os filtros atuais.</p></div>`;
-
-      if (total > PAGE_SIZE){
-        $('paginacao').style.display='';
-        const end = Math.min(start+PAGE_SIZE, total);
-        $('contagem').textContent = `${start+1}-${end} de ${total}`;
-        $('btnPrev').disabled = (page===1);
-        $('btnNext').disabled = (end>=total);
-      } else {
-        $('paginacao').style.display='none';
-        $('contagem').textContent='';
-      }
-    }
-
-    // ===== Busca API =====
-    async function fetchProfissionaisRaw(q){
+    // Busca
+    async function fetchProfissionais(isLoadMore=false){
       const params = new URLSearchParams();
-      if(q.cidade) params.set('cidade', q.cidade);
-      if(q.bairro) params.set('bairro', q.bairro);
-      if(q.servico) params.set('servico', q.servico);
-      if(q.minRating) params.set('minRating', q.minRating);
-      params.set('limit', '100');
+      if(lastQuery.cidade) params.set('cidade', lastQuery.cidade);
+      if(lastQuery.bairro)  params.set('bairro', lastQuery.bairro);
+      if(lastQuery.servico) params.set('servico', lastQuery.servico);
+      if(lastQuery.minRating) params.set('minRating', lastQuery.minRating);
+
       params.set('sort','score'); params.set('dir','desc');
+      params.set('page', String(page)); params.set('limit', String(limit));
+
       if(useGPS && userLat!=null && userLng!=null){
         params.set('userLat', String(userLat));
         params.set('userLng', String(userLng));
       }
       params.set('ts', Date.now());
-      const r = await fetch('/api/profissionais?'+params.toString(), NO_STORE);
-      if(!r.ok){ throw new Error('HTTP '+r.status); }
-      const js = await r.json();
-      return Array.isArray(js.items) ? js.items : (Array.isArray(js.itens)? js.itens : []);
-    }
 
-    async function tryFeaturedFallback(q){
-      const qs = new URLSearchParams({ limit:'10', sort:'score', dir:'desc' });
-      if (q.cidade) qs.set('cidade', q.cidade);
-      if (q.servico) qs.set('servico', q.servico);
       try{
-        let r = await fetch(`/api/profissionais?featured=1&${qs.toString()}&${ts()}`, NO_STORE);
-        let js = r.ok ? await r.json() : null;
-        if(js && (js.items?.length)) return js.items;
-        r = await fetch(`/api/profissionais?${qs.toString()}&${ts()}`, NO_STORE);
-        js = r.ok ? await r.json() : {items:[]};
-        return js.items || [];
-      }catch{ return []; }
+        $('loader').style.display='';
+        const r = await fetch('/api/profissionais?'+params.toString(), NO_STORE);
+        const js = await r.json();
+        const itemsRaw = js.items || js.itens || [];
+        total = (js.total!=null ? js.total : (Array.isArray(itemsRaw)? itemsRaw.length : 0));
+
+        let items = itemsRaw;
+
+        // ordenação local por distância (com GPS)
+        items = sortByDistanceIfPossible(items);
+
+        // fallback de destaques (até 5)
+        if(items.length===0 && !isLoadMore){
+          const alt = await tryFeaturedFallback();
+          if(alt && alt.length){
+            renderResults(alt.slice(0,5), false);
+            acumulados = Math.min(5, alt.length);
+            $('paginacao').style.display='none';
+            $('contagem').textContent='';
+            return;
+          }
+        }
+
+        renderResults(items, isLoadMore);
+        acumulados += items.length;
+        $('paginacao').style.display = (acumulados<total)?'':'none';
+        $('contagem').textContent = (acumulados<total)? `${acumulados}/${total} exibidos` : '';
+      }catch{
+        if(!isLoadMore) $('results').innerHTML = `<div class="card"><p class="muted">Falha ao carregar resultados. Tente novamente.</p></div>`;
+      }finally{
+        $('loader').style.display='none';
+      }
+    }
+    function renderResults(items, isLoadMore){
+      const grid = $('results');
+      const html = (items||[]).map(cardHTML).join('');
+      if(isLoadMore) grid.insertAdjacentHTML('beforeend', html);
+      else grid.innerHTML = html || `<div class="card"><p class="muted">Nenhum profissional encontrado com os filtros atuais.</p></div>`;
     }
 
-    // ===== Submit / Limpar =====
     function applyStateTags(q){
       hideTags();
       if(q.cidade) showTag('tagCidade','Cidade: '+q.cidade);
@@ -472,105 +423,69 @@
       if(q.servico) showTag('tagServico','Serviço: '+q.servico);
       if(q.minRating) showTag('tagRating','Avaliação: '+q.minRating+'+');
     }
-
-    async function submitBusca(){
-      const q = {
+    function submitBusca(){
+      lastQuery = {
         cidade: $('cidade').value.trim(),
         bairro: $('bairro').value.trim(),
         servico: $('servico').value.trim(),
         minRating: $('minRating').value.trim()
       };
-      applyStateTags(q);
+      applyStateTags(lastQuery);
       resetResults();
-
-      try{
-        $('loader').style.display='';
-        let raw = await fetchProfissionaisRaw(q);
-        // completa distanceKm se possível
-        raw = enrichDistances(raw);
-
-        const ordenar = (document.getElementById('ordenar')?.value || 'relevancia');
-        filteredOrdered = filterAndOrder(raw, q, ordenar);
-
-        // se ficou vazio, tenta destaques
-        if (filteredOrdered.length===0){
-          let alt = await tryFeaturedFallback(q);
-          alt = enrichDistances(alt);
-          filteredOrdered = filterAndOrder(alt, q, ordenar);
-        }
-
-        page = 1; renderPage();
-      } catch {
-        $('results').innerHTML = `<div class="card"><p class="err">Falha ao carregar resultados. Tente novamente.</p></div>`;
-      } finally {
-        $('loader').style.display='none';
-      }
+      fetchProfissionais(false);
     }
 
     document.getElementById('formBusca').addEventListener('submit', (e)=>{ e.preventDefault(); submitBusca(); });
     document.getElementById('btnLimpar').addEventListener('click', async ()=>{
       $('cidade').value=''; $('bairro').value=''; $('servico').value=''; $('minRating').value='';
       hideTags(); resetResults();
-      await fillCidades(); submitBusca();
+      await fillCidades(); fetchProfissionais(false);
     });
+    document.getElementById('btnMais').addEventListener('click', ()=>{ if(acumulados < total){ page++; fetchProfissionais(true); } });
 
-    // Mudança Ordenar por ⇒ refaz a busca/ordenação atual
-    const ordenarSel = document.getElementById('ordenar');
-    if (ordenarSel){
-      ordenarSel.addEventListener('change', ()=>{
-        // reordena os atuais (mantendo filtros) sem chamar a API
-        const q = {
-          cidade: $('cidade').value.trim(),
-          bairro: $('bairro').value.trim(),
-          servico: $('servico').value.trim(),
-          minRating: $('minRating').value.trim()
-        };
-        const ordenar = ordenarSel.value || 'relevancia';
-        // recalcula distâncias (caso GPS ligou depois)
-        allItems = enrichDistances(allItems);
-        filteredOrdered = filterAndOrder(allItems, q, ordenar);
-        page=1; renderPage();
-      });
+    // Destaques
+    async function tryFeaturedFallback(){
+      try{
+        const url1 = `/api/profissionais?featured=1&limit=6&sort=score&dir=desc&${ts()}`;
+        let r = await fetch(url1, NO_STORE);
+        let js = r.ok ? await r.json() : null;
+        const items1 = js?.items || js?.itens || [];
+        if(items1.length) return items1;
+
+        const url2 = `/api/profissionais?limit=6&sort=score&dir=desc&${ts()}`;
+        r = await fetch(url2, NO_STORE);
+        js = r.ok ? await r.json() : {items:[]};
+        return (js.items || js.itens || []);
+      }catch{ return []; }
     }
-
-    // Paginação
-    $('btnPrev').addEventListener('click', ()=>{ if(page>1){ page--; renderPage(); } });
-    $('btnNext').addEventListener('click', ()=>{ const total=filteredOrdered.length; if(page*PAGE_SIZE < total){ page++; renderPage(); } });
-
-    // ===== Destaques (home section) =====
     async function loadDestaques(){
-      const q = {
-        cidade: $('cidade').value.trim(),
-        servico: $('servico').value.trim()
-      };
       const cont = $('destaques');
       const count = $('destCount');
       cont.innerHTML = `<div class="muted">Carregando destaques…</div>`;
       try{
-        let items = await tryFeaturedFallback(q);
-        items = enrichDistances(items);
-        const ordenar = (ordenarSel?.value || 'relevancia');
-        const ordered = filterAndOrder(items, q, ordenar).slice(0, 6);
-        count.textContent = ordered.length ? `${ordered.length} selecionados` : '';
-        cont.innerHTML = ordered.length ? ordered.map(cardHTML).join('') : `<div class="muted">Sem destaques no momento.</div>`;
-        if($('results').children.length===0 && ordered.length){
-          filteredOrdered = ordered;
-          page=1; renderPage();
+        const items = await tryFeaturedFallback();
+        count.textContent = items.length ? `${items.length} selecionados` : '';
+        cont.innerHTML = items.length ? items.map(cardHTML).join('') : `<div class="muted">Sem destaques no momento.</div>`;
+        if($('results').children.length===0 && items.length){
+          $('results').innerHTML = items.map(cardHTML).join('');
         }
       }catch{
         cont.innerHTML = `<div class="muted">Não foi possível carregar os destaques.</div>`;
       }
     }
 
-    // ===== Boot =====
+    // Boot
     (async function init(){
       // força atualização do SW
       if('serviceWorker' in navigator){
-        try{ const regs=await navigator.serviceWorker.getRegistrations(); regs.forEach(r=>r.update()); }catch{}
+        try{
+          const regs=await navigator.serviceWorker.getRegistrations();
+          regs.forEach(r=>r.update());
+        }catch{}
       }
       await fillCidades();
 
-      // querystring compartilhável
+      // Query inicial (compartilhável)
       const u=new URL(location.href);
       const cid=u.searchParams.get('cidade')||'';
       const bai=u.searchParams.get('bairro')||'';
@@ -579,13 +494,10 @@
       if(cid) { $('cidade').value=cid; await loadBairrosDaCidade(cid); }
       if(bai) $('bairro').value=bai;
       if(ser) $('servico').value=ser;
-      if(mr)  $('minRating').value=mr;
+      if(mr) $('minRating').value=mr;
 
-      // mostra seletor de ordenação por padrão; se quiser esconder em telas muito pequenas, fica no CSS
-      document.querySelector('.opt-ordenar').style.display='';
-
-      await submitBusca();
-      await loadDestaques();
+      submitBusca();
+      loadDestaques();
     })();
   })();
   </script>
@@ -594,7 +506,7 @@
   <script>
     if ('serviceWorker' in navigator){
       window.addEventListener('load', ()=>{
-        navigator.serviceWorker.register('/sw.js?v=clients-ios-2').catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=clients-2025-09-07').catch(()=>{});
       });
     }
   </script>
