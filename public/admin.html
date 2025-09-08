@@ -33,11 +33,11 @@
     .avatar { width:38px; height:38px; border-radius:999px; object-fit:cover; object-position:center; border:1px solid #e5e7eb; background:#f1f5f9; }
     .namecell{ display:flex; align-items:center; gap:8px; min-width:220px }
     .rating-low{ color:#b91c1c; font-weight:700 }
+    tr.low-row td { background:#fff7f7 }
     .status-pill{ font-size:12px; padding:2px 6px; border-radius:999px; border:1px solid #fecaca; background:#fee2e2; color:#991b1b }
     .chart-canvas{ width:100%; height:280px; display:block; }
     @media (min-width:920px){ #chartPie, #chartBars { height:240px; } }
     a:focus, button:focus, select:focus, input:focus { outline:3px solid #a5b4fc; outline-offset:2px; }
-    /* ===== Denúncias ===== */
     .den-grid { display:grid; grid-template-columns: 1fr; gap:12px; }
     @media (min-width:980px){ .den-grid { grid-template-columns: 2fr 1fr; } }
     .chip { font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid #e5e7eb; background:#f8fafc }
@@ -47,7 +47,6 @@
     .chip.descartada{ border-color:#fecaca; background:#fee2e2; color:#991b1b }
     .den-actions .btn{ padding:6px 8px; }
     .den-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px; }
-    /* ===== Badges de plano ===== */
     .plan-badge{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid #e5e7eb; background:#f1f5f9; font-weight:800; margin-left:6px }
     .plan-badge.PRO{ background:#eef2ff; border-color:#6366f1 }
     .plan-badge.PREMIUM{ background:#fffbeb; border-color:#fbbf24 }
@@ -65,7 +64,6 @@
   </header>
 
   <main class="wrap-max">
-    <!-- KPIs -->
     <div class="cards" id="kpis">
       <div class="kpi"><div class="meta">Profissionais (ativos)</div><strong id="k_ativos">—</strong></div>
       <div class="kpi"><div class="meta">Suspensos</div><strong id="k_susp">—</strong></div>
@@ -75,7 +73,6 @@
       <div class="kpi"><div class="meta">Nota média geral</div><strong id="k_avg">—</strong></div>
     </div>
 
-    <!-- Gráficos -->
     <div class="panel" style="margin-top:12px">
       <div class="grid2">
         <div>
@@ -102,10 +99,10 @@
         <a id="btnCSV" class="btn" href="/api/admin/export/csv" target="_blank" rel="noopener">Exportar CSV</a>
         <a class="btn ghost" href="/api/admin/export?what=profissionais" target="_blank" rel="noopener">Profissionais CSV</a>
         <a class="btn ghost" href="/api/admin/export?what=metrics" target="_blank" rel="noopener">Métricas CSV</a>
+        <button id="btnDiag" class="btn outline" title="Executa checagem rápida das rotas de métricas e lista">🧪 Diagnóstico</button>
       </div>
     </div>
 
-    <!-- Filtros da lista -->
     <div class="panel" style="margin-top:12px">
       <div class="toolbar">
         <input id="f_q" class="input" placeholder="Buscar (nome, serviço, bairro…)" style="min-width:220px">
@@ -173,7 +170,6 @@
       <p id="errList" class="meta warn" style="display:none">Erro ao carregar lista.</p>
     </div>
 
-    <!-- Denúncias -->
     <div class="panel" style="margin-top:12px">
       <div class="den-grid">
         <div>
@@ -216,7 +212,6 @@
           </div>
           <p id="errDen" class="meta warn" style="display:none">Erro ao carregar denúncias.</p>
         </div>
-
         <div>
           <div class="den-card">
             <h3 style="margin:0 0 6px">Resumo</h3>
@@ -226,7 +221,6 @@
       </div>
     </div>
 
-    <!-- Pagamentos (últimos) -->
     <div class="panel" style="margin-top:12px">
       <div class="row" style="justify-content:space-between;align-items:center">
         <h2 style="margin:6px 0 12px">Pagamentos (últimos)</h2>
@@ -239,478 +233,493 @@
     </div>
   </main>
 
-  <script>
-  (function(){
-    const $ = (id)=> document.getElementById(id);
+<script>
+(function(){
+  const $ = (id)=> document.getElementById(id);
 
-    // ======= KPIs =======
-    const kAtivos=$('k_ativos'), kSusp=$('k_susp'), kExc=$('k_exc'),
-          kVis=$('k_vis'), kCalls=$('k_calls'), kAvg=$('k_avg');
+  // KPIs
+  const kAtivos=$('k_ativos'), kSusp=$('k_susp'), kExc=$('k_exc'),
+        kVis=$('k_vis'), kCalls=$('k_calls'), kAvg=$('k_avg');
 
-    // ======= Charts =======
-    const cLines=$('chartLines'), cPie=$('chartPie'), cBars=$('chartBars');
-    const errMet=$('errMet');
+  // Charts
+  const cLines=$('chartLines'), cPie=$('chartPie'), cBars=$('chartBars');
+  const errMet=$('errMet');
 
-    // Recompute / CSV
-    const btnRecompute=$('btnRecompute'), btnCSV=$('btnCSV');
+  const btnRecompute=$('btnRecompute'), btnCSV=$('btnCSV'), btnDiag=$('btnDiag');
 
-    // Lista profissionais
-    const f_q=$('f_q'), f_cidade=$('f_cidade'), f_serv=$('f_serv'),
-          f_verif=$('f_verif'), f_status=$('f_status'),
-          f_sort=$('f_sort'), f_dir=$('f_dir'), f_go=$('f_go');
-    const tbody=$('tbody'), listInfo=$('listInfo'),
-          prev=$('prev'), next=$('next'), pageInfo=$('pageInfo');
-    const dlCidades=$('lista-cidades');
-    let PAGE=1, PAGES=1;
+  // Lista
+  const f_q=$('f_q'), f_cidade=$('f_cidade'), f_serv=$('f_serv'),
+        f_verif=$('f_verif'), f_status=$('f_status'),
+        f_sort=$('f_sort'), f_dir=$('f_dir'), f_go=$('f_go');
+  const tbody=$('tbody'), listInfo=$('listInfo'),
+        prev=$('prev'), next=$('next'), pageInfo=$('pageInfo');
+  const dlCidades=$('lista-cidades');
+  let PAGE=1, PAGES=1;
 
-    // Denúncias
-    const d_status=$('d_status'), d_q=$('d_q'), d_go=$('d_go');
-    const tbodyDen=$('tbodyDen'), denInfo=$('denInfo'),
-          d_prev=$('d_prev'), d_next=$('d_next'), d_pageInfo=$('d_pageInfo');
-    const errDen=$('errDen');
-    let D_PAGE=1, D_PAGES=1;
+  // Denúncias
+  const d_status=$('d_status'), d_q=$('d_q'), d_go=$('d_go');
+  const tbodyDen=$('tbodyDen'), denInfo=$('denInfo'),
+        d_prev=$('d_prev'), d_next=$('d_next'), d_pageInfo=$('d_pageInfo');
+  const errDen=$('errDen');
+  let D_PAGE=1, D_PAGES=1;
 
-    let metricsCache=null;
+  let metricsCache=null;
 
-    async function apiJSON(url, opt){
-      const r = await fetch(url, { cache:'no-store', ...(opt||{}) });
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      return r.json();
+  async function apiJSON(url, opt){
+    const r = await fetch(url, { cache:'no-store', ...(opt||{}) });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }
+  function escapeHtml(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+  async function postJSON(url, body){
+    const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{}) });
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }
+
+  function deviceScaleCanvas(canvas){
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    return ctx;
+  }
+
+  // Desenho dos gráficos
+  function drawLineChart(cv, series, labels){
+    const ctx = deviceScaleCanvas(cv); if (!ctx) return;
+    const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
+    ctx.clearRect(0,0,W,H);
+
+    ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(40,10); ctx.lineTo(40,H-30); ctx.lineTo(W-10,H-30); ctx.stroke();
+
+    const max = Math.max(1, ...series.flat());
+    const scaleY = (H-40)/max;
+    const stepX = (W-60)/Math.max(1, labels.length-1);
+    const colors = ['#2563eb','#16a34a','#f97316'];
+
+    ctx.strokeStyle='#f1f5f9';
+    for(let t=1;t<=5;t++){
+      const v = Math.round(max*t/5);
+      const y = (H-30) - v*scaleY;
+      ctx.beginPath(); ctx.moveTo(40,y); ctx.lineTo(W-10,y); ctx.stroke();
     }
-    function escapeHtml(s){
-      return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-    }
-    async function postJSON(url, body){
-      const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{}) });
-      if (!r.ok) throw new Error('HTTP '+r.status);
-      return r.json();
-    }
 
-    function deviceScaleCanvas(canvas){
-      const dpr = window.devicePixelRatio || 1;
-      const rect = canvas.getBoundingClientRect();
-      if (!rect.width || !rect.height) return;
-      canvas.width = Math.round(rect.width * dpr);
-      canvas.height = Math.round(rect.height * dpr);
-      const ctx = canvas.getContext('2d');
-      ctx.setTransform(dpr,0,0,dpr,0,0);
-      return ctx;
-    }
+    series.forEach((data,si)=>{
+      const grad = ctx.createLinearGradient(0,10,0,H-30);
+      grad.addColorStop(0, colors[si] + 'cc');
+      grad.addColorStop(1, colors[si] + '11');
 
-    // ===== Charts (vanilla) =====
-    function drawLineChart(cv, series, labels){
-      const ctx = deviceScaleCanvas(cv); if (!ctx) return;
-      const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
-      ctx.clearRect(0,0,W,H);
-
-      // axes
-      ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(40,10); ctx.lineTo(40,H-30); ctx.lineTo(W-10,H-30); ctx.stroke();
-
-      const max = Math.max(1, ...series.flat());
-      const scaleY = (H-40)/max;
-      const stepX = (W-60)/Math.max(1, labels.length-1);
-      const colors = ['#2563eb','#16a34a','#f97316']; // visitas, chamadas, cadastros
-
-      // grid Y
-      ctx.strokeStyle='#f1f5f9';
-      for(let t=1;t<=5;t++){
-        const v = Math.round(max*t/5);
-        const y = (H-30) - v*scaleY;
-        ctx.beginPath(); ctx.moveTo(40,y); ctx.lineTo(W-10,y); ctx.stroke();
-      }
-
-      series.forEach((data,si)=>{
-        const grad = ctx.createLinearGradient(0,10,0,H-30);
-        grad.addColorStop(0, colors[si] + 'cc');
-        grad.addColorStop(1, colors[si] + '11');
-
-        ctx.beginPath();
-        data.forEach((v,i)=>{
-          const x=40 + i*stepX;
-          const y=(H-30) - v*scaleY;
-          if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-        });
-        ctx.strokeStyle=colors[si]; ctx.lineWidth=2; ctx.stroke();
-
-        // área suave
-        const lastX=40 + (data.length-1)*stepX;
-        ctx.lineTo(lastX, H-30);
-        ctx.lineTo(40, H-30);
-        ctx.closePath();
-        ctx.fillStyle=grad; ctx.fill();
+      ctx.beginPath();
+      data.forEach((v,i)=>{
+        const x=40 + i*stepX;
+        const y=(H-30) - v*scaleY;
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
       });
+      ctx.strokeStyle=colors[si]; ctx.lineWidth=2; ctx.stroke();
 
-      // labels X
-      ctx.fillStyle='#64748b'; ctx.font='12px system-ui';
-      const every = Math.ceil(labels.length/8);
-      labels.forEach((lb,i)=>{ if (i%every===0){ const x=40 + i*stepX; ctx.fillText(lb, x-10, H-10); } });
-
-      // legend
-      const legends = ['Visitas','#2563eb','Chamadas','#16a34a','Cadastros','#f97316'];
-      ctx.font='12px system-ui'; ctx.textBaseline='middle';
-      const baseY=16; let off=46;
-      for(let i=0;i<legends.length;i+=2){
-        ctx.fillStyle=legends[i+1]; ctx.fillRect(off-16, baseY-5, 10,10);
-        ctx.fillStyle='#111827'; ctx.fillText(legends[i], off, baseY);
-        off += ctx.measureText(legends[i]).width + 54;
-      }
-    }
-
-    function drawPie(cv, vals){
-      const ctx = deviceScaleCanvas(cv); if (!ctx) return;
-      const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
-      ctx.clearRect(0,0,W,H);
-
-      const sum = vals.reduce((a,b)=>a+b,0) || 1;
-      const cx=W/2, cy=H/2, r=Math.min(W,H)*0.36, inner=r*0.58;
-      const colors=['#10b981','#e5e7eb'];
-      let ang= -Math.PI/2;
-
-      vals.forEach((v,i)=>{
-        const a = (v/sum)*Math.PI*2;
-        ctx.beginPath(); ctx.arc(cx,cy,r,ang,ang+a); ctx.arc(cx,cy,inner,ang+a,ang,true); ctx.closePath();
-        ctx.fillStyle=colors[i%colors.length]; ctx.fill();
-        ang += a;
-      });
-
-      ctx.fillStyle='#111827'; ctx.font='600 16px system-ui'; ctx.textAlign='center';
-      ctx.fillText('Verificados', cx, cy-4);
-      ctx.font='12px system-ui'; ctx.fillStyle='#334155';
-      ctx.fillText(vals[0] + ' de ' + (vals[0]+vals[1]), cx, cy+14);
-    }
-
-    function drawBars(cv, labels, values){
-      const ctx = deviceScaleCanvas(cv); if (!ctx) return;
-      const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
-      ctx.clearRect(0,0,W,H);
-
-      const max = Math.max(1, ...values);
-      const axisL = 40, axisB = 30;
-      const bw = Math.max(16, (W-axisL-20)/Math.max(1, labels.length) - 10);
-      const scaleY = (H- axisB - 14)/max;
-
-      ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(axisL,10); ctx.lineTo(axisL,H-axisB); ctx.lineTo(W-10,H-axisB); ctx.stroke();
-      ctx.strokeStyle='#f1f5f9';
-      for(let t=1;t<=5;t++){ const y = (H-axisB) - (max*t/5)*scaleY; ctx.beginPath(); ctx.moveTo(axisL,y); ctx.lineTo(W-10,y); ctx.stroke(); }
-
-      let x = axisL + 8;
-      values.forEach((v,i)=>{
-        const h = v*scaleY;
-        const grad = ctx.createLinearGradient(0,(H-axisB)-h,0,H-axisB);
-        grad.addColorStop(0,'#2563eb'); grad.addColorStop(1,'#93c5fd');
-        ctx.fillStyle=grad;
-        ctx.fillRect(x, (H-axisB)-h, bw, h);
-
-        // labels
-        ctx.save();
-        ctx.translate(x + bw/2, H-10);
-        ctx.rotate(-Math.PI/4);
-        ctx.fillStyle='#334155'; ctx.font='11px system-ui'; ctx.textAlign='left';
-        const lab = labels[i] || '';
-        ctx.fillText(lab.length>16 ? lab.slice(0,16)+'…' : lab, 0, 0);
-        ctx.restore();
-
-        x += bw + 10;
-      });
-    }
-
-    let resizeTimer;
-    window.addEventListener('resize', ()=>{
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(()=>{ if(metricsCache) paintCharts(metricsCache); }, 120);
+      const lastX=40 + (data.length-1)*stepX;
+      ctx.lineTo(lastX, H-30); ctx.lineTo(40, H-30); ctx.closePath();
+      ctx.fillStyle=grad; ctx.fill();
     });
 
-    function paintCharts(m){
-      const labels = (m.timeseries?.days||[]).map(d=> (d.date||'').slice(5));
-      const visits = (m.timeseries?.days||[]).map(d=>d.visits||0);
-      const calls  = (m.timeseries?.days||[]).map(d=>d.calls||0);
-      const sign   = (m.timeseries?.days||[]).map(d=>d.signups||0);
-      drawLineChart(cLines, [visits,calls,sign], labels);
+    ctx.fillStyle='#64748b'; ctx.font='12px system-ui';
+    const every = Math.ceil(labels.length/8);
+    labels.forEach((lb,i)=>{ if (i%every===0){ const x=40 + i*stepX; ctx.fillText(lb, x-10, H-10); } });
 
-      const vY = m.verified?.yes || 0;
-      const vN = m.verified?.no  || 0;
-      drawPie(cPie, [vY, vN]);
-
-      const labs = (m.top?.servicos||[]).map(x=> String(x.name||''));
-      const vals = (m.top?.servicos||[]).map(x=> Number(x.value||0));
-      drawBars(cBars, labs, vals);
+    const legends = ['Visitas','#2563eb','Chamadas','#16a34a','Cadastros','#f97316'];
+    ctx.font='12px system-ui'; ctx.textBaseline='middle';
+    const baseY=16; let off=46;
+    for(let i=0;i<legends.length;i+=2){
+      ctx.fillStyle=legends[i+1]; ctx.fillRect(off-16, baseY-5, 10,10);
+      ctx.fillStyle='#111827'; ctx.fillText(legends[i], off, baseY);
+      off += ctx.measureText(legends[i]).width + 54;
     }
-
-    async function loadMetrics(){
-      try{
-        const m = await apiJSON('/api/admin/metrics');
-        metricsCache = m;
-        kAtivos.textContent = String(m.ativos||0);
-        kSusp.textContent   = String(m.suspensos||0);
-        kExc.textContent    = String(m.excluidos||0);
-        kVis.textContent    = String(m.visitas||0);
-        kCalls.textContent  = String(m.chamadas||0);
-        kAvg.textContent    = m.mediaGeral ? Number(m.mediaGeral).toFixed(2) : '—';
-        paintCharts(m);
-        errMet.style.display='none';
-      }catch(e){
-        errMet.style.display='';
-      }
-    }
-
-    btnRecompute.addEventListener('click', async ()=>{
-      btnRecompute.disabled = true;
-      try{
-        const r = await postJSON('/api/admin/recompute', {});
-        alert('Recalcular verificações: '+ (r.changed||0)+' alterados.');
-      }catch{ alert('Falha ao recalcular.'); }
-      finally{ btnRecompute.disabled=false; }
+  }
+  function drawPie(cv, vals){
+    const ctx = deviceScaleCanvas(cv); if (!ctx) return;
+    const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
+    ctx.clearRect(0,0,W,H);
+    const sum = vals.reduce((a,b)=>a+b,0) || 1;
+    const cx=W/2, cy=H/2, r=Math.min(W,H)*0.36, inner=r*0.58;
+    const colors=['#10b981','#e5e7eb'];
+    let ang= -Math.PI/2;
+    vals.forEach((v,i)=>{
+      const a = (v/sum)*Math.PI*2;
+      ctx.beginPath(); ctx.arc(cx,cy,r,ang,ang+a); ctx.arc(cx,cy,inner,ang+a,ang,true); ctx.closePath();
+      ctx.fillStyle=colors[i%colors.length]; ctx.fill();
+      ang += a;
     });
+    ctx.fillStyle='#111827'; ctx.font='600 16px system-ui'; ctx.textAlign='center';
+    ctx.fillText('Verificados', cx, cy-4);
+    ctx.font='12px system-ui'; ctx.fillStyle='#334155';
+    ctx.fillText(vals[0] + ' de ' + (vals[0]+vals[1]), cx, cy+14);
+  }
+  function drawBars(cv, labels, values){
+    const ctx = deviceScaleCanvas(cv); if (!ctx) return;
+    const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
+    ctx.clearRect(0,0,W,H);
+    const max = Math.max(1, ...values);
+    const axisL = 40, axisB = 30;
+    const bw = Math.max(16, (W-axisL-20)/Math.max(1, labels.length) - 10);
+    const scaleY = (H- axisB - 14)/max;
 
-    // ====== Lista de profissionais ======
-    async function loadCidades(){
-      try{
-        const list = await apiJSON('/api/geo/cidades');
-        dlCidades.innerHTML = (list||[]).map(c=>`<option value="${escapeHtml(c)}">`).join('');
-      }catch{}
-    }
+    ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(axisL,10); ctx.lineTo(axisL,H-axisB); ctx.lineTo(W-10,H-axisB); ctx.stroke();
+    ctx.strokeStyle='#f1f5f9';
+    for(let t=1;t<=5;t++){ const y = (H-axisB) - (max*t/5)*scaleY; ctx.beginPath(); ctx.moveTo(axisL,y); ctx.lineTo(W-10,y); ctx.stroke(); }
 
-    function updateCSVLink(){
-      const qs = new URLSearchParams({
-        q: f_q.value.trim(),
-        cidade: f_cidade.value.trim(),
-        servico: f_serv.value.trim(),
-        verificado: f_verif.value,
-        status: f_status.value,
-        sort: f_sort.value,
-        dir: f_dir.value
-      });
-      btnCSV.href = '/api/admin/export/csv?'+qs.toString();
-    }
-    [f_q,f_cidade,f_serv,f_verif,f_status,f_sort,f_dir].forEach(el=>{
-      el.addEventListener('change', updateCSVLink);
-      el.addEventListener('input', updateCSVLink);
+    let x = axisL + 8;
+    values.forEach((v,i)=>{
+      const h = v*scaleY;
+      const grad = ctx.createLinearGradient(0,(H-axisB)-h,0,H-axisB);
+      grad.addColorStop(0,'#2563eb'); grad.addColorStop(1,'#93c5fd');
+      ctx.fillStyle=grad;
+      ctx.fillRect(x, (H-axisB)-h, bw, h);
+
+      ctx.save();
+      ctx.translate(x + bw/2, H-10);
+      ctx.rotate(-Math.PI/4);
+      ctx.fillStyle='#334155'; ctx.font='11px system-ui'; ctx.textAlign='left';
+      const lab = labels[i] || '';
+      ctx.fillText(lab.length>16 ? lab.slice(0,16)+'…' : lab, 0, 0);
+      ctx.restore();
+      x += bw + 10;
     });
+  }
 
-    async function loadList(page=1){
-      PAGE = page;
-      const qs = new URLSearchParams({
-        q: f_q.value.trim(),
-        cidade: f_cidade.value.trim(),
-        servico: f_serv.value.trim(),
-        verificado: f_verif.value,
-        status: f_status.value,
-        sort: f_sort.value,
-        dir: f_dir.value,
-        page: String(PAGE),
-        limit: "20"
-      });
-      try{
-        const data = await apiJSON('/api/admin/profissionais?'+qs.toString());
-        renderList(data);
-        $('errList').style.display='none';
-      }catch{
-        $('errList').style.display='';
+  let resizeTimer;
+  window.addEventListener('resize', ()=>{
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(()=>{ if(metricsCache) paintCharts(metricsCache); }, 120);
+  });
+
+  // Mapeia nomes variados
+  function mapDay(d){
+    const date = d.date || d.data || d.dia || d.day || d.d;
+    const visitas = d.visitas ?? d.visits ?? 0;
+    const chamadas = d.chamadas ?? d.calls ?? d.ligacoes ?? 0;
+    const cad = d.cadastros ?? d.signups ?? d.registros ?? 0;
+    return { date, visitas, chamadas, cad };
+  }
+
+  function paintCharts(m){
+    const daysRaw = (m.timeseries?.days || m.dias || m.series || []);
+    const days = daysRaw.map(mapDay);
+    const labels = days.map(d=> String(d.date||'').slice(5));
+    const visits = days.map(d=>d.visitas||0);
+    const calls  = days.map(d=>d.chamadas||0);
+    const sign   = days.map(d=>d.cad||0);
+    if(labels.length){ drawLineChart(cLines, [visits,calls,sign], labels); }
+
+    const verified = m.verified || m.verificados || {};
+    const vY = Number(verified.yes ?? verified.sim ?? verified.true ?? 0);
+    const vN = Number(verified.no  ?? verified.nao ?? verified.false ?? 0);
+    drawPie(cPie, [vY, vN]);
+
+    const top = (m.top?.servicos || m.topServicos || m.top_services || []);
+    const labs = top.map(x=> String(x.name || x.servico || x.titulo || ''));
+    const vals = top.map(x=> Number(x.value ?? x.total ?? x.count ?? 0));
+    if(labs.length){ drawBars(cBars, labs, vals); }
+  }
+
+  async function loadMetrics(){
+    try{
+      const m = await apiJSON('/api/admin/metrics');
+      metricsCache = m;
+      kAtivos.textContent = String(m.ativos ?? m.actives ?? 0);
+      kSusp.textContent   = String(m.suspensos ?? m.suspended ?? 0);
+      kExc.textContent    = String(m.excluidos ?? m.deleted ?? 0);
+      kVis.textContent    = String(m.visitas ?? m.totalVisits ?? 0);
+      kCalls.textContent  = String(m.chamadas ?? m.totalCalls ?? 0);
+      const media = m.mediaGeral ?? m.avg ?? m.ratingMedio;
+      kAvg.textContent    = (media!=null) ? Number(media).toFixed(2) : '—';
+      paintCharts(m);
+      errMet.style.display='none';
+    }catch(e){
+      errMet.style.display='';
+    }
+  }
+
+  btnRecompute.addEventListener('click', async ()=>{
+    btnRecompute.disabled = true;
+    try{
+      const r = await postJSON('/api/admin/recompute', {});
+      alert('Recalcular verificações: '+ (r.changed||0)+' alterados.');
+    }catch{ alert('Falha ao recalcular.'); }
+    finally{ btnRecompute.disabled=false; }
+  });
+
+  // Diagnóstico rápido
+  btnDiag.addEventListener('click', async ()=>{
+    try{
+      const [met, sample] = await Promise.allSettled([
+        apiJSON('/api/admin/metrics'),
+        apiJSON('/api/admin/profissionais?limit=1')
+      ]);
+      let txt = '🧪 Diagnóstico\n';
+      if(met.status==='fulfilled'){
+        const m=met.value, days=(m.timeseries?.days||[]).length;
+        txt += `• /metrics OK (dias=${days}, verifYes=${m.verified?.yes ?? m.verificados?.sim ?? 'n/d'})\n`;
+      }else{
+        txt += '• /metrics FALHOU\n';
       }
-      updateCSVLink();
-    }
-
-    function renderList(data){
-      const items = data.items||[];
-      tbody.innerHTML = items.map(p=>{
-        const foto = p.foto || '/icons/icon-192.png';
-        const svc = (p.servico||p.profissao||'');
-        const ver = p.verificado ? '✅' : '—';
-        const ratingVal = (p.rating!=null) ? Number(p.rating) : null;
-        const ratingStr = (ratingVal!=null) ? ratingVal.toFixed(2) : '—';
-        const isLow = ratingVal!=null && ratingVal<3;
-        const ratingCell = isLow
-          ? `<span class="rating-low" title="Rating baixo — atenção">⚠️ ${ratingStr}</span>`
-          : ratingStr;
-
-        const statusChip = p.excluido ? '<span class="status-pill">Excluído</span>'
-                          : (p.suspenso ? '<span class="status-pill" style="border-color:#fde68a;background:#fef3c7;color:#92400e">Suspenso</span>' : '');
-
-        const plano = String(p.plano||'free').toLowerCase();
-        const badgePlano = plano==='premium' ? '<span class="plan-badge PREMIUM">PREMIUM</span>'
-                        : (plano==='pro' ? '<span class="plan-badge PRO">PRO</span>' : '');
-
-        return `<tr>
-          <td>${p.id}</td>
-          <td>
-            <div class="namecell">
-              <img class="avatar" src="${foto}" alt="Foto de ${escapeHtml(p.nome)}" onerror="this.src='/icons/icon-192.png'">
-              <div>
-                <div style="font-weight:600">${escapeHtml(p.nome)} ${badgePlano}</div>
-                ${statusChip}
-              </div>
-            </div>
-          </td>
-          <td>${escapeHtml(p.cidade||'')}</td>
-          <td>${escapeHtml(p.bairro||'')}</td>
-          <td>${escapeHtml(svc)}</td>
-          <td>${ver}</td>
-          <td>${ratingCell}</td>
-          <td>${p.avalCount||0}</td>
-          <td>${p.visitas||0}</td>
-          <td>${p.chamadas||0}</td>
-          <td class="row">
-            ${p.excluido ? `
-              <button class="btn outline" data-act="restaurar" data-id="${p.id}">Restaurar</button>
-            ` : `
-              ${p.suspenso ? `<button class="btn outline" data-act="ativar" data-id="${p.id}">Ativar</button>`
-                            : `<button class="btn outline" data-act="suspender" data-id="${p.id}">Suspender</button>`}
-              <button class="btn ghost" data-act="excluir" data-id="${p.id}">Excluir</button>
-            `}
-            <a class="btn" href="/profissional/${p.id}" target="_blank" rel="noopener">Abrir</a>
-          </td>
-        </tr>`;
-      }).join('');
-
-      listInfo.textContent = `Total: ${data.total} • Página ${data.page}/${data.pages}`;
-      PAGES = data.pages;
-      pageInfo.textContent = `${data.page}/${data.pages}`;
-
-      tbody.querySelectorAll('button[data-act]').forEach(btn=>{
-        btn.addEventListener('click', async ()=>{
-          const id = btn.getAttribute('data-id');
-          const act = btn.getAttribute('data-act');
-          try{
-            if (act==='suspender'){
-              const motivo = prompt('Motivo da suspensão (opcional):','');
-              await postJSON(`/api/admin/profissionais/${id}/suspender`, { motivo });
-            } else if (act==='ativar'){
-              await postJSON(`/api/admin/profissionais/${id}/ativar`, {});
-            } else if (act==='excluir'){
-              if (!confirm('Tem certeza que deseja excluir?')) return;
-              const r = await fetch(`/api/admin/profissionais/${id}`, { method:'DELETE' });
-              if(!r.ok) throw new Error('HTTP '+r.status);
-            } else if (act==='restaurar'){
-              await postJSON(`/api/admin/profissionais/${id}/restaurar`, {});
-            }
-          }catch(_){ alert('Ação não concluída.'); }
-          loadList(PAGE);
-        });
-      });
-    }
-
-    prev.addEventListener('click', ()=>{ if (PAGE>1) loadList(PAGE-1); });
-    next.addEventListener('click', ()=>{ if (PAGE<PAGES) loadList(PAGE+1); });
-    f_go.addEventListener('click', ()=> loadList(1));
-
-    // ===== Denúncias (admin) =====
-    async function loadDenuncias(page=1){
-      D_PAGE = page;
-      const qs = new URLSearchParams({
-        status: d_status.value,
-        q: d_q.value.trim(),
-        page: String(D_PAGE),
-        limit: "20"
-      });
-      try{
-        const data = await apiJSON('/api/admin/denuncias?'+qs.toString());
-        renderDenuncias(data);
-        errDen.style.display='none';
-      }catch{
-        errDen.style.display='';
+      if(sample.status==='fulfilled'){
+        const d=sample.value;
+        txt += `• /profissionais OK (total=${d.total ?? 'n/d'})\n`;
+      }else{
+        txt += '• /profissionais FALHOU\n';
       }
+      alert(txt);
+      console.log('[diagnostic]', { metrics: met, list: sample });
+    }catch(_){ alert('Diagnóstico não pôde ser concluído.'); }
+  });
+
+  // ====== Lista ======
+  async function loadCidades(){
+    try{
+      const list = await apiJSON('/api/geo/cidades');
+      dlCidades.innerHTML = (list||[]).map(c=>`<option value="${escapeHtml(c)}">`).join('');
+    }catch{}
+  }
+  function updateCSVLink(){
+    const qs = new URLSearchParams({
+      q: f_q.value.trim(),
+      cidade: f_cidade.value.trim(),
+      servico: f_serv.value.trim(),
+      verificado: f_verif.value,
+      status: f_status.value,
+      sort: f_sort.value,
+      dir: f_dir.value
+    });
+    btnCSV.href = '/api/admin/export/csv?'+qs.toString();
+  }
+  [f_q,f_cidade,f_serv,f_verif,f_status,f_sort,f_dir].forEach(el=>{
+    el.addEventListener('change', updateCSVLink);
+    el.addEventListener('input', updateCSVLink);
+  });
+
+  async function loadList(page=1){
+    PAGE = page;
+    const qs = new URLSearchParams({
+      q: f_q.value.trim(),
+      cidade: f_cidade.value.trim(),
+      servico: f_serv.value.trim(),
+      verificado: f_verif.value,
+      status: f_status.value,
+      sort: f_sort.value,
+      dir: f_dir.value,
+      page: String(PAGE),
+      limit: "20"
+    });
+    try{
+      const data = await apiJSON('/api/admin/profissionais?'+qs.toString());
+      renderList(data);
+      $('errList').style.display='none';
+    }catch{
+      $('errList').style.display='';
     }
+    updateCSVLink();
+  }
 
-    function renderDenuncias(data){
-      const items = data.items||[];
-      tbodyDen.innerHTML = items.map(d=>{
-        const when = (d.createdAt||'').replace('T',' ').slice(0,16);
-        const prof = d.profissional || {};
-        const status = String(d.status||'aberta');
-        const chip = `<span class="chip ${status}">${escapeHtml(status.replace('_',' '))}</span>`;
-        const profIdText = (prof.id!=null) ? ('#'+ String(prof.id)) : '';
-        return `<tr>
-          <td>${d.id}</td>
-          <td><span class="meta">${escapeHtml(when)}</span></td>
-          <td>
-            <div>${profIdText} ${prof.nome ? escapeHtml(prof.nome) : ''}</div>
-            <div class="meta">${escapeHtml(prof.cidade||'')} • ${escapeHtml(prof.bairro||'')}</div>
-          </td>
-          <td>${escapeHtml(d.motivo||'—')}</td>
-          <td>${chip}</td>
-          <td class="den-actions row">
-            <button class="btn outline" data-s="em_analise" data-id="${d.id}">Em análise</button>
-            <button class="btn outline" data-s="resolvida" data-id="${d.id}">Resolvida</button>
-            <button class="btn ghost" data-s="descartada" data-id="${d.id}">Descartar</button>
-          </td>
-        </tr>`;
-      }).join('');
+  function renderList(data){
+    const items = data.items||[];
+    tbody.innerHTML = items.map(p=>{
+      const foto = p.foto || '/icons/icon-192.png';
+      const svc  = (p.servico||p.profissao||'');
+      const ver  = p.verificado ? '✅' : '—';
+      const ratingVal = (p.rating!=null) ? Number(p.rating) : null;
+      const ratingStr = (ratingVal!=null) ? ratingVal.toFixed(2) : '—';
+      const isLow = ratingVal!=null && ratingVal<3;
+      const ratingCell = isLow
+        ? `<span class="rating-low" title="Rating baixo — atenção">⚠️ ${ratingStr}</span>`
+        : ratingStr;
 
-      denInfo.textContent = `Total: ${data.total} • Página ${data.page}/${data.pages}`;
-      D_PAGES = data.pages;
-      d_pageInfo.textContent = `${data.page}/${data.pages}`;
+      const statusChip = p.excluido ? '<span class="status-pill">Excluído</span>'
+                        : (p.suspenso ? '<span class="status-pill" style="border-color:#fde68a;background:#fef3c7;color:#92400e">Suspenso</span>' : '');
 
-      tbodyDen.querySelectorAll('button[data-s]').forEach(btn=>{
-        btn.addEventListener('click', async ()=>{
-          const id = btn.getAttribute('data-id');
-          const status = btn.getAttribute('data-s');
-          try{
-            await postJSON(`/api/admin/denuncias/${id}/status`, { status });
-          }catch(_){ alert('Falha ao atualizar status.'); }
-          loadDenuncias(D_PAGE);
-        });
-      });
-    }
+      const plano = String(p.plano||'free').toLowerCase();
+      const badgePlano = plano==='premium' ? '<span class="plan-badge PREMIUM">PREMIUM</span>'
+                      : (plano==='pro' ? '<span class="plan-badge PRO">PRO</span>' : '');
 
-    d_prev.addEventListener('click', ()=>{ if (D_PAGE>1) loadDenuncias(D_PAGE-1); });
-    d_next.addEventListener('click', ()=>{ if (D_PAGE<D_PAGES) loadDenuncias(D_PAGE+1); });
-    d_go.addEventListener('click', ()=> loadDenuncias(1));
+      const rowClass = isLow ? ' class="low-row"' : '';
 
-    // ===== Pagamentos (últimos) =====
-    function moneyBR(v){
-      const n = Number(v||0);
-      return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-    function renderPayment(p){
-      const id   = escapeHtml(String(p.id||'—'));
-      const pro  = escapeHtml(String(p.proId||'—'));
-      const meth = escapeHtml(String(p.method||'').toUpperCase());   // PIX|CARD
-      const st   = escapeHtml(String(p.status||'—'));                // paid|pending|...
-      const gross= moneyBR(p.amount);
-      const fees = moneyBR(p.fees);
-      const net  = moneyBR(p.net);
-      const when = (p.createdAt||'').replace('T',' ').slice(0,19).replace(/-/g,'/');
-      return `
-        <div class="kpi" style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
-          <div>
-            <div><strong>Pagamento #${id}</strong> — Pro #${pro}</div>
-            <div class="meta">Data: ${escapeHtml(when)}</div>
-            <div class="row" style="margin-top:6px">
-              <span class="badge">Método <strong>${meth}</strong></span>
-              <span class="badge">Status <strong>${st}</strong></span>
+      return `<tr${rowClass}>
+        <td>${p.id}</td>
+        <td>
+          <div class="namecell">
+            <img class="avatar" src="${foto}" alt="Foto de ${escapeHtml(p.nome)}" onerror="this.src='/icons/icon-192.png'">
+            <div>
+              <div style="font-weight:600">${escapeHtml(p.nome)} ${badgePlano}</div>
+              ${statusChip}
             </div>
           </div>
-          <div style="text-align:right">
-            <div>Bruto: R$ ${gross}</div>
-            <div>Taxas: R$ ${fees}</div>
-            <div><strong>Líquido: R$ ${net}</strong></div>
+        </td>
+        <td>${escapeHtml(p.cidade||'')}</td>
+        <td>${escapeHtml(p.bairro||'')}</td>
+        <td>${escapeHtml(svc)}</td>
+        <td>${ver}</td>
+        <td>${ratingCell}</td>
+        <td>${p.avalCount||0}</td>
+        <td>${p.visitas||0}</td>
+        <td>${p.chamadas||0}</td>
+        <td class="row">
+          ${p.excluido ? `
+            <button class="btn outline" data-act="restaurar" data-id="${p.id}">Restaurar</button>
+          ` : `
+            ${p.suspenso ? `<button class="btn outline" data-act="ativar" data-id="${p.id}">Ativar</button>`
+                          : `<button class="btn outline" data-act="suspender" data-id="${p.id}">Suspender</button>`}
+            <button class="btn ghost" data-act="excluir" data-id="${p.id}">Excluir</button>
+          `}
+          <a class="btn" href="/profissional/${p.id}" target="_blank" rel="noopener">Abrir</a>
+        </td>
+      </tr>`;
+    }).join('');
+
+    listInfo.textContent = `Total: ${data.total} • Página ${data.page}/${data.pages}`;
+    PAGES = data.pages;
+    pageInfo.textContent = `${data.page}/${data.pages}`;
+
+    tbody.querySelectorAll('button[data-act]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const id = btn.getAttribute('data-id');
+        const act = btn.getAttribute('data-act');
+        try{
+          if (act==='suspender'){
+            const motivo = prompt('Motivo da suspensão (opcional):','');
+            await postJSON(`/api/admin/profissionais/${id}/suspender`, { motivo });
+          } else if (act==='ativar'){
+            await postJSON(`/api/admin/profissionais/${id}/ativar`, {});
+          } else if (act==='excluir'){
+            if (!confirm('Tem certeza que deseja excluir?')) return;
+            const r = await fetch(`/api/admin/profissionais/${id}`, { method:'DELETE' });
+            if(!r.ok) throw new Error('HTTP '+r.status);
+          } else if (act==='restaurar'){
+            await postJSON(`/api/admin/profissionais/${id}/restaurar`, {});
+          }
+        }catch(_){ alert('Ação não concluída.'); }
+        loadList(PAGE);
+      });
+    });
+  }
+
+  prev.addEventListener('click', ()=>{ if (PAGE>1) loadList(PAGE-1); });
+  next.addEventListener('click', ()=>{ if (PAGE<PAGES) loadList(PAGE+1); });
+  f_go.addEventListener('click', ()=> loadList(1));
+
+  // Denúncias
+  async function loadDenuncias(page=1){
+    D_PAGE = page;
+    const qs = new URLSearchParams({
+      status: d_status.value,
+      q: d_q.value.trim(),
+      page: String(D_PAGE),
+      limit: "20"
+    });
+    try{
+      const data = await apiJSON('/api/admin/denuncias?'+qs.toString());
+      renderDenuncias(data);
+      errDen.style.display='none';
+    }catch{
+      errDen.style.display='';
+    }
+  }
+  function renderDenuncias(data){
+    const items = data.items||[];
+    tbodyDen.innerHTML = items.map(d=>{
+      const when = (d.createdAt||'').replace('T',' ').slice(0,16);
+      const prof = d.profissional || {};
+      const status = String(d.status||'aberta');
+      const chip = `<span class="chip ${status}">${escapeHtml(status.replace('_',' '))}</span>`;
+      const profIdText = (prof.id!=null) ? ('#'+ String(prof.id)) : '';
+      return `<tr>
+        <td>${d.id}</td>
+        <td><span class="meta">${escapeHtml(when)}</span></td>
+        <td>
+          <div>${profIdText} ${prof.nome ? escapeHtml(prof.nome) : ''}</div>
+          <div class="meta">${escapeHtml(prof.cidade||'')} • ${escapeHtml(prof.bairro||'')}</div>
+        </td>
+        <td>${escapeHtml(d.motivo||'—')}</td>
+        <td>${chip}</td>
+        <td class="den-actions row">
+          <button class="btn outline" data-s="em_analise" data-id="${d.id}">Em análise</button>
+          <button class="btn outline" data-s="resolvida" data-id="${d.id}">Resolvida</button>
+          <button class="btn ghost" data-s="descartada" data-id="${d.id}">Descartar</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    denInfo.textContent = `Total: ${data.total} • Página ${data.page}/${data.pages}`;
+    D_PAGES = data.pages;
+    d_pageInfo.textContent = `${data.page}/${data.pages}`;
+
+    tbodyDen.querySelectorAll('button[data-s]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const id = btn.getAttribute('data-id');
+        const status = btn.getAttribute('data-s');
+        try{ await postJSON(`/api/admin/denuncias/${id}/status`, { status }); }
+        catch(_){ alert('Falha ao atualizar status.'); }
+        loadDenuncias(D_PAGE);
+      });
+    });
+  }
+  d_prev.addEventListener('click', ()=>{ if (D_PAGE>1) loadDenuncias(D_PAGE-1); });
+  d_next.addEventListener('click', ()=>{ if (D_PAGE<D_PAGES) loadDenuncias(D_PAGE+1); });
+  d_go.addEventListener('click', ()=> loadDenuncias(1));
+
+  // Pagamentos
+  function moneyBR(v){ const n = Number(v||0); return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function renderPayment(p){
+    const id   = escapeHtml(String(p.id||'—'));
+    const pro  = escapeHtml(String(p.proId||'—'));
+    const meth = escapeHtml(String(p.method||'').toUpperCase());
+    const st   = escapeHtml(String(p.status||'—'));
+    const gross= moneyBR(p.amount);
+    const fees = moneyBR(p.fees);
+    const net  = moneyBR(p.net);
+    const when = (p.createdAt||'').replace('T',' ').slice(0,19).replace(/-/g,'/');
+    return `
+      <div class="kpi" style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
+        <div>
+          <div><strong>Pagamento #${id}</strong> — Pro #${pro}</div>
+          <div class="meta">Data: ${escapeHtml(when)}</div>
+          <div class="row" style="margin-top:6px">
+            <span class="badge">Método <strong>${meth}</strong></span>
+            <span class="badge">Status <strong>${st}</strong></span>
           </div>
         </div>
-      `;
+        <div style="text-align:right">
+          <div>Bruto: R$ ${gross}</div>
+          <div>Taxas: R$ ${fees}</div>
+          <div><strong>Líquido: R$ ${net}</strong></div>
+        </div>
+      </div>
+    `;
+  }
+  async function loadPayments(){
+    try{
+      const arr = await apiJSON('/api/admin/payments?limit=10');
+      $('pay_list').innerHTML = (arr||[]).map(renderPayment).join('') || '<div class="meta">Nenhum pagamento ainda.</div>';
+    }catch(e){
+      $('pay_list').innerHTML = '<div class="warn">Falha ao carregar pagamentos.</div>';
     }
-    async function loadPayments(){
-      try{
-        const arr = await apiJSON('/api/admin/payments?limit=10');
-        $('pay_list').innerHTML = (arr||[]).map(renderPayment).join('') || '<div class="meta">Nenhum pagamento ainda.</div>';
-      }catch(e){
-        $('pay_list').innerHTML = '<div class="warn">Falha ao carregar pagamentos.</div>';
-      }
-    }
-    $('pay_reload').addEventListener('click', loadPayments);
+  }
+  $('pay_reload').addEventListener('click', loadPayments);
 
-    // Boot
-    (async function init(){
-      await loadMetrics();
-      await loadCidades();
-      updateCSVLink();
-      await loadList(1);
-      await loadDenuncias(1);
-      await loadPayments();
-    })();
+  // Boot
+  (async function init(){
+    await loadMetrics();
+    await loadCidades();
+    updateCSVLink();
+    await loadList(1);
+    await loadDenuncias(1);
+    await loadPayments();
   })();
-  </script>
+})();
+</script>
 </body>
 </html>

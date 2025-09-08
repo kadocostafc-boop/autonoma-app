@@ -1,58 +1,42 @@
-<!doctype html>
-<html lang="pt-BR">
-<head>
+<!doctype html><html lang="pt-BR"><head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Meus Favoritos • Autônoma.app</title>
-
-  <!-- Canonical + SEO -->
   <link rel="canonical" href="https://autonomaapp.com.br/favoritos.html">
-  <meta name="description" content="Perfis salvos neste dispositivo. Acesse rapidamente seus profissionais favoritos e compartilhe com amigos.">
-
-  <!-- PWA / Favicons -->
+  <meta name="description" content="Perfis salvos neste dispositivo. Acesse rapidamente seus profissionais favoritos e compartilhe.">
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#0b49c8">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
-
-  <!-- CSS global -->
-  <link rel="stylesheet" href="/css/app.css?v=std-cards-2025-09-07">
+  <link rel="stylesheet" href="/css/app.css?v=favs-2025-09-08">
   <style>
-    :root{ --borda:#e5e7eb; --cinza:#64748b; --azul:#0b49c8 }
+    :root{ --borda:#e5e7eb; --cinza:#64748b; --txt:#0f172a; --azul:#0b1f63 }
     .header{ display:flex; align-items:center; gap:12px; padding:12px 16px }
     .header .logo{ height:32px }
     .nav{ display:flex; gap:8px; margin-left:auto; flex-wrap:wrap }
     .wrap{ max-width:1120px; margin:0 auto; padding:16px; }
-
-    /* Grid responsivo */
     .grid{ display:grid; gap:10px; grid-template-columns:1fr; }
     @media (min-width:720px){ .grid{ grid-template-columns:1fr 1fr } }
     @media (min-width:1060px){ .grid{ grid-template-columns:1fr 1fr 1fr } }
 
-    .card{ background:#fff; border:1px solid var(--borda); border-radius:16px; padding:14px; }
-
-    /* === CARD PADRÃO === */
+    /* Card alinhado ao visual do perfil */
     .pro-card{
-      background:#fff; border:1px solid var(--borda); border-radius:14px; padding:10px 12px;
-      display:flex; align-items:center; gap:10px; box-shadow: 0 4px 12px rgba(0,0,0,.05);
-      transition:transform .16s ease, box-shadow .16s ease; min-height:84px;
+      background:#fff; border:1px solid var(--borda); border-radius:16px; padding:12px;
+      display:grid; grid-template-columns: 72px 1fr auto; gap:12px; align-items:center;
+      box-shadow: 0 4px 12px rgba(0,0,0,.05); transition:transform .16s ease, box-shadow .16s ease;
     }
     .pro-card:hover{ transform:translateY(-1px); box-shadow:0 8px 18px rgba(0,0,0,.08) }
-    .pro-avatar{ width:62px; height:62px; border-radius:999px; object-fit:cover; border:1px solid var(--borda); background:#f8fafc; flex:0 0 62px }
-    .pro-main{ flex:1 1 auto; min-width:0 }
-    .pro-name{ margin:0; font-size:15px; font-weight:900; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-    .pro-sub{ margin:2px 0 0; font-size:12.5px; color:var(--cinza); overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+    .pro-avatar{ width:72px; height:72px; border-radius:999px; object-fit:cover; border:1px solid var(--borda); background:#f8fafc }
+    .pro-name{ margin:0; font-size:16px; font-weight:900; color:var(--txt); }
+    .pro-sub{ margin:2px 0 0; font-size:13px; color:var(--cinza); }
     .meta-line{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px }
     .pill{ font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--borda); background:#f8fafc }
-    .rating{ color:#f59e0b; }
-    .right{ display:flex; flex-direction:column; gap:6px; align-items:flex-end; min-width:148px }
+    .pill.warn{ border-color:#fecaca; background:#fee2e2; color:#991b1b; font-weight:700 }
+    .rating{ color:#f59e0b }
+    .right{ display:flex; flex-direction:column; gap:6px; align-items:flex-end }
     .btn{ border:none; background:#0b1f63; color:#fff; padding:8px 10px; border-radius:10px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:13px }
     .btn.ghost{ background:#fff; color:#0f172a; border:1px solid var(--borda) }
     .btn.outline{ background:#fff; color:#0f172a; border:1px solid var(--borda) }
-    .btn.icon{ display:inline-flex; align-items:center; gap:6px; }
-
     footer { padding: 28px 12px; background:#0b1f63; margin-top:16px }
     .foot-links { display:flex; flex-wrap:wrap; gap:12px; justify-content:center }
     .foot-links a { color:#cde1ff; font-size:14px; text-decoration:none }
@@ -71,20 +55,22 @@
 </header>
 
 <div class="wrap">
-  <div class="card">
-    <h1 style="margin:0">Meus Favoritos</h1>
-    <p class="meta">Perfis salvos neste dispositivo para acesso rápido.</p>
-    <div class="row" style="gap:8px; flex-wrap:wrap">
-      <button id="btnShareAll" class="btn outline" type="button">🔗 Compartilhar lista</button>
-      <button id="btnClear" class="btn ghost" type="button">🗑️ Limpar todos</button>
+  <div class="pro-card" style="grid-template-columns:1fr">
+    <div>
+      <h1 style="margin:0">Meus Favoritos</h1>
+      <p class="meta">Perfis salvos neste dispositivo para acesso rápido.</p>
+      <div class="meta-line">
+        <button id="btnShareAll" class="btn outline" type="button">🔗 Compartilhar lista</button>
+        <button id="btnClear" class="btn ghost" type="button">🗑️ Limpar todos</button>
+      </div>
     </div>
   </div>
 
   <div id="list" class="grid" aria-live="polite"></div>
-  <div id="empty" class="card meta" style="display:none">Você ainda não adicionou favoritos.</div>
+  <div id="empty" class="pro-card" style="display:none"><span class="meta">Você ainda não adicionou favoritos.</span></div>
 
-  <div class="card" style="text-align:center">
-    <div class="row" style="justify-content:center; gap:8px; flex-wrap:wrap">
+  <div class="pro-card" style="grid-template-columns:1fr">
+    <div class="meta-line" style="justify-content:center">
       <a class="btn ghost" href="/">Início</a>
       <a class="btn ghost" href="/clientes.html">Buscar profissionais</a>
       <a class="btn ghost" href="/top10.html">🏆 Top 10</a>
@@ -94,56 +80,27 @@
   </div>
 </div>
 
+<footer>
+  <nav class="foot-links" aria-label="Links do rodapé">
+    <a href="/termos.html">Termos</a><a href="/privacidade.html">Privacidade</a>
+    <a href="/top10.html">Top 10</a><a href="/planos.html">Planos</a>
+  </nav>
+</footer>
+
 <script>
 (function(){
   const list = document.getElementById('list');
   const empty = document.getElementById('empty');
   const BTN_SHARE_ALL = document.getElementById('btnShareAll');
   const BTN_CLEAR = document.getElementById('btnClear');
-
-  const KEY_NEW = 'autonoma_favs';
-  const KEY_OLD = 'favIds';
+  const KEY = 'autonoma_favs';
   const NO_STORE = { cache:'no-store' };
 
-  function migrateFavsIfNeeded(){
-    try{
-      const hasNew = !!localStorage.getItem(KEY_NEW);
-      const oldRaw = localStorage.getItem(KEY_OLD);
-      if (!hasNew && oldRaw){
-        let oldArr = [];
-        try { oldArr = JSON.parse(oldRaw) || []; } catch { oldArr = []; }
-        const norm = oldArr.map(v => (v && typeof v === 'object') ? v : ({ id: v }));
-        localStorage.setItem(KEY_NEW, JSON.stringify(norm));
-      }
-    }catch{}
-  }
-  function getFavs(){
-    try{
-      const raw = localStorage.getItem(KEY_NEW) || '[]';
-      const arr = JSON.parse(raw);
-      return Array.isArray(arr) ? arr : [];
-    }catch{ return []; }
-  }
-  function setFavs(arr){
-    try{ localStorage.setItem(KEY_NEW, JSON.stringify(arr||[])); }catch{}
-  }
-  function removeFav(id){
-    const arr = getFavs();
-    const idx = arr.findIndex(x => String(x?.id) === String(id));
-    if (idx >= 0){ arr.splice(idx,1); setFavs(arr); }
-    render();
-  }
-  function esc(s){
-    return String(s||'')
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-  }
-  function estrelas(n){
-    const r = Math.round((Number(n||0))*2)/2;
-    const f = Math.floor(r);
-    const half = (r%1!==0);
-    return '★'.repeat(f) + (half?'½':'') + '☆'.repeat(5 - f - (half?1:0));
-  }
+  function getFavs(){ try{ return JSON.parse(localStorage.getItem(KEY)||'[]') }catch{ return [] } }
+  function setFavs(arr){ try{ localStorage.setItem(KEY, JSON.stringify(arr||[])) }catch{} }
+  function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;') }
+  function estrelas(n){ const r=Math.round((Number(n||0))*2)/2, f=Math.floor(r), h=(r%1!==0); return '★'.repeat(f)+(h?'½':'')+'☆'.repeat(5-f-(h?1:0)) }
+  function kmFmt(d){ return (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${Number(d).toFixed(1)} km`)) }
 
   async function fetchProfileById(id){
     const tries = [
@@ -151,66 +108,39 @@
       `/api/profissionais?id=${encodeURIComponent(id)}`,
       `/api/profissional/${encodeURIComponent(id)}`,
       `/api/profissional?id=${encodeURIComponent(id)}`,
-      `/api/public/profissional?id=${encodeURIComponent(id)}`,
-      `/api/public/profissionais/${encodeURIComponent(id)}`
+      `/api/public/profissional?id=${encodeURIComponent(id)}`
     ];
     for(const u of tries){
-      try{
-        const r = await fetch(u, NO_STORE);
-        if(!r.ok) continue;
-        const js = await r.json();
-        if(js){
-          if(js.item) return js.item;
-          if(js.id || js.nome) return js;
-        }
+      try{ const r=await fetch(u,NO_STORE); if(!r.ok) continue; const js=await r.json();
+        if(js?.item) return js.item; if(js && (js.id!=null || js.nome)) return js;
       }catch(_){}
     }
     return null;
   }
+
   async function enrichIfNeeded(arr){
-    const out = [];
+    const out=[];
     for(const p of arr){
       if(p && p.nome){ out.push(p); continue; }
       if(!(p && p.id!=null)){ continue; }
-      try{
-        const full = await fetchProfileById(p.id);
-        if(full){
-          out.push({
-            id: full.id,
-            nome: full.nome,
-            servico: full.servico || full.profissao || '',
-            bairro: full.bairro || '',
-            cidade: full.cidade || '',
-            foto: full.foto || '',
-            whatsapp: full.whatsapp || '',
-            rating: Number(full.rating||0),
-            avaliacoes: Number(full.avaliacoes||0),
-            atendimentos: Number(full.atendimentos||0),
-            precoBase: full.precoBase || full.preco || null,
-            distanceKm: (full.distanceKm ?? full.dist ?? full.distanciaKm ?? null),
-            lat: full.lat, lng: full.lng
-          });
-        }else{
-          out.push({ id: p.id });
-        }
-      }catch{
-        out.push({ id: p.id });
-      }
+      const full = await fetchProfileById(p.id).catch(()=>null);
+      out.push(full ? {
+        id: full.id, nome: full.nome,
+        servico: full.servico || full.profissao || '',
+        bairro: full.bairro || '', cidade: full.cidade || '',
+        foto: full.foto || '', whatsapp: full.whatsapp || '',
+        rating: Number(full.rating||0), avaliacoes: Number(full.avaliacoes||0),
+        atendimentos: Number(full.atendimentos||0),
+        precoBase: full.precoBase ?? full.preco ?? null,
+        distanceKm: (full.distanceKm ?? full.dist ?? full.distanciaKm ?? null)
+      } : { id: p.id });
     }
     return out;
   }
 
-  function kmFmt(d){
-    return (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${Number(d).toFixed(1)} km`));
-  }
-
   function renderCards(arr){
-    if (!arr.length){
-      empty.style.display = '';
-      list.innerHTML = '';
-      return;
-    }
-    empty.style.display = 'none';
+    if(!arr.length){ empty.style.display=''; list.innerHTML=''; return; }
+    empty.style.display='none';
     list.innerHTML = arr.map(p=>{
       const id = p.id;
       const foto = p.foto || '/icons/icon-192.png';
@@ -222,6 +152,7 @@
       const atend = Number(p.atendimentos||0);
       const price = (p.precoBase!=null && p.precoBase!=="") ? `R$ ${String(p.precoBase)}` : null;
       const dist  = (p.distanceKm!=null && isFinite(p.distanceKm)) ? kmFmt(Number(p.distanceKm)) : '—';
+
       let wa = '';
       if (p.whatsapp){
         const d = String(p.whatsapp).replace(/\D/g,'');
@@ -229,14 +160,19 @@
         const txt = 'Olá, vi seu perfil no Autônoma.app. Podemos falar?';
         wa = `https://wa.me/${num}?text=${encodeURIComponent(txt)}`;
       }
+
+      const lowWarn = (isFinite(rating) && rating>0 && rating<3)
+        ? `<span class="pill warn" title="Rating baixo — atenção">⚠️ ${rating.toFixed(2)}</span>`
+        : `<span class="pill"><span class="rating">⭐ ${estrelas(rating)}</span> <span>(${avals})</span></span>`;
+
       return `
         <div class="pro-card" data-id="${esc(id)}">
           <img class="pro-avatar" src="${esc(foto)}" alt="Foto de ${esc(nome)}" onerror="this.src='/icons/icon-192.png'">
-          <div class="pro-main">
+          <div>
             <h3 class="pro-name">${esc(nome)}</h3>
-            <div class="pro-sub">${esc(serv)} • <span>${esc(local)}</span></div>
+            <div class="pro-sub">${esc(serv)}${local?' • <span>'+esc(local)+'</span>':''}</div>
             <div class="meta-line">
-              <span class="pill"><span class="rating">⭐ ${estrelas(rating)}</span> <span>(${avals})</span></span>
+              ${lowWarn}
               <span class="pill">Distância: ${dist}</span>
               <span class="pill">Atendimentos: ${isFinite(atend)?atend:0}</span>
               ${price ? `<span class="pill">Valor: ${esc(price)}</span>`:''}
@@ -255,88 +191,55 @@
     // Eventos
     list.querySelectorAll('.pro-card').forEach(card=>{
       const id = card.getAttribute('data-id');
-      const btnShare = card.querySelector('.btn-share');
-      const btnRemove = card.querySelector('.btn-remove');
-
-      btnShare.addEventListener('click', async ()=>{
+      card.querySelector('.btn-share').addEventListener('click', async ()=>{
         const name = card.querySelector('.pro-name')?.textContent || 'Profissional';
         const sub  = card.querySelector('.pro-sub')?.textContent || '';
         const url  = location.origin + '/profissional/' + encodeURIComponent(id);
         const text = `Indicação no Autônoma: ${name} — ${sub}.`;
         try{
-          if (navigator.share){
-            await navigator.share({ title:'Autônoma • '+name, text, url });
-          } else {
-            await navigator.clipboard.writeText(text + ' ' + url);
-            btnShare.textContent = '✅ Link copiado';
-            setTimeout(()=> btnShare.textContent = 'Recomendar', 1600);
+          if (navigator.share){ await navigator.share({ title:'Autônoma • '+name, text, url }); }
+          else { await navigator.clipboard.writeText(text + ' ' + url);
+            const b=card.querySelector('.btn-share'); b.textContent='✅ Link copiado'; setTimeout(()=> b.textContent='Recomendar',1600);
           }
         }catch(_){}
       });
-
-      btnRemove.addEventListener('click', ()=>{
-        if (confirm('Remover este profissional dos favoritos?')) removeFav(id);
+      card.querySelector('.btn-remove').addEventListener('click', ()=>{
+        if (confirm('Remover este profissional dos favoritos?')){
+          const arr = getFavs().filter(x => String(x?.id)!==String(id)); setFavs(arr); render();
+        }
       });
     });
   }
 
   async function render(){
     const arr = getFavs();
-    if(!arr.length){
-      empty.style.display=''; list.innerHTML=''; return;
-    }
+    if(!arr.length){ empty.style.display=''; list.innerHTML=''; return; }
     empty.style.display='none';
     renderCards(arr); // imediato
-    try{
-      const full = await enrichIfNeeded(arr);
-      setFavs(full);
-      renderCards(full);
-    }catch{}
+    try{ const full = await enrichIfNeeded(arr); setFavs(full); renderCards(full); }catch{}
   }
 
-  // Compartilhar todos
   BTN_SHARE_ALL.addEventListener('click', async ()=>{
-    const arr = getFavs();
-    if (!arr.length){ alert('Você não tem favoritos ainda.'); return; }
+    const arr = getFavs(); if (!arr.length){ alert('Você não tem favoritos ainda.'); return; }
     const lines = arr.slice(0,20).map(p=>{
-      const name  = p.nome || 'Profissional';
-      const serv  = p.servico || p.profissao || '';
-      const local = [p.bairro, p.cidade].filter(Boolean).join(' • ');
-      const url   = location.origin + '/profissional/' + encodeURIComponent(p.id);
+      const name=p.nome||'Profissional', serv=p.servico||p.profissao||'', local=[p.bairro,p.cidade].filter(Boolean).join(' • ');
+      const url = location.origin + '/profissional/' + encodeURIComponent(p.id);
       return `• ${name} — ${serv} (${local}) → ${url}`;
     });
     const text = `Minhas indicações no Autônoma:\n\n${lines.join('\n')}`;
     try{
-      if (navigator.share){
-        await navigator.share({ title:'Autônoma • Meus favoritos', text });
-      } else {
-        await navigator.clipboard.writeText(text);
-        BTN_SHARE_ALL.textContent = '✅ Lista copiada';
-        setTimeout(()=> BTN_SHARE_ALL.textContent = '🔗 Compartilhar lista', 1600);
-      }
+      if (navigator.share){ await navigator.share({ title:'Autônoma • Meus favoritos', text }); }
+      else { await navigator.clipboard.writeText(text); BTN_SHARE_ALL.textContent='✅ Lista copiada'; setTimeout(()=> BTN_SHARE_ALL.textContent='🔗 Compartilhar lista',1600); }
     }catch(_){}
   });
 
-  // Limpar todos
   BTN_CLEAR.addEventListener('click', ()=>{
-    const arr = getFavs();
-    if (!arr.length){ alert('Não há favoritos para limpar.'); return; }
-    if (confirm('Tem certeza que deseja limpar todos os favoritos deste dispositivo?')){
-      setFavs([]); render();
-    }
+    const arr=getFavs(); if(!arr.length){ alert('Não há favoritos para limpar.'); return; }
+    if (confirm('Tem certeza que deseja limpar todos os favoritos deste dispositivo?')){ setFavs([]); render(); }
   });
 
-  // SW
-  if ('serviceWorker' in navigator){
-    window.addEventListener('load', ()=>{
-      navigator.serviceWorker.register('/sw.js?ver=favs-std-cards').catch(()=>{});
-    });
-  }
-
-  // Boot
-  migrateFavsIfNeeded();
+  if ('serviceWorker' in navigator){ window.addEventListener('load', ()=>{ navigator.serviceWorker.register('/sw.js?ver=favs-2025-09-08').catch(()=>{}); }); }
   render();
 })();
 </script>
-</body>
-</html>
+</body></html>
