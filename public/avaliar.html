@@ -4,50 +4,47 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Avaliar Profissional • Autônoma.app</title>
-  <meta name="theme-color" content="#0b1f63">
+  <meta name="theme-color" content="#2563eb">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/css/app.css?v=avaliar-hero-2025-09-08">
+  <!-- mesmo CSS do perfil -->
+  <link rel="stylesheet" href="/css/app.css?v=avaliar-like-perfil-2025-09-08">
   <style>
-    /* Topbar igual ao /clientes */
-    .header{display:flex;align-items:center;gap:12px;padding:12px 16px;background:#0b1f63}
+    /* === estilos espelhados do /perfil === */
+    .wrap{max-width:1120px;margin:0 auto;padding:16px}
+    .header{display:flex;align-items:center;gap:12px;padding:12px 16px}
     .header .logo{height:32px;width:auto;display:block}
     .topbar-links{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
-    .btn{border:none;background:#2563eb;color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;font-weight:800}
-    .btn.ghost{background:#f1f5f9;color:#0f172a}
-    .btn.outline{background:#fff;color:#0f172a;border:1px solid #e5e7eb}
-    .btn-wa{background:#16a34a}
-    .btn:hover{filter:brightness(.98)}
-    .wrap{max-width:1120px;margin:0 auto;padding:16px}
-    /* ===== HERO azul (mesmo espírito do /clientes) ===== */
-    .hero{background:linear-gradient(180deg,#1e3a8a 0%,#2563eb 100%);border-radius:20px;padding:16px;border:1px solid #1d4ed8;box-shadow:0 12px 30px rgba(2,6,23,.15)}
-    .hero-title{color:#fff;margin:0 0 12px;font-size:28px;line-height:1.15;font-weight:900}
-    .hero-sub{color:#c7d2fe;margin:0 0 12px}
-    .hero-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:12px}
-    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .avatar{width:46px;height:46px;border-radius:999px;object-fit:cover;border:1px solid #e5e7eb;background:#fff}
-    .pro-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-    .pro-name{margin:0;font-weight:900}
-    .pro-meta{margin:0;color:#64748b;font-size:13px}
-    label{font-weight:700;display:block;margin:10px 0 6px;color:#0f172a}
-    .input,select,textarea{width:100%;padding:10px;border-radius:12px;border:1px solid #e5e7eb;background:#fff;font-size:15px}
-    textarea{resize:vertical;min-height:90px}
-    /* Cards padrões */
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:980px){ .grid{grid-template-columns: 380px 1fr} }
     .card-soft{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:14px}
+    .avatar-box{display:flex;align-items:center;gap:10px}
+    .avatar{width:64px;height:64px;border-radius:999px;object-fit:cover;border:1px solid #e5e7eb;background:#f8fafc}
+    .nome{font-size:20px;margin:0}
+    .serv-local{color:#64748b}
+    .btn {border:none;background:#2563eb;color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;font-weight:800}
+    .btn.outline{background:transparent;border:1px solid #e5e7eb;color:#111827}
+    .btn.ghost{background:#f1f5f9;color:#111827}
+    .btn-wa{background:#16a34a}
+    .btn-wa:hover{filter:brightness(.95)}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .list{display:grid;grid-template-columns:1fr;gap:8px}
     @media(min-width:720px){ .list{grid-template-columns:1fr 1fr} }
     .item{padding:10px;border:1px solid #e5e7eb;border-radius:12px;background:#f8fafc}
     .rating{color:#f59e0b}
     .meta{color:#64748b}
-    footer{padding:28px 12px;background:#0b1f63;margin-top:16px}
-    .foot-links{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
-    .foot-links a{color:#cde1ff;font-size:14px;text-decoration:none}
-    .foot-links a:hover{text-decoration:underline}
+    label{font-weight:700;display:block;margin:10px 0 6px}
+    input,select,textarea{width:100%;padding:10px;border-radius:12px;border:1px solid #e5e7eb;background:#fff;font-size:15px}
+    textarea{resize:vertical;min-height:90px}
+    footer { padding:28px 12px; background:#0b1f63; margin-top:16px }
+    .foot-links { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
+    .foot-links a { color:#cde1ff; font-size:14px; text-decoration:none; }
+    .foot-links a:hover { text-decoration:underline; }
   </style>
 </head>
 <body>
-  <!-- Topbar -->
+  <!-- Topbar igual ao /perfil -->
   <header class="header" role="banner">
     <a href="/" aria-label="Início">
       <img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display='none'">
@@ -56,61 +53,67 @@
       <a class="btn ghost" href="/">Início</a>
       <a class="btn ghost" href="/clientes.html">Buscar</a>
       <a class="btn ghost" href="/top10.html">🏆 Top 10</a>
-      <a class="btn outline" href="/painel_login.html">Entrar</a>
+      <a class="btn ghost" href="/planos.html">⭐ Planos</a>
+      <a class="btn outline" href="/painel_login.html">🔐 Entrar no Painel</a>
     </nav>
   </header>
 
   <main class="wrap">
-    <!-- HERO azul com o formulário dentro (como /clientes) -->
-    <section class="hero">
-      <h1 id="heroTitle" class="hero-title">Avaliar profissional</h1>
-      <p class="hero-sub">Dê sua nota e deixe um comentário. Ajuda outros clientes a escolher melhor.</p>
-
-      <div class="hero-card">
-        <div class="pro-head">
+    <div class="grid">
+      <!-- Coluna esquerda: cabeçalho do profissional + ações (igual estilo do perfil) -->
+      <aside class="card-soft">
+        <div class="avatar-box">
           <img id="foto" class="avatar" src="/icons/icon-192.png" alt="Foto do profissional">
           <div>
-            <p id="nome" class="pro-name">Profissional</p>
-            <p id="meta" class="pro-meta">—</p>
-          </div>
-          <div class="row" style="margin-left:auto">
-            <a id="btnWA" class="btn-wa btn" target="_blank" rel="noopener">WhatsApp</a>
-            <a id="backPerfil" class="btn outline" href="/clientes.html">Voltar ao perfil</a>
+            <h1 id="nome" class="nome">Profissional</h1>
+            <div id="servLocal" class="serv-local">—</div>
           </div>
         </div>
+        <div class="row" style="margin-top:12px">
+          <a id="btnWa" class="btn btn-wa" target="_blank" rel="noopener">WhatsApp</a>
+          <a id="btnPerfil" class="btn outline" href="#">← Voltar ao perfil</a>
+        </div>
+      </aside>
 
+      <!-- Coluna direita: formulário e comentários (cards iguais aos do perfil) -->
+      <section class="card-soft">
+        <h2 style="margin:0 0 8px">Avaliar profissional</h2>
         <form id="f" autocomplete="on" novalidate>
-          <label for="nomeCli">Seu nome <span class="meta">(opcional)</span></label>
-          <input id="nomeCli" name="nome" class="input" placeholder="Ex.: Maria Silva">
+          <div class="list" style="margin-bottom:10px">
+            <div class="item">
+              <label for="nomeCli">Seu nome <span class="meta">(opcional)</span></label>
+              <input id="nomeCli" name="nome" placeholder="Ex.: Maria Silva">
+            </div>
+            <div class="item">
+              <label for="notaSel">Nota</label>
+              <select id="notaSel">
+                <option value="0" selected>Selecione…</option>
+                <option value="5">5 - Excelente</option>
+                <option value="4">4 - Muito bom</option>
+                <option value="3">3 - Bom</option>
+                <option value="2">2 - Regular</option>
+                <option value="1">1 - Ruim</option>
+              </select>
+            </div>
+          </div>
 
-          <label for="notaSel">Nota</label>
-          <select id="notaSel" class="input">
-            <option value="0" selected>Selecione…</option>
-            <option value="5">5 - Excelente</option>
-            <option value="4">4 - Muito bom</option>
-            <option value="3">3 - Bom</option>
-            <option value="2">2 - Regular</option>
-            <option value="1">1 - Ruim</option>
-          </select>
+          <div class="item" style="margin-bottom:10px">
+            <label for="coment">Comentário</label>
+            <textarea id="coment" name="comentario" placeholder="Como foi sua experiência? (opcional)"></textarea>
+          </div>
 
-          <label for="coment">Comentário</label>
-          <textarea id="coment" name="comentario" class="input" placeholder="Conte como foi sua experiência"></textarea>
-
-          <div class="row" style="margin-top:10px">
+          <div class="row">
             <button id="send" class="btn" type="submit">Enviar avaliação</button>
-            <a id="voltarPerfil2" class="btn outline" href="#">Voltar ao perfil</a>
+            <a id="btnPerfil2" class="btn outline" href="#">Voltar ao perfil</a>
           </div>
           <p id="status" class="meta" aria-live="polite" style="margin-top:6px"></p>
         </form>
-      </div>
-    </section>
 
-    <!-- Comentários recentes -->
-    <section class="card-soft" style="margin-top:12px">
-      <h2 style="margin:0 0 8px">Comentários recentes</h2>
-      <div id="reviews" class="list"></div>
-      <p id="noReviews" class="meta" style="display:none">Ainda não há comentários.</p>
-    </section>
+        <h3 class="title" style="margin-top:14px">Comentários recentes</h3>
+        <div id="reviews" class="list"></div>
+        <p id="noReviews" class="meta" style="display:none">Ainda não há comentários.</p>
+      </section>
+    </div>
   </main>
 
   <footer>
@@ -126,9 +129,8 @@
 
   <script>
   (function(){
-    // ===== Utils =====
     const $ = s => document.querySelector(s);
-    const esc = s => String(s||"").replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+    const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
     const stars = n => { const r=Math.round((Number(n)||0)*2)/2; const f=Math.floor(r),h=(r%1!==0); return "★".repeat(f)+(h?"½":"")+"☆".repeat(5-f-(h?1:0)); };
 
     function getId(){
@@ -170,8 +172,8 @@
       for (const u of tries){
         try{
           const js = await getJSON(u);
-          if(js?.item) return js.item;
-          if(js && (js.id!=null || js.nome)) return js;
+          if (js?.item) return js.item;
+          if (js && (js.id!=null || js.nome)) return js;
         }catch(_){}
       }
       throw new Error('notfound');
@@ -219,7 +221,6 @@
       }).join('');
     }
 
-    // Envio
     const f = $('#f'), status = $('#status'), sendBtn = $('#send');
     function setStatus(msg, ok){
       status.textContent = msg||'';
@@ -232,7 +233,6 @@
       const nota = Number($('#notaSel').value||0);
       const comentario = String($('#coment').value||'').trim();
       if (nota<1 || nota>5){ setStatus('Selecione uma nota de 1 a 5.', false); return; }
-
       sendBtn.disabled = true; setStatus('Enviando...', null);
       try{
         const r = await fetch(`/api/profissional/${encodeURIComponent(PRO_ID)}/avaliar`,{
@@ -257,16 +257,14 @@
         const p = await loadPro(PRO_ID);
         $('#foto').src = p.foto || '/icons/icon-192.png';
         $('#nome').textContent = p.nome || 'Profissional';
-        $('#heroTitle').textContent = 'Avaliar ' + (p.nome || 'profissional');
-        $('#meta').textContent = [p.servico || p.profissao, [p.bairro, p.cidade].filter(Boolean).join(' • ')].filter(Boolean).join(' • ') || '—';
+        $('#servLocal').textContent = [p.servico || p.profissao, [p.bairro, p.cidade].filter(Boolean).join(' • ')].filter(Boolean).join(' • ') || '—';
         const perfilUrl = '/profissional/' + encodeURIComponent(PRO_ID);
-        $('#backPerfil').href = perfilUrl;
-        $('#voltarPerfil2').href = perfilUrl;
+        $('#btnPerfil').href = perfilUrl;
+        $('#btnPerfil2').href = perfilUrl;
         const wa = waLink(p);
-        const waBtn = $('#btnWA');
+        const waBtn = $('#btnWa');
         if (wa){ waBtn.href = wa; } else { waBtn.classList.add('outline'); waBtn.textContent='WhatsApp indisponível'; waBtn.removeAttribute('href'); }
       }catch(_){}
-
       try{
         const arr = await fetchReviews(PRO_ID);
         renderReviews(arr);
