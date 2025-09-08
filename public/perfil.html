@@ -6,7 +6,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/css/app.css?v=perfil-2025-09-08b">
+  <link rel="stylesheet" href="/css/app.css?v=perfil-2025-09-08d">
   <style>
     .wrap{max-width:1120px;margin:0 auto;padding:16px}
     .header{display:flex;align-items:center;gap:12px;padding:12px 16px}
@@ -108,9 +108,7 @@
 
         <h3 class="title">Avaliações</h3>
         <div id="reviews" class="list"></div>
-        <!-- Mensagem removida quando houver nota/quantidade; só usada quando realmente não há nada -->
-        <p id="noReviews" class="meta" style="display:none">Ainda não há avaliações.</p>
-        <!-- Caixa de diagnóstico (opcional) -->
+        <!-- Removido: "Ainda não há avaliações" -->
         <p id="diag" class="meta" style="display:none"></p>
       </section>
     </div>
@@ -129,17 +127,20 @@
 
   <script>
   (function(){
-    // ===== Config =====
-    const DEBUG = false; // mude para true para ver mensagens de diagnóstico no rodapé da seção
+    const DEBUG = false;
 
-    // Utils
     const $ = s => document.querySelector(s);
-    const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#39;");
+    const esc = s => String(s||"").replace(/[&<>"]/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m]));
     const kmFmt = d => (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${Number(d).toFixed(d<10?1:0)} km`));
     const stars = n => { const r=Math.round((Number(n)||0)*2)/2; const f=Math.floor(r),h=(r%1!==0); return "★".repeat(f)+(h?"½":"")+"☆".repeat(5-f-(h?1:0)); };
-    async function getJSON(url){ const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error('http '+r.status+' @ '+url); return r.json(); }
+    const setDiag = t => { if(!DEBUG) return; const d=$('#diag'); d.style.display=''; d.textContent = t; };
 
-    // ID
+    async function getJSON(url){
+      const r = await fetch(url,{cache:'no-store'});
+      if(!r.ok) throw new Error('http '+r.status+' @ '+url);
+      return r.json();
+    }
+
     function getProfileId(){
       const url = new URL(location.href);
       const qid = url.searchParams.get('id');
@@ -150,32 +151,19 @@
       return '';
     }
     const id = getProfileId();
-    if(!id){ location.href = '/clientes.html'; return; }
-
-    function flash(msg, ok=true){
-      const box = $('#flash'); box.textContent = msg;
-      box.className = 'card-soft msg ' + (ok?'ok':'warn'); box.style.display='';
-      setTimeout(()=>{ box.style.display='none'; }, 2400);
-    }
-    function setDiag(t){ if(!DEBUG) return; const d=$('#diag'); d.style.display=''; d.textContent = t; }
+    if(!id){ location.href = '/clientes.html'; }
 
     // Favoritos
-    const KEY_FAVS = 'autonoma_favs';
-    const getFavs = ()=>{ try{return JSON.parse(localStorage.getItem(KEY_FAVS)||'[]')}catch{return[]} };
-    const setFavs = v => { try{localStorage.setItem(KEY_FAVS, JSON.stringify(v||[]))}catch{} };
-    const isFav = pid => getFavs().some(x => String(x?.id)===String(pid));
-    function upsertFav(obj){
-      const arr = getFavs();
-      const i = arr.findIndex(x => String(x?.id)===String(obj.id));
-      if (i>=0) arr[i] = {...arr[i], ...obj}; else arr.push(obj);
-      setFavs(arr);
-    }
-    function removeFav(pid){ setFavs(getFavs().filter(x => String(x?.id)!==String(pid))); }
+    const KEY_FAVS='autonoma_favs';
+    const getFavs=()=>{ try{return JSON.parse(localStorage.getItem(KEY_FAVS)||'[]')}catch{return[]} };
+    const setFavs=v=>{ try{localStorage.setItem(KEY_FAVS, JSON.stringify(v||[]))}catch{} };
+    const isFav=pid=> getFavs().some(x=> String(x?.id)===String(pid));
+    function upsertFav(obj){ const arr=getFavs(); const i=arr.findIndex(x=>String(x?.id)===String(obj.id)); if(i>=0) arr[i]={...arr[i],...obj}; else arr.push(obj); setFavs(arr); }
+    function removeFav(pid){ setFavs(getFavs().filter(x=> String(x?.id)!==String(pid))); }
 
     // Distância
     function haversineKm(lat1, lon1, lat2, lon2){
-      const toRad = x => x * Math.PI/180; const R = 6371;
-      const dLat = toRad(lat2-lat1), dLon = toRad(lon2-lon1);
+      const toRad = x => x*Math.PI/180, R=6371, dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
       const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
       return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
     }
@@ -188,51 +176,58 @@
       }, ()=>{}, {enableHighAccuracy:true, timeout:10000, maximumAge:30000});
     }
 
-    // WhatsApp msg
+    // WhatsApp
     function buildWaLink(p){
       if(!p || !p.whatsapp) return null;
       const d = String(p.whatsapp).replace(/\D/g,'');
       const num = d.startsWith('55') ? d : ('55'+d);
-      const partes = [];
-      partes.push('Olá, vi seu perfil no Autônoma.app');
+      const partes = ['Olá, vi seu perfil no Autônoma.app'];
       const svc = p.servico || p.profissao;
-      if (svc) partes.push(`e gostaria de contratar seus serviços de ${svc}`); else partes.push('e gostaria de contratar seus serviços');
+      partes.push(svc ? `e gostaria de contratar seus serviços de ${svc}` : 'e gostaria de contratar seus serviços');
       if (p.cidade) partes.push(`em ${p.cidade}`);
-      const msg = partes.join(' ') + '. Podemos conversar?';
+      const msg = partes.join(' ')+'. Podemos conversar?';
       return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
     }
-    function buildAvalLink(pid){ return `/avaliar/${encodeURIComponent(pid)}`; }
+    function buildAvalLink(pid){ return '/avaliar/'+encodeURIComponent(pid); }
     function logCall(pid){ try{ navigator.sendBeacon?.(`/api/profissional/${encodeURIComponent(pid)}/call`); }catch(_){} }
 
-    // Carrega perfil (multi endpoints)
+    // Perfil
     async function loadProfile(pid){
       const tries = [
         `/api/profissional/${encodeURIComponent(pid)}`,
         `/api/profissionais?id=${encodeURIComponent(pid)}`,
         `/api/public/profissional?id=${encodeURIComponent(pid)}`
       ];
-      for (const u of tries){
+      for(const u of tries){
         try{
           const js = await getJSON(u);
-          if(js){ if(js.item) return js.item; if(js.id!=null || js.nome) return js; }
-        }catch(e){ setDiag('Perfil: falha em '+u+' -> '+e.message); }
+          if (js?.item) return js.item;
+          if (js && (js.id!=null || js.nome)) return js;
+        }catch(e){ setDiag('Perfil: '+e.message); }
       }
-      // fallback lista
       try{
         const list = await getJSON('/api/profissionais');
         const arr = list.items || list.itens || list || [];
-        const found = arr.find(x => String(x?.id)===String(pid));
+        const found = arr.find(x=> String(x?.id)===String(pid));
         if(found) return found;
-      }catch(e){ setDiag('Perfil: fallback list falhou -> '+e.message); }
+      }catch(e){ setDiag('Perfil fallback: '+e.message); }
       throw new Error('notfound');
     }
 
-    // Avaliações — busca robusta
-    async function loadAvaliacoes(pid){
+    // Avaliações
+    function pickInlineReviews(p){
+      const cands = [
+        p.avaliacoesDetalhe, p.avaliacoesDetalhadas, p.comentarios, p.reviews, p.feedbacks
+      ].filter(Array.isArray);
+      if (cands.length) return cands[0];
+      return [];
+    }
+    async function fetchReviews(pid){
       const tries = [
         `/api/profissional/${encodeURIComponent(pid)}/avaliacoes`,
         `/api/avaliacoes?proId=${encodeURIComponent(pid)}`,
         `/api/public/avaliacoes?proId=${encodeURIComponent(pid)}`,
+        `/api/reviews?proId=${encodeURIComponent(pid)}`,
         `/api/profissionais/${encodeURIComponent(pid)}/avaliacoes`
       ];
       for(const u of tries){
@@ -242,45 +237,32 @@
           if (Array.isArray(js?.items)) return js.items;
           if (Array.isArray(js?.avaliacoes)) return js.avaliacoes;
           if (Array.isArray(js?.data)) return js.data;
-        }catch(e){ setDiag('Avaliações: falha em '+u+' -> '+e.message); }
+        }catch(e){ setDiag('Avaliações: '+e.message); }
       }
       return [];
     }
-
-    // Normaliza e renderiza avaliações
     function normalizeAval(a){
       const nome = a.autor || a.nome || a.cliente || a.user || 'Cliente';
       const nota = a.nota ?? a.rating ?? a.estrelas ?? a.score ?? 0;
       const texto = a.texto || a.comentario || a.comment || a.mensagem || '';
-      return { nome: String(nome), nota: Number(nota), texto: String(texto) };
+      return { nome:String(nome), nota:Number(nota), texto:String(texto) };
     }
-    function renderAvaliacoes(list, ctx){
-      const box = $('#reviews'); const empty = $('#noReviews');
-      const norm = list.map(normalizeAval).filter(x => (x.texto || '').trim().length>0 || x.nota>0);
-
-      // Regras:
-      // - Se houver pelo menos 1 comentário (texto) → mostra cards e esconde "noReviews".
-      // - Se não houver comentários, mas houver média/contagem geral no topo → não mostra "noReviews".
-      // - Só mostra "noReviews" quando realmente não existe NADA.
-      const hasComments = norm.some(x => (x.texto || '').trim().length>0);
-      const hasAny = norm.length > 0 || ctx.hasTopRating;
-
-      if (!hasComments){
-        box.innerHTML = '';            // não mostra nada
-        empty.style.display = hasAny ? 'none' : ''; // só exibe se não tiver nada mesmo
+    function renderAvaliacoes(list){
+      const box = $('#reviews');
+      const norm = list.map(normalizeAval).filter(x => (x.texto||'').trim().length>0 || x.nota>0);
+      if (norm.length){
+        box.innerHTML = norm.slice(0,20).map(a=>`
+          <div class="item">
+            <div class="row" style="justify-content:space-between">
+              <strong>${esc(a.nome)}</strong>
+              <span class="rating">${stars(a.nota)}</span>
+            </div>
+            ${a.texto?`<p class="meta" style="margin:6px 0 0">${esc(a.texto)}</p>`:''}
+          </div>
+        `).join('');
         return;
       }
-
-      empty.style.display = 'none';
-      box.innerHTML = norm.slice(0,20).map(a=>`
-        <div class="item">
-          <div class="row" style="justify-content:space-between">
-            <strong>${esc(a.nome)}</strong>
-            <span class="rating">${stars(a.nota)}</span>
-          </div>
-          ${a.texto?`<p class="meta" style="margin:6px 0 0">${esc(a.texto)}</p>`:''}
-        </div>
-      `).join('');
+      box.innerHTML = '';
     }
 
     let PROF=null;
@@ -288,7 +270,6 @@
       try{
         PROF = await loadProfile(id);
 
-        // Cabeçalho
         $('#foto').src = PROF.foto || '/icons/icon-192.png';
         $('#foto').alt = 'Foto de ' + (PROF.nome || 'Profissional');
         $('#nome').textContent = PROF.nome || 'Profissional';
@@ -296,13 +277,11 @@
           [PROF.servico || PROF.profissao, [PROF.bairro, PROF.cidade].filter(Boolean).join(' • ')]
           .filter(Boolean).join(' • ') || '—';
 
-        // KPIs
         $('#k_trab').textContent = Number(PROF.trabalhos||PROF.atendimentos||0);
         $('#k_exp').textContent  = computeExperience(PROF);
         $('#k_calls').textContent= Number(PROF.chamadas||0);
         $('#k_vis').textContent  = Number(PROF.visitas||0);
 
-        // Info
         $('#precoBase').textContent = PROF.precoBase ? String(PROF.precoBase) : '—';
         if(PROF.site){ $('#site').textContent=PROF.site; $('#site').href=PROF.site; }
         else { $('#site').textContent='—'; $('#site').removeAttribute('href'); }
@@ -310,38 +289,31 @@
         $('#dist').textContent = kmFmt(PROF.distanceKm);
         if (PROF.distanceKm == null) tryClientDistance(PROF);
 
-        // Rating e contagem (topo)
         const ratingNum = Number(PROF.rating||0);
         $('#stars').textContent = stars(ratingNum);
         const avalCount = Array.isArray(PROF.avaliacoes) ? PROF.avaliacoes.length : Number(PROF.avaliacoes||0);
         $('#count').textContent = `(${isNaN(avalCount)?0:avalCount})`;
 
-        // Desc
         $('#desc').textContent = PROF.descricao || '—';
 
-        // WhatsApp
         const wa = buildWaLink(PROF);
         const waBtn = $('#btnWa');
         if(wa){ waBtn.href = wa; waBtn.addEventListener('click', ()=> logCall(id)); }
         else { waBtn.classList.add('outline'); waBtn.textContent='WhatsApp indisponível'; waBtn.removeAttribute('href'); }
 
-        // Avaliar
         $('#btnAval').href = buildAvalLink(id);
-
-        // Favorito estado
         if (isFav(id)) $('#btnFav').classList.add('on');
 
-        // Avaliações
-        const hasTopRating = (ratingNum>0) || (Number(avalCount)>0);
-        const emb = Array.isArray(PROF.avaliacoesDetalhe)? PROF.avaliacoesDetalhe : [];
-        if(emb.length){
-          renderAvaliacoes(emb, {hasTopRating});
+        const inline = pickInlineReviews(PROF);
+        if (inline.length){
+          renderAvaliacoes(inline);
         } else {
-          const fetched = await loadAvaliacoes(id);
-          renderAvaliacoes(fetched, {hasTopRating});
+          const fetched = await fetchReviews(id);
+          renderAvaliacoes(fetched);
         }
       }catch(e){
-        flash('Não foi possível carregar o perfil.', false);
+        const box = document.getElementById('flash');
+        box.textContent = 'Não foi possível carregar o perfil.'; box.className='card-soft msg warn'; box.style.display='';
         setDiag('Init erro: '+e.message);
       }
     }
@@ -359,14 +331,13 @@
       return '—';
     }
 
-    // Ações
-    $('#btnFav').addEventListener('click', ()=>{
+    document.getElementById('btnFav').addEventListener('click', ()=>{
       const on = isFav(id);
       if (on){
         removeFav(id);
-        $('#btnFav').classList.remove('on');
-        $('#msgActions').textContent = 'Removido dos favoritos.';
-        $('#msgActions').className = 'msg ok';
+        document.getElementById('btnFav').classList.remove('on');
+        document.getElementById('msgActions').textContent = 'Removido dos favoritos.';
+        document.getElementById('msgActions').className = 'msg ok';
       } else {
         const obj = {
           id: PROF?.id || id, nome: PROF?.nome || 'Profissional',
@@ -378,16 +349,16 @@
           distanceKm: (typeof PROF?.distanceKm==='number') ? PROF.distanceKm : null
         };
         upsertFav(obj);
-        $('#btnFav').classList.add('on');
-        $('#msgActions').textContent = 'Adicionado aos favoritos.';
-        $('#msgActions').className = 'msg ok';
+        document.getElementById('btnFav').classList.add('on');
+        document.getElementById('msgActions').textContent = 'Adicionado aos favoritos.';
+        document.getElementById('msgActions').className = 'msg ok';
       }
     });
 
-    $('#btnRec').addEventListener('click', async ()=>{
-      $('#btnRec').classList.add('on');
-      $('#msgActions').textContent = 'Obrigado! Recomendação registrada.';
-      $('#msgActions').className = 'msg ok';
+    document.getElementById('btnRec').addEventListener('click', async ()=>{
+      document.getElementById('btnRec').classList.add('on');
+      document.getElementById('msgActions').textContent = 'Obrigado! Recomendação registrada.';
+      document.getElementById('msgActions').className = 'msg ok';
       try{
         await fetch('/api/recomendacoes',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) });
       }catch(_){}
