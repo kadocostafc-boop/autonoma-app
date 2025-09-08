@@ -1289,6 +1289,175 @@ app.get("/admin/login", (_req,res)=>{
     </form>
   </div></div>`);
 });
+// ========================= ADMIN APIs — DASHBOARD =========================
+// Estatísticas para os cards + série de últimos 30 dias
+app.get("/api/admin/stats", requireAdmin, (_req, res) => {
+  try {
+    const db = readDB();
+    const metr = readJSON(METRICS_FILE, {});
+    const today = new Date();
+    const dayKey = (d)=> d.toISOString().slice(0,10);
+
+    const totalAtivos    = db.filter(p=>!p.excluido && !p.suspenso).length;
+    const totalSuspensos = db.filter(p=> p.suspenso).length;
+    const totalExcluidos = db.filter(p=> p.excluido).length;
+    const visitasTotais  = db.reduce((a,p)=> a + (Number(p.visitas)||0), 0);
+    const chamadasTotais = db.reduce((a,p)=> a + (Number(p.chamadas)||0), 0);
+    const favoritosTotais= 0; // (se quiser, migramos depois do arquivo favorites.json)
+
+    // série de 30 dias (visits/calls/reports/qr)
+    const days = [];
+    for (let i=29;i>=0;i--){
+      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate()-i);
+      const k = dayKey(d);
+      const line = metr[k] || {}; // (compat antiga — caso tenha salvo diferente)
+      const v = (metr.visit && Array.isArray(metr.visit[k])) ? metr.visit[k].length : 0;
+      const c = (metr.call  && Array.isArray(metr.call[k]))  ? metr.call[k].length  : 0;
+      const r = (metr.report&& Array.isArray(metr.report[k]))? metr.report[k].length: 0;
+      const q = (metr.qr    && Array.isArray(metr.qr[k]))    ? metr.qr[k].length    : 0;
+      days.push({ day:k, visits:v, calls:c, reports:r, qr:q });
+    }
+
+    res.json({
+      ok:true,
+      cards:{
+        ativos: totalAtivos,
+        suspensos: totalSuspensos,
+        excluidos: totalExcluidos,
+        visitas: visitasTotais,
+        chamadas: chamadasTotais,
+        favoritos: favoritosTotais
+      },
+      last30: days
+    });
+  } catch(e){
+    res.status(500).json({ ok:false, error:String(e) });
+  }
+});
+
+// Lista de profissionais (filtros + paginação) para a tabela do admin
+app.get("/api/admin/profissionais", requireAdmin, (req,res)=>{
+  try{
+    let items = readDB().slice();
+
+    const q        = (req.query.q||"").toString().trim().toLowerCase();
+    const cidade   = (req.query.cidade||"").toString().trim().toLowerCase();
+    const servicoQ = (req.query.servico||"").toString().trim().toLowerCase();
+    const plano    = (req.query.plano||"").toString().trim().toLowerCase(); // premium|pro|free|""(todos)
+    const verif    = (req.query.verificado||"").toString().trim().toLowerCase(); // "1"|"0"|"" 
+    const status   = (req.query.status||"").toString().trim().toLowerCase(); // "ativos"|"suspensos"|"excluidos"|"" 
+
+    if (status==="ativos")    items = items.filter(p=>!p.excluido && !p.suspenso);
+    if (status==="suspensos") items = items.filter(p=> p.suspenso);
+    if (status==="excluidos") items = items.filter(p=> p.excluido);
+
+    if (q){
+      const N = q.normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+      items = items.filter(p=>{
+        const txt = `${p.nome} ${p.servico||p.profissao||""} ${p.cidade} ${p.bairro}`.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+        return txt.includes(N);
+      });
+    }
+    if (cidade){
+      items = items.filter(p => (p.cidade||"").toLowerCase().includes(cidade));
+    }
+    if (servicoQ){
+      items = items.filter(p => ((p.servico||p.profissao||"").toLowerCase().includes(servicoQ)));
+    }
+    if (plano && ["premium","pro","free"].includes(plano)){
+      items = items.filter(p => (p.plano||"free").toLowerCase()===plano);
+    }
+    if (verif==="1") items = items.filter(p=> !!p.verificado);
+    if (verif==="0") items = items.filter(p=> !p.verificado);
+
+    // score simples p/ ordenações conhecidas
+    items = items.map(p=>{
+      const notas = (p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
+      const rating = notas.length ? (notas.reduce((a,b)=>a+b,0)/notas.length) : 0;
+      return { ...p, _rating:rating };
+    });
+
+    const sort = String(req.query.sort||"recentes"); // "recentes"|"rating"|"visitas"|"chamadas"|"nome"
+    const dir  = String(req.query.dir||"desc").toLowerCase()==="asc" ? 1 : -1;
+
+    items.sort((a,b)=>{
+      const by = {
+        recentes: (x)=> Date.parse(x.createdAt||0)||0,
+        rating:   (x)=> Number(x._rating||0),
+        visitas:  (x)=> Number(x.visitas||0),
+        chamadas: (x)=> Number(x.chamadas||0),
+        nome:     (x)=> String(x.nome||"").toLowerCase()
+      }[sort] || ((x)=> Date.parse(x.createdAt||0)||0);
+      const va = by(a), vb = by(b);
+      if (typeof va === "string" || typeof vb === "string"){
+        return va.localeCompare(vb) * dir;
+      }
+      return (va - vb) * dir;
+    });
+
+    const page  = Math.max(1, Number(req.query.page||1));
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit||30)));
+    const total = items.length;
+    const start = (page-1)*limit;
+    const slice = items.slice(start, start+limit).map(p=>({
+      id: p.id,
+      nome: p.nome,
+      cidade: p.cidade||"",
+      bairro: p.bairro||"",
+      servico: p.servico||p.profissao||"",
+      plano: p.plano||"free",
+      verificado: !!p.verificado,
+      rating: Number(p._rating||0),
+      avals: Array.isArray(p.avaliacoes)? p.avaliacoes.length : 0,
+      visitas: Number(p.visitas||0),
+      chamadas: Number(p.chamadas||0),
+      suspenso: !!p.suspenso,
+      excluido: !!p.excluido
+    }));
+
+    res.json({ ok:true, total, items:slice });
+  }catch(e){
+    res.status(500).json({ ok:false, error:String(e) });
+  }
+});
+
+// Recalcular “verificado” em toda a base (botão do admin)
+app.post("/api/admin/recalc-verified", requireAdmin, (_req,res)=>{
+  try{
+    const db = readDB();
+    for (const p of db){
+      p.verificado = !!(p?.foto && isWhatsappValid(p.whatsapp) && p.cidade && p.bairro);
+    }
+    writeDB(db);
+    res.json({ ok:true, changed: db.length });
+  }catch(e){
+    res.status(500).json({ ok:false, error:String(e) });
+  }
+});
+
+// (Opcional) CSV de métricas agregadas (últimos 30 dias)
+app.get("/api/admin/metrics.csv", requireAdmin, (_req,res)=>{
+  try{
+    const metr = readJSON(METRICS_FILE, {});
+    const today = new Date();
+    const rows = [["dia","visitas","chamadas","denuncias","qr"]];
+    for (let i=29;i>=0;i--){
+      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate()-i);
+      const k = d.toISOString().slice(0,10);
+      const v = (metr.visit && Array.isArray(metr.visit[k])) ? metr.visit[k].length : 0;
+      const c = (metr.call  && Array.isArray(metr.call[k]))  ? metr.call[k].length  : 0;
+      const r = (metr.report&& Array.isArray(metr.report[k]))? metr.report[k].length: 0;
+      const q = (metr.qr    && Array.isArray(metr.qr[k]))    ? metr.qr[k].length    : 0;
+      rows.push([k,v,c,r,q]);
+    }
+    const csv = rows.map(r=> r.map(v=> `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+    res.setHeader("Content-Type","text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition","attachment; filename=metrics_30d.csv");
+    res.send(csv);
+  }catch(e){
+    res.status(500).type("text").send(String(e));
+  }
+});
 
 app.post("/admin/login", loginLimiter, async (req,res)=>{
   const user = trim(req.body.user);
