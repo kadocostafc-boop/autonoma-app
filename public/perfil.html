@@ -67,18 +67,21 @@
 
   <main class="wrap">
     <div id="flash" class="card-soft msg" style="display:none"></div>
+
     <div class="grid">
       <aside class="card-soft">
         <div class="avatar-box">
           <img id="foto" class="avatar" alt="Foto do profissional">
           <h1 id="nome" class="nome">Profissional</h1>
           <div id="servLocal" class="serv-local">—</div>
+
           <div class="kpis">
             <div class="kpi"><div class="label">Trabalhos</div><div id="k_trab" class="val">—</div></div>
             <div class="kpi"><div class="label">Experiência</div><div id="k_exp" class="val">—</div></div>
             <div class="kpi"><div class="label">Chamadas</div><div id="k_calls" class="val">—</div></div>
             <div class="kpi"><div class="label">Visitas</div><div id="k_vis" class="val">—</div></div>
           </div>
+
           <div class="actions">
             <a id="btnWa" class="btn btn-wa" target="_blank" rel="noopener">WhatsApp</a>
             <button id="btnFav" class="btn outline fav"><span>★</span> Favoritar</button>
@@ -97,6 +100,7 @@
           <div class="item"><span class="muted">Distância</span><strong id="dist">—</strong></div>
           <div class="item"><span class="muted">Avaliação</span><strong><span id="stars" class="rating">☆☆☆☆☆</span> <span id="count" class="muted"></span></strong></div>
         </div>
+
         <div class="item" style="margin-bottom:10px">
           <span class="muted">Descrição</span>
           <p id="desc" style="margin:6px 0 0">—</p>
@@ -120,248 +124,290 @@
     </nav>
   </footer>
 
-<script>
-(function(){
-  // Utils
-  const $ = s => document.querySelector(s);
-  const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#39;");
-  const kmFmt = d => (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${Number(d).toFixed(d<10?1:0)} km`));
-  const stars = n => { const r=Math.round((Number(n)||0)*2)/2; const f=Math.floor(r),h=(r%1!==0); return "★".repeat(f)+(h?"½":"")+"☆".repeat(5-f-(h?1:0)); };
-  async function getJSON(url){ const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error('http '+r.status); return r.json(); }
+  <script>
+  (function(){
+    // Utils
+    const $ = s => document.querySelector(s);
+    const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#39;");
+    const kmFmt = d => (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${Number(d).toFixed(d<10?1:0)} km`));
+    const stars = n => { const r=Math.round((Number(n)||0)*2)/2; const f=Math.floor(r),h=(r%1!==0); return "★".repeat(f)+(h?"½":"")+"☆".repeat(5-f-(h?1:0)); };
+    async function getJSON(url){ const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error('http '+r.status); return r.json(); }
 
-  // ID
-  function getProfileId(){
-    const url = new URL(location.href);
-    const qid = url.searchParams.get('id');
-    if (qid) return qid;
-    const parts = location.pathname.split('/').filter(Boolean);
-    const i = parts.indexOf('profissional');
-    if (i>=0 && parts[i+1]) return parts[i+1];
-    return '';
-  }
-  const id = getProfileId();
-  if(!id){ location.href = '/clientes.html'; return; }
-
-  function flash(msg, ok=true){
-    const box = $('#flash'); box.textContent = msg;
-    box.className = 'card-soft msg ' + (ok?'ok':'warn'); box.style.display='';
-    setTimeout(()=>{ box.style.display='none'; }, 2400);
-  }
-
-  // Favoritos
-  const KEY_FAVS = 'autonoma_favs';
-  const getFavs = ()=>{ try{return JSON.parse(localStorage.getItem(KEY_FAVS)||'[]')}catch{return[]} };
-  const setFavs = v => { try{localStorage.setItem(KEY_FAVS, JSON.stringify(v||[]))}catch{} };
-  const isFav = pid => getFavs().some(x => String(x?.id)===String(pid));
-  function upsertFav(obj){
-    const arr = getFavs();
-    const i = arr.findIndex(x => String(x?.id)===String(obj.id));
-    if (i>=0) arr[i] = {...arr[i], ...obj}; else arr.push(obj);
-    setFavs(arr);
-  }
-  function removeFav(pid){ setFavs(getFavs().filter(x => String(x?.id)!==String(pid))); }
-
-  // Distância
-  function haversineKm(lat1, lon1, lat2, lon2){
-    const toRad = x => x * Math.PI/180; const R = 6371;
-    const dLat = toRad(lat2-lat1), dLon = toRad(lon2-lon1);
-    const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
-    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-  }
-  function tryClientDistance(p){
-    if(!(p && typeof p.lat==='number' && typeof p.lng==='number')) return;
-    if(!('geolocation' in navigator)) return;
-    navigator.geolocation.getCurrentPosition((pos)=>{
-      const km = haversineKm(pos.coords.latitude, pos.coords.longitude, p.lat, p.lng);
-      $('#dist').textContent = kmFmt(km);
-    }, ()=>{}, {enableHighAccuracy:true, timeout:10000, maximumAge:30000});
-  }
-
-  // WhatsApp msg
-  function buildWaLink(p){
-    if(!p || !p.whatsapp) return null;
-    const d = String(p.whatsapp).replace(/\D/g,'');
-    const num = d.startsWith('55') ? d : ('55'+d);
-    const partes = [];
-    partes.push('Olá, vi seu perfil no Autônoma.app');
-    const svc = p.servico || p.profissao;
-    if (svc) partes.push(`e gostaria de contratar seus serviços de ${svc}`); else partes.push('e gostaria de contratar seus serviços');
-    if (p.cidade) partes.push(`em ${p.cidade}`);
-    const msg = partes.join(' ') + '. Podemos conversar?';
-    return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
-  }
-  function buildAvalLink(pid){ return `/avaliar/${encodeURIComponent(pid)}`; }
-  function logCall(pid){ try{ navigator.sendBeacon?.(`/api/profissional/${encodeURIComponent(pid)}/call`); }catch(_){} }
-
-  // Carrega perfil (multi endpoints)
-  async function loadProfile(pid){
-    const tries = [
-      `/api/profissional/${encodeURIComponent(pid)}`,
-      `/api/profissionais?id=${encodeURIComponent(pid)}`,
-      `/api/public/profissional?id=${encodeURIComponent(pid)}`
-    ];
-    for (const u of tries){
-      try{
-        const js = await getJSON(u);
-        if(js){ if(js.item) return js.item; if(js.id!=null || js.nome) return js; }
-      }catch(_){}
+    // ID
+    function getProfileId(){
+      const url = new URL(location.href);
+      const qid = url.searchParams.get('id');
+      if (qid) return qid;
+      const parts = location.pathname.split('/').filter(Boolean);
+      const i = parts.indexOf('profissional');
+      if (i>=0 && parts[i+1]) return parts[i+1];
+      return '';
     }
-    // fallback lista
-    try{
-      const list = await getJSON('/api/profissionais');
-      const arr = list.items || list.itens || list || [];
-      const found = arr.find(x => String(x?.id)===String(pid));
-      if(found) return found;
-    }catch(_){}
-    throw new Error('notfound');
-  }
+    const id = getProfileId();
+    if(!id){ location.href = '/clientes.html'; return; }
 
-  // Avaliações — busca robusta
-  async function loadAvaliacoes(pid){
-    const tries = [
-      `/api/profissional/${encodeURIComponent(pid)}/avaliacoes`,
-      `/api/avaliacoes?proId=${encodeURIComponent(pid)}`,
-      `/api/public/avaliacoes?proId=${encodeURIComponent(pid)}`
-    ];
-    for(const u of tries){
-      try{
-        const js = await getJSON(u);
-        if(Array.isArray(js)) return js;
-        if(Array.isArray(js?.items)) return js.items;
-        if(Array.isArray(js?.avaliacoes)) return js.avaliacoes;
-      }catch(_){}
+    function flash(msg, ok=true){
+      const box = $('#flash'); box.textContent = msg;
+      box.className = 'card-soft msg ' + (ok?'ok':'warn'); box.style.display='';
+      setTimeout(()=>{ box.style.display='none'; }, 2400);
     }
-    return []; // nada
-  }
 
-  // Render avaliações
-  function renderAvaliacoes(list){
-    const box = $('#reviews'); const empty = $('#noReviews');
-    if(!list.length){ box.innerHTML=''; empty.style.display=''; return; }
-    empty.style.display='none';
-    box.innerHTML = list.slice(0,20).map(a=>{
-      const nome = esc(a.autor || a.nome || a.cliente || 'Cliente');
-      const nota = Number(a.nota ?? a.rating ?? a.estrelas ?? 0);
-      const texto= esc(a.texto || a.comentario || a.comment || '');
-      return `
-        <div class="item">
-          <div class="row" style="justify-content:space-between">
-            <strong>${nome}</strong>
-            <span class="rating">${stars(nota)}</span>
-          </div>
-          ${texto?`<p class="meta" style="margin:6px 0 0">${texto}</p>`:''}
-        </div>
-      `;
-    }).join('');
-  }
+    // Favoritos
+    const KEY_FAVS = 'autonoma_favs';
+    const getFavs = ()=>{ try{return JSON.parse(localStorage.getItem(KEY_FAVS)||'[]')}catch{return[]} };
+    const setFavs = v => { try{localStorage.setItem(KEY_FAVS, JSON.stringify(v||[]))}catch{} };
+    const isFav = pid => getFavs().some(x => String(x?.id)===String(pid));
+    function upsertFav(obj){
+      const arr = getFavs();
+      const i = arr.findIndex(x => String(x?.id)===String(obj.id));
+      if (i>=0) arr[i] = {...arr[i], ...obj}; else arr.push(obj);
+      setFavs(arr);
+    }
+    function removeFav(pid){ setFavs(getFavs().filter(x => String(x?.id)!==String(pid))); }
 
-  let PROF=null;
-  async function init(){
-    try{
-      PROF = await loadProfile(id);
+    // Distância
+    function haversineKm(lat1, lon1, lat2, lon2){
+      const toRad = x => x * Math.PI/180; const R = 6371;
+      const dLat = toRad(lat2-lat1), dLon = toRad(lon2-lon1);
+      const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*math.sin(dLon/2)**2;
+    }
+  })();
+  </script>
 
-      // Cabeçalho
-      $('#foto').src = PROF.foto || '/icons/icon-192.png';
-      $('#foto').alt = 'Foto de ' + (PROF.nome || 'Profissional');
-      $('#nome').textContent = PROF.nome || 'Profissional';
-      $('#servLocal').textContent =
-        [PROF.servico || PROF.profissao, [PROF.bairro, PROF.cidade].filter(Boolean).join(' • ')]
-        .filter(Boolean).join(' • ') || '—';
+  <script>
+  (function(){
+    const $ = s => document.querySelector(s);
+    const kmFmt = d => (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${Number(d).toFixed(d<10?1:0)} km`));
+    const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#39;");
+    const stars = n => { const r=Math.round((Number(n)||0)*2)/2; const f=Math.floor(r),h=(r%1!==0); return "★".repeat(f)+(h?"½":"")+"☆".repeat(5-f-(h?1:0)); };
 
-      // KPIs
-      $('#k_trab').textContent = Number(PROF.trabalhos||PROF.atendimentos||0);
-      $('#k_exp').textContent  = computeExperience(PROF);
-      $('#k_calls').textContent= Number(PROF.chamadas||0);
-      $('#k_vis').textContent  = Number(PROF.visitas||0);
+    // Distância
+    function haversineKm(lat1, lon1, lat2, lon2){
+      const toRad = x => x * Math.PI/180; const R = 6371;
+      const dLat = toRad(lat2-lat1), dLon = toRad(lon2-lon1);
+      const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+      return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+    }
+    function tryClientDistance(p){
+      if(!(p && typeof p.lat==='number' && typeof p.lng==='number')) return;
+      if(!('geolocation' in navigator)) return;
+      navigator.geolocation.getCurrentPosition((pos)=>{
+        const km = haversineKm(pos.coords.latitude, pos.coords.longitude, p.lat, p.lng);
+        $('#dist').textContent = kmFmt(km);
+      }, ()=>{}, {enableHighAccuracy:true, timeout:10000, maximumAge:30000});
+    }
 
-      // Info
-      $('#precoBase').textContent = PROF.precoBase ? String(PROF.precoBase) : '—';
-      if(PROF.site){ $('#site').textContent=PROF.site; $('#site').href=PROF.site; }
-      else { $('#site').textContent='—'; $('#site').removeAttribute('href'); }
-      $('#dist').textContent = kmFmt(PROF.distanceKm);
-      if (PROF.distanceKm == null) tryClientDistance(PROF);
+    // WhatsApp msg
+    function buildWaLink(p){
+      if(!p || !p.whatsapp) return null;
+      const d = String(p.whatsapp).replace(/\D/g,'');
+      const num = d.startsWith('55') ? d : ('55'+d);
+      const partes = [];
+      partes.push('Olá, vi seu perfil no Autônoma.app');
+      const svc = p.servico || p.profissao;
+      if (svc) partes.push(`e gostaria de contratar seus serviços de ${svc}`); else partes.push('e gostaria de contratar seus serviços');
+      if (p.cidade) partes.push(`em ${p.cidade}`);
+      const msg = partes.join(' ') + '. Podemos conversar?';
+      return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+    }
 
-      // Rating e contagem
-      const ratingNum = Number(PROF.rating||0);
-      $('#stars').textContent = stars(ratingNum);
-      const avalCount = Array.isArray(PROF.avaliacoes) ? PROF.avaliacoes.length : Number(PROF.avaliacoes||0);
-      $('#count').textContent = `(${isNaN(avalCount)?0:avalCount})`;
+    function buildAvalLink(pid){ return `/avaliar/${encodeURIComponent(pid)}`; }
+    function logCall(pid){ try{ navigator.sendBeacon?.(`/api/profissional/${encodeURIComponent(pid)}/call`); }catch(_){} }
 
-      // Desc
-      $('#desc').textContent = PROF.descricao || '—';
+    async function getJSON(url){ const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error('http '+r.status); return r.json(); }
 
-      // WhatsApp
-      const wa = buildWaLink(PROF);
-      const waBtn = $('#btnWa');
-      if(wa){ waBtn.href = wa; waBtn.addEventListener('click', ()=> logCall(id)); }
-      else { waBtn.classList.add('outline'); waBtn.textContent='WhatsApp indisponível'; waBtn.removeAttribute('href'); }
-
-      // Avaliar
-      $('#btnAval').href = buildAvalLink(id);
-
-      // Favorito estado
-      if (isFav(id)) $('#btnFav').classList.add('on');
-
-      // Avaliações detalhadas (inline) OU fetch dedicado
-      const emb = Array.isArray(PROF.avaliacoesDetalhe)? PROF.avaliacoesDetalhe : [];
-      if(emb.length){ renderAvaliacoes(emb); }
-      else {
-        const fetched = await loadAvaliacoes(id);
-        renderAvaliacoes(fetched);
+    // Carrega perfil (multi endpoints)
+    async function loadProfile(pid){
+      const tries = [
+        `/api/profissional/${encodeURIComponent(pid)}`,
+        `/api/profissionais?id=${encodeURIComponent(pid)}`,
+        `/api/public/profissional?id=${encodeURIComponent(pid)}`
+      ];
+      for (const u of tries){
+        try{
+          const js = await getJSON(u);
+          if(js){ if(js.item) return js.item; if(js.id!=null || js.nome) return js; }
+        }catch(_){}
       }
-    }catch(e){
-      flash('Não foi possível carregar o perfil.', false);
+      // fallback lista
+      try{
+        const list = await getJSON('/api/profissionais');
+        const arr = list.items || list.itens || list || [];
+        const found = arr.find(x => String(x?.id)===String(pid));
+        if(found) return found;
+      }catch(_){}
+      throw new Error('notfound');
     }
-  }
 
-  function computeExperience(p){
-    if (p.experiencia && typeof p.experiencia === 'string') return p.experiencia;
-    const n = Number(p.experienciaAnos ?? p.anosExp ?? p.exp ?? p.anos);
-    if (!isNaN(n) && n>0) return n + (n>1 ? ' anos' : ' ano');
-    const start = Number(p.inicioAno || p.anoInicio || p.desde);
-    const now = new Date().getFullYear();
-    if(!isNaN(start) && start>1900 && start<=now){
-      const y = now - start;
-      return y + (y!==1 ? ' anos' : ' ano');
+    // Avaliações — busca robusta
+    async function loadAvaliacoes(pid){
+      const tries = [
+        `/api/profissional/${encodeURIComponent(pid)}/avaliacoes`,
+        `/api/avaliacoes?proId=${encodeURIComponent(pid)}`,
+        `/api/public/avaliacoes?proId=${encodeURIComponent(pid)}`
+      ];
+      for(const u of tries){
+        try{
+          const js = await getJSON(u);
+          if(Array.isArray(js)) return js;
+          if(Array.isArray(js?.items)) return js.items;
+          if(Array.isArray(js?.avaliacoes)) return js.avaliacoes;
+        }catch(_){}
+      }
+      return [];
     }
-    return '—';
-  }
 
-  // Ações
-  $('#btnFav').addEventListener('click', ()=>{
-    const on = isFav(id);
-    if (on){
-      removeFav(id);
-      $('#btnFav').classList.remove('on');
-      $('#msgActions').textContent = 'Removido dos favoritos.';
+    // Render avaliações (também atualiza contador)
+    function renderAvaliacoes(list){
+      const box = $('#reviews'); const empty = $('#noReviews');
+      if(!list.length){
+        box.innerHTML=''; empty.style.display='';
+        $('#count').textContent = '(0)';
+        return;
+      }
+      empty.style.display='none';
+      $('#count').textContent = `(${list.length})`;
+      box.innerHTML = list.slice(0,20).map(a=>{
+        const nome = esc(a.autor || a.nome || a.cliente || 'Cliente');
+        const nota = Number(a.nota ?? a.rating ?? a.estrelas ?? 0);
+        const texto= esc(a.texto || a.comentario || a.comment || '');
+        return `
+          <div class="item">
+            <div class="row" style="justify-content:space-between">
+              <strong>${nome}</strong>
+              <span class="rating">${stars(nota)}</span>
+            </div>
+            ${texto?`<p class="meta" style="margin:6px 0 0">${texto}</p>`:''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ID novamente (para este escopo)
+    function getProfileId(){
+      const url = new URL(location.href);
+      const qid = url.searchParams.get('id');
+      if (qid) return qid;
+      const parts = location.pathname.split('/').filter(Boolean);
+      const i = parts.indexOf('profissional');
+      if (i>=0 && parts[i+1]) return parts[i+1];
+      return '';
+    }
+    const id = getProfileId();
+    if(!id){ location.href='/clientes.html'; return; }
+
+    let PROF=null;
+    async function init(){
+      try{
+        PROF = await loadProfile(id);
+        // Cabeçalho
+        $('#foto').src = PROF.foto || '/icons/icon-192.png';
+        $('#foto').alt = 'Foto de ' + (PROF.nome || 'Profissional');
+        $('#nome').textContent = PROF.nome || 'Profissional';
+        $('#servLocal').textContent =
+          [PROF.servico || PROF.profissao, [PROF.bairro, PROF.cidade].filter(Boolean).join(' • ')]
+          .filter(Boolean).join(' • ') || '—';
+
+        // KPIs
+        $('#k_trab').textContent = Number(PROF.trabalhos||PROF.atendimentos||0);
+        $('#k_exp').textContent  = computeExperience(PROF);
+        $('#k_calls').textContent= Number(PROF.chamadas||0);
+        $('#k_vis').textContent  = Number(PROF.visitas||0);
+
+        // Info
+        $('#precoBase').textContent = PROF.precoBase ? String(PROF.precoBase) : '—';
+        if(PROF.site){ $('#site').textContent=PROF.site; $('#site').href=PROF.site; }
+        else { $('#site').textContent='—'; $('#site').removeAttribute('href'); }
+
+        $('#dist').textContent = kmFmt(PROF.distanceKm);
+        if (PROF.distanceKm == null) tryClientDistance(PROF);
+
+        // Rating e contagem (contagem será sobrescrita pelo fetch se vierem avaliações)
+        const ratingNum = Number(PROF.rating||0);
+        $('#stars').textContent = stars(ratingNum);
+        const avalCount = Array.isArray(PROF.avaliacoes) ? PROF.avaliacoes.length : Number(PROF.avaliacoes||0);
+        $('#count').textContent = `(${isNaN(avalCount)?0:avalCount})`;
+
+        // Desc
+        $('#desc').textContent = PROF.descricao || '—';
+
+        // WhatsApp
+        const wa = buildWaLink(PROF);
+        const waBtn = $('#btnWa');
+        if(wa){ waBtn.href = wa; waBtn.addEventListener('click', ()=> logCall(id)); }
+        else { waBtn.classList.add('outline'); waBtn.textContent='WhatsApp indisponível'; waBtn.removeAttribute('href'); }
+
+        // Avaliar
+        $('#btnAval').href = buildAvalLink(id);
+
+        // Favorito estado
+        if (isFav(id)) $('#btnFav').classList.add('on');
+
+        // Avaliações detalhadas (inline) OU fetch dedicado
+        const emb = Array.isArray(PROF.avaliacoesDetalhe)? PROF.avaliacoesDetalhe : [];
+        if(emb.length){ renderAvaliacoes(emb); }
+        else {
+          const fetched = await loadAvaliacoes(id);
+          renderAvaliacoes(fetched);
+        }
+      }catch(e){
+        flash('Não foi possível carregar o perfil.', false);
+      }
+    }
+
+    function computeExperience(p){
+      if (p.experiencia && typeof p.experiencia === 'string') return p.experiencia;
+      const n = Number(p.experienciaAnos ?? p.anosExp ?? p.exp ?? p.anos);
+      if (!isNaN(n) && n>0) return n + (n>1 ? ' anos' : ' ano');
+      const start = Number(p.inicioAno || p.anoInicio || p.desde);
+      const now = new Date().getFullYear();
+      if(!isNaN(start) && start>1900 && start<=now){
+        const y = now - start;
+        return y + (y!==1 ? ' anos' : ' ano');
+      }
+      return '—';
+    }
+
+    // Ações
+    $('#btnFav').addEventListener('click', ()=>{
+      const on = isFav(id);
+      if (on){
+        removeFav(id);
+        $('#btnFav').classList.remove('on');
+        $('#msgActions').textContent = 'Removido dos favoritos.';
+        $('#msgActions').className = 'msg ok';
+      } else {
+        const obj = {
+          id: PROF?.id || id,
+          nome: PROF?.nome || 'Profissional',
+          servico: PROF?.servico || PROF?.profissao || '',
+          bairro: PROF?.bairro || '',
+          cidade: PROF?.cidade || '',
+          local: [PROF?.bairro, PROF?.cidade].filter(Boolean).join(' • '),
+          whatsapp: PROF?.whatsapp || '',
+          foto: PROF?.foto || '',
+          rating: Number(PROF?.rating||0),
+          atendimentos: Number(PROF?.atendimentos||0),
+          distanceKm: (typeof PROF?.distanceKm==='number') ? PROF.distanceKm : null
+        };
+        upsertFav(obj);
+        $('#btnFav').classList.add('on');
+        $('#msgActions').textContent = 'Adicionado aos favoritos.';
+        $('#msgActions').className = 'msg ok';
+      }
+    });
+
+    $('#btnRec').addEventListener('click', async ()=>{
+      $('#btnRec').classList.add('on');
+      $('#msgActions').textContent = 'Obrigado! Recomendação registrada.';
       $('#msgActions').className = 'msg ok';
-    } else {
-      const obj = {
-        id: PROF?.id || id, nome: PROF?.nome || 'Profissional',
-        servico: PROF?.servico || PROF?.profissao || '',
-        bairro: PROF?.bairro || '', cidade: PROF?.cidade || '',
-        local: [PROF?.bairro, PROF?.cidade].filter(Boolean).join(' • '),
-        whatsapp: PROF?.whatsapp || '', foto: PROF?.foto || '',
-        rating: Number(PROF?.rating||0), atendimentos: Number(PROF?.atendimentos||0),
-        distanceKm: (typeof PROF?.distanceKm==='number') ? PROF.distanceKm : null
-      };
-      upsertFav(obj);
-      $('#btnFav').classList.add('on');
-      $('#msgActions').textContent = 'Adicionado aos favoritos.';
-      $('#msgActions').className = 'msg ok';
-    }
-  });
+      try{
+        await fetch('/api/recomendacoes',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) });
+      }catch(_){}
+    });
 
-  $('#btnRec').addEventListener('click', async ()=>{
-    $('#btnRec').classList.add('on');
-    $('#msgActions').textContent = 'Obrigado! Recomendação registrada.';
-    $('#msgActions').className = 'msg ok';
-    try{
-      await fetch('/api/recomendacoes',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) });
-    }catch(_){}
-  });
-
-  init();
-})();
-</script>
-</body></html>
+    init();
+  })();
+  </script>
+</body>
+</html>
