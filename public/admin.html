@@ -5,39 +5,49 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Admin • Autônoma.app</title>
   <meta name="theme-color" content="#2d6cdf">
-  <link rel="stylesheet" href="/css/app.css?v=admin-2025-09-07">
+  <link rel="stylesheet" href="/css/app.css?v=admin-2025-09-08">
+  <!-- Chart.js (gráficos bonitos) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <style>
     .header { display:flex; align-items:center; gap:12px; padding:12px 16px; }
     .header .logo { height:32px; width:auto; display:block; }
     .header .home { margin-left:auto }
     .wrap-max{ max-width:1120px; margin:0 auto; padding:16px; }
+
     .cards{ display:grid; grid-template-columns:1fr; gap:12px; }
     @media (min-width:920px){ .cards{ grid-template-columns: repeat(3, 1fr); } }
     .kpi{ background:#fff; border:1px solid #e5e7eb; border-radius:16px; padding:14px; }
     .kpi strong{ font-size:20px }
     .kpi .meta{ color:#64748b }
+
     .panel{ background:#fff; border:1px solid #e5e7eb; border-radius:16px; padding:14px; }
     .grid2{ display:grid; grid-template-columns:1fr; gap:16px; }
     @media (min-width:920px){ .grid2{ grid-template-columns: 2fr 1fr; } }
     .charts-col { display:grid; gap:16px; grid-template-rows: 1fr 1fr; }
+
     .chart-box{ background:#fafafa; border:1px solid #e5e7eb; border-radius:14px; padding:10px; }
     .chart-title{ margin:0 0 6px; font-size:14px; color:#334155; font-weight:600 }
+    .chart-wrap{ position:relative; width:100%; height:280px; }
+    @media (min-width:920px){ .chart-wrap { height:240px; } }
+
     .toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px }
     .table{ width:100%; border-collapse: collapse; }
     .table th, .table td{ border-bottom:1px solid #e5e7eb; padding:8px; text-align:left; font-size:14px; vertical-align:middle }
     .table th{ background:#f8fafc; position:sticky; top:0; z-index:1 }
+
     .badge{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid #e5e7eb; background:#f1f5f9 }
     .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap }
     .meta{ color:#64748b }
     .warn{ color:#b91c1c }
+
     .avatar { width:38px; height:38px; border-radius:999px; object-fit:cover; object-position:center; border:1px solid #e5e7eb; background:#f1f5f9; }
     .namecell{ display:flex; align-items:center; gap:8px; min-width:220px }
     .rating-low{ color:#b91c1c; font-weight:600 }
+
     .status-pill{ font-size:12px; padding:2px 6px; border-radius:999px; border:1px solid #fecaca; background:#fee2e2; color:#991b1b }
-    /* Canvas responsivo com alta definição */
-    .chart-canvas{ width:100%; height:280px; display:block; }
-    @media (min-width:920px){ #chartPie, #chartBars { height:240px; } }
+
     a:focus, button:focus, select:focus, input:focus { outline:3px solid #a5b4fc; outline-offset:2px; }
+
     /* ===== Denúncias ===== */
     .den-grid { display:grid; grid-template-columns: 1fr; gap:12px; }
     @media (min-width:980px){ .den-grid { grid-template-columns: 2fr 1fr; } }
@@ -48,11 +58,11 @@
     .chip.descartada{ border-color:#fecaca; background:#fee2e2; color:#991b1b }
     .den-actions .btn{ padding:6px 8px; }
     .den-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px; }
+
     /* ===== Badges de plano ===== */
     .plan-badge{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid #e5e7eb; background:#f1f5f9; font-weight:800; margin-left:6px }
     .plan-badge.PRO{ background:#eef2ff; border-color:#6366f1 }
     .plan-badge.PREMIUM{ background:#fffbeb; border-color:#fbbf24 }
-    /* Botões básicos herdados do app.css */
   </style>
 </head>
 <body>
@@ -84,25 +94,25 @@
           <h2 style="margin:6px 0 12px">Métricas (últimos 30 dias)</h2>
           <div class="chart-box">
             <p class="chart-title">Visitas • Chamadas • Cadastros</p>
-            <canvas id="chartLines" class="chart-canvas" aria-label="Série temporal"></canvas>
+            <div class="chart-wrap"><canvas id="chartLines" aria-label="Série temporal"></canvas></div>
           </div>
         </div>
         <div class="charts-col">
           <div class="chart-box">
             <p class="chart-title">Verificados</p>
-            <canvas id="chartPie" class="chart-canvas" aria-label="Verificados"></canvas>
+            <div class="chart-wrap"><canvas id="chartPie" aria-label="Verificados"></canvas></div>
           </div>
           <div class="chart-box">
             <p class="chart-title">Top serviços</p>
-            <canvas id="chartBars" class="chart-canvas" aria-label="Top serviços"></canvas>
+            <div class="chart-wrap"><canvas id="chartBars" aria-label="Top serviços"></canvas></div>
           </div>
         </div>
       </div>
       <p id="errMet" class="meta warn" style="display:none; margin-top:8px">Falha ao carregar métricas do admin.</p>
+
       <div class="row" style="margin-top:10px">
         <button id="btnRecompute" class="btn outline">Recalcular verificações</button>
         <a id="btnCSV" class="btn" href="/api/admin/export/csv" target="_blank" rel="noopener">Exportar CSV</a>
-        <!-- Atalhos de export -->
         <a class="btn ghost" href="/api/admin/export?what=profissionais" target="_blank" rel="noopener">Profissionais CSV</a>
         <a class="btn ghost" href="/api/admin/export?what=metrics" target="_blank" rel="noopener">Métricas CSV</a>
       </div>
@@ -148,19 +158,19 @@
       <div style="overflow:auto; max-height:540px">
         <table class="table" id="tab">
           <thead>
-            <tr>
-              <th>ID</th>
-              <th>Profissional</th>
-              <th>Cidade</th>
-              <th>Bairro</th>
-              <th>Serviço</th>
-              <th>Verif.</th>
-              <th>Rating</th>
-              <th>Aval.</th>
-              <th>Visitas</th>
-              <th>Chamadas</th>
-              <th>Ações</th>
-            </tr>
+          <tr>
+            <th>ID</th>
+            <th>Profissional</th>
+            <th>Cidade</th>
+            <th>Bairro</th>
+            <th>Serviço</th>
+            <th>Verif.</th>
+            <th>Rating</th>
+            <th>Aval.</th>
+            <th>Visitas</th>
+            <th>Chamadas</th>
+            <th>Ações</th>
+          </tr>
           </thead>
           <tbody id="tbody"></tbody>
         </table>
@@ -193,23 +203,21 @@
             <input id="d_q" class="input" placeholder="Buscar por motivo/descrição/ID prof.">
             <button id="d_go" class="btn">Filtrar</button>
           </div>
-
           <div style="overflow:auto; max-height:420px">
             <table class="table" id="tabDen">
               <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Quando</th>
-                  <th>Profissional</th>
-                  <th>Motivo</th>
-                  <th>Status</th>
-                  <th>Ações</th>
-                </tr>
+              <tr>
+                <th>ID</th>
+                <th>Quando</th>
+                <th>Profissional</th>
+                <th>Motivo</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
               </thead>
               <tbody id="tbodyDen"></tbody>
             </table>
           </div>
-
           <div class="row" style="justify-content:space-between; margin-top:10px">
             <div class="meta" id="denInfo">—</div>
             <div class="row">
@@ -250,7 +258,7 @@
     const kAtivos=$('k_ativos'), kSusp=$('k_susp'), kExc=$('k_exc'),
           kVis=$('k_vis'), kCalls=$('k_calls'), kAvg=$('k_avg');
 
-    // ======= Charts =======
+    // ======= Chart.js canvases =======
     const cLines=$('chartLines'), cPie=$('chartPie'), cBars=$('chartBars');
     const errMet=$('errMet');
 
@@ -290,147 +298,81 @@
       return r.json();
     }
 
-    function deviceScaleCanvas(canvas){
-      const dpr = window.devicePixelRatio || 1;
-      const rect = canvas.getBoundingClientRect();
-      if (!rect.width || !rect.height) return;
-      canvas.width = Math.round(rect.width * dpr);
-      canvas.height = Math.round(rect.height * dpr);
-      const ctx = canvas.getContext('2d');
-      ctx.setTransform(dpr,0,0,dpr,0,0);
-      return ctx;
-    }
+    // ====== Chart.js instances ======
+    let lineChart, pieChart, barChart;
 
-    // ===== Charts (vanilla) =====
-    function drawLineChart(cv, series, labels){
-      const ctx = deviceScaleCanvas(cv); if (!ctx) return;
-      const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
-      ctx.clearRect(0,0,W,H);
-      // axes
-      ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(40,10); ctx.lineTo(40,H-30); ctx.lineTo(W-10,H-30); ctx.stroke();
-      const max = Math.max(1, ...series.flat());
-      const scaleY = (H-40)/max;
-      const stepX = (W-60)/Math.max(1, labels.length-1);
-      const colors = ['#2563eb','#16a34a','#f97316']; // visitas, chamadas, cadastros
+    function buildOrUpdateCharts(m){
+      // ---- Dados
+      const days = (m.timeseries?.days||[]);
+      const labels = days.map(d => String(d.date||'').slice(5));
+      const visits = days.map(d => Number(d.visits||0));
+      const calls  = days.map(d => Number(d.calls||0));
+      const signups= days.map(d => Number(d.signups||0));
 
-      // grid Y
-      ctx.strokeStyle='#f1f5f9';
-      for(let t=1;t<=5;t++){
-        const v = Math.round(max*t/5);
-        const y = (H-30) - v*scaleY;
-        ctx.beginPath(); ctx.moveTo(40,y); ctx.lineTo(W-10,y); ctx.stroke();
-      }
+      const vYes = Number(m.verified?.yes||0);
+      const vNo  = Number(m.verified?.no ||0);
 
-      series.forEach((data,si)=>{
-        const grad = ctx.createLinearGradient(0,10,0,H-30);
-        grad.addColorStop(0, colors[si] + 'cc');
-        grad.addColorStop(1, colors[si] + '11');
-        ctx.beginPath();
-        data.forEach((v,i)=>{
-          const x=40 + i*stepX;
-          const y=(H-30) - v*scaleY;
-          if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-        });
-        ctx.strokeStyle=colors[si]; ctx.lineWidth=2; ctx.stroke();
+      const topServ = (m.top?.servicos||[]);
+      const barLabels = topServ.map(x => String(x.name||''));
+      const barValues = topServ.map(x => Number(x.value||0));
 
-        const lastX=40 + (data.length-1)*stepX;
-        ctx.lineTo(lastX, H-30);
-        ctx.lineTo(40, H-30);
-        ctx.closePath();
-        ctx.fillStyle=grad; ctx.fill();
-      });
+      // ---- Estilos
+      const baseOpts = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels:{ boxWidth: 12 } },
+          tooltip: { mode: 'index', intersect: false }
+        },
+        interaction: { mode: 'index', intersect: false }
+      };
 
-      // labels X
-      ctx.fillStyle='#64748b'; ctx.font='12px system-ui';
-      const every = Math.ceil(labels.length/8);
-      labels.forEach((lb,i)=>{ if (i%every===0){ const x=40 + i*stepX; ctx.fillText(lb, x-10, H-10); } });
+      // ---- Line
+      const lineData = {
+        labels,
+        datasets: [
+          { label:'Visitas', data:visits, borderWidth:2, tension:0.25 },
+          { label:'Chamadas', data:calls, borderWidth:2, tension:0.25 },
+          { label:'Cadastros', data:signups, borderWidth:2, tension:0.25 }
+        ]
+      };
+      const lineOpts = {
+        ...baseOpts,
+        scales: {
+          x: { grid:{ display:false } },
+          y: { beginAtZero:true, grid:{ color:'#eef2f7' } }
+        }
+      };
+      if (lineChart) { lineChart.data = lineData; lineChart.update(); }
+      else { lineChart = new Chart(cLines.getContext('2d'), { type:'line', data:lineData, options:lineOpts }); }
 
-      // legend
-      const legends = ['Visitas','#2563eb','Chamadas','#16a34a','Cadastros','#f97316'];
-      ctx.font='12px system-ui'; ctx.textBaseline='middle';
-      const baseY=16; let off=46;
-      for(let i=0;i<legends.length;i+=2){
-        ctx.fillStyle=legends[i+1]; ctx.fillRect(off-16, baseY-5, 10,10);
-        ctx.fillStyle='#111827'; ctx.fillText(legends[i], off, baseY);
-        off += ctx.measureText(legends[i]).width + 54;
-      }
-    }
+      // ---- Pie (doughnut)
+      const pieData = {
+        labels:['Verificados','Não verificados'],
+        datasets:[{ data:[vYes, vNo] }]
+      };
+      const pieOpts = {
+        ...baseOpts,
+        plugins:{ legend:{ position:'bottom' } },
+        cutout: '58%'
+      };
+      if (pieChart) { pieChart.data = pieData; pieChart.update(); }
+      else { pieChart = new Chart(cPie.getContext('2d'), { type:'doughnut', data:pieData, options:pieOpts }); }
 
-    function drawPie(cv, vals){
-      const ctx = deviceScaleCanvas(cv); if (!ctx) return;
-      const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
-      ctx.clearRect(0,0,W,H);
-      const sum = vals.reduce((a,b)=>a+b,0) || 1;
-      const cx=W/2, cy=H/2, r=Math.min(W,H)*0.36, inner=r*0.58;
-      const colors=['#10b981','#e5e7eb'];
-      let ang= -Math.PI/2;
-      vals.forEach((v,i)=>{
-        const a = (v/sum)*Math.PI*2;
-        ctx.beginPath(); ctx.arc(cx,cy,r,ang,ang+a); ctx.arc(cx,cy,inner,ang+a,ang,true); ctx.closePath();
-        ctx.fillStyle=colors[i%colors.length]; ctx.fill();
-        ang += a;
-      });
-      ctx.fillStyle='#111827'; ctx.font='600 16px system-ui'; ctx.textAlign='center';
-      ctx.fillText('Verificados', cx, cy-4);
-      ctx.font='12px system-ui'; ctx.fillStyle='#334155';
-      ctx.fillText(vals[0] + ' de ' + (vals[0]+vals[1]), cx, cy+14);
-    }
-
-    function drawBars(cv, labels, values){
-      const ctx = deviceScaleCanvas(cv); if (!ctx) return;
-      const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
-      ctx.clearRect(0,0,W,H);
-      const max = Math.max(1, ...values);
-      const axisL = 40, axisB = 30;
-      const bw = Math.max(16, (W-axisL-20)/Math.max(1, labels.length) - 10);
-      const scaleY = (H- axisB - 14)/max;
-
-      ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(axisL,10); ctx.lineTo(axisL,H-axisB); ctx.lineTo(W-10,H-axisB); ctx.stroke();
-
-      ctx.strokeStyle='#f1f5f9';
-      for(let t=1;t<=5;t++){ const y = (H-axisB) - (max*t/5)*scaleY; ctx.beginPath(); ctx.moveTo(axisL,y); ctx.lineTo(W-10,y); ctx.stroke(); }
-
-      let x = axisL + 8;
-      values.forEach((v,i)=>{
-        const h = v*scaleY;
-        const grad = ctx.createLinearGradient(0,(H-axisB)-h,0,H-axisB);
-        grad.addColorStop(0,'#2563eb'); grad.addColorStop(1,'#93c5fd');
-        ctx.fillStyle=grad;
-        ctx.fillRect(x, (H-axisB)-h, bw, h);
-        // labels
-        ctx.save();
-        ctx.translate(x + bw/2, H-10);
-        ctx.rotate(-Math.PI/4);
-        ctx.fillStyle='#334155'; ctx.font='11px system-ui'; ctx.textAlign='left';
-        const lab = labels[i] || '';
-        ctx.fillText(lab.length>16 ? lab.slice(0,16)+'…' : lab, 0, 0);
-        ctx.restore();
-        x += bw + 10;
-      });
-    }
-
-    let resizeTimer;
-    window.addEventListener('resize', ()=>{
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(()=>{ if(metricsCache) paintCharts(metricsCache); }, 120);
-    });
-
-    function paintCharts(m){
-      const labels = (m.timeseries?.days||[]).map(d=> (d.date||'').slice(5));
-      const visits = (m.timeseries?.days||[]).map(d=>d.visits||0);
-      const calls  = (m.timeseries?.days||[]).map(d=>d.calls||0);
-      const sign   = (m.timeseries?.days||[]).map(d=>d.signups||0);
-      drawLineChart(cLines, [visits,calls,sign], labels);
-
-      const vY = m.verified?.yes || 0;
-      const vN = m.verified?.no  || 0;
-      drawPie(cPie, [vY, vN]);
-
-      const labs = (m.top?.servicos||[]).map(x=> String(x.name||''));
-      const vals = (m.top?.servicos||[]).map(x=> Number(x.value||0));
-      drawBars(cBars, labs, vals);
+      // ---- Bars
+      const barData = {
+        labels: barLabels,
+        datasets: [{ label:'Profissionais', data: barValues, borderWidth:1 }]
+      };
+      const barOpts = {
+        ...baseOpts,
+        scales: {
+          x: { grid:{ display:false } },
+          y: { beginAtZero:true, grid:{ color:'#eef2f7' } }
+        }
+      };
+      if (barChart) { barChart.data = barData; barChart.update(); }
+      else { barChart = new Chart(cBars.getContext('2d'), { type:'bar', data:barData, options:barOpts }); }
     }
 
     async function loadMetrics(){
@@ -443,7 +385,7 @@
         kVis.textContent    = String(m.visitas||0);
         kCalls.textContent  = String(m.chamadas||0);
         kAvg.textContent    = m.mediaGeral ? Number(m.mediaGeral).toFixed(2) : '—';
-        paintCharts(m);
+        buildOrUpdateCharts(m);
         errMet.style.display='none';
       }catch(e){
         errMet.style.display='';
@@ -455,6 +397,7 @@
       try{
         const r = await postJSON('/api/admin/recompute', {});
         alert('Recalcular verificações: '+ (r.changed||0)+' alterados.');
+        loadMetrics();
       }catch{ alert('Falha ao recalcular.'); }
       finally{ btnRecompute.disabled=false; }
     });
@@ -466,7 +409,6 @@
         dlCidades.innerHTML = (list||[]).map(c=>`<option value="${escapeHtml(c)}">`).join('');
       }catch{}
     }
-
     function updateCSVLink(){
       const qs = new URLSearchParams({
         q: f_q.value.trim(),
@@ -577,7 +519,6 @@
         });
       });
     }
-
     prev.addEventListener('click', ()=>{ if (PAGE>1) loadList(PAGE-1); });
     next.addEventListener('click', ()=>{ if (PAGE<PAGES) loadList(PAGE+1); });
     f_go.addEventListener('click', ()=> loadList(1));
@@ -599,7 +540,6 @@
         errDen.style.display='';
       }
     }
-
     function renderDenuncias(data){
       const items = data.items||[];
       tbodyDen.innerHTML = items.map(d=>{
@@ -639,7 +579,6 @@
         });
       });
     }
-
     d_prev.addEventListener('click', ()=>{ if (D_PAGE>1) loadDenuncias(D_PAGE-1); });
     d_next.addEventListener('click', ()=>{ if (D_PAGE<D_PAGES) loadDenuncias(D_PAGE+1); });
     d_go.addEventListener('click', ()=> loadDenuncias(1));
@@ -650,13 +589,13 @@
       return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
     function renderPayment(p){
-      const id   = escapeHtml(String(p.id||'—'));
+      const id   = escapeHtml(String(p.id||p.pid||'—')); // aceita id ou pid
       const pro  = escapeHtml(String(p.proId||'—'));
       const meth = escapeHtml(String(p.method||'').toUpperCase());   // PIX|CARD
       const st   = escapeHtml(String(p.status||'—'));                // paid|pending|...
       const gross= moneyBR(p.amount);
-      const fees = moneyBR(p.fees);
-      const net  = moneyBR(p.net);
+      const fees = moneyBR(p.fees || p.appFee || 0);
+      const net  = moneyBR(p.net || p.toPro || 0);
       const when = (p.createdAt||'').replace('T',' ').slice(0,19).replace(/-/g,'/');
       return `
         <div class="kpi" style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
@@ -694,6 +633,10 @@
       await loadList(1);
       await loadDenuncias(1);
       await loadPayments();
+      // Re-render charts ao redimensionar
+      window.addEventListener('resize', ()=> {
+        if (metricsCache) buildOrUpdateCharts(metricsCache);
+      });
     })();
   })();
   </script>

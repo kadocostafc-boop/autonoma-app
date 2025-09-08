@@ -3,183 +3,249 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Avaliar Profissional</title>
+  <title>Avaliar Profissional • Autônoma.app</title>
   <link rel="stylesheet" href="/css/app.css">
+  <meta name="theme-color" content="#2563eb">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f6fa;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
+    :root{
+      --c1:#2563eb; --c2:#0b1f63;
+      --ok:#16a34a; --warn:#b91c1c;
+      --txt:#111827; --mut:#64748b; --bd:#e5e7eb; --bg:#f5f6fa; --soft:#f8fafc;
     }
-
-    .avaliar-container {
-      background: #fff;
-      padding: 20px;
-      border-radius: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      width: 100%;
-      max-width: 480px;
+    *{box-sizing:border-box}
+    body{
+      margin:0; background:var(--bg); color:var(--txt); font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      min-height:100vh; display:flex; align-items:center; justify-content:center; padding:16px;
     }
-
-    h1 {
-      text-align: center;
-      font-size: 1.4rem;
-      margin-bottom: 20px;
-      color: #333;
-    }
-
-    label {
-      font-weight: bold;
-      margin-bottom: 6px;
-      display: block;
-      font-size: 0.95rem;
-    }
-
-    input, textarea, button {
-      width: 100%;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      margin-bottom: 16px;
-      font-size: 1rem;
-    }
-
-    textarea {
-      resize: vertical;
-      min-height: 80px;
-    }
-
-    .stars {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 16px;
-    }
-
-    .star {
-      font-size: 2rem;
-      cursor: pointer;
-      color: #ccc;
-      transition: color 0.2s;
-    }
-
-    .star.selected,
-    .star:hover,
-    .star:hover ~ .star {
-      color: gold;
-    }
-
-    button {
-      background: #007bff;
-      color: #fff;
-      font-weight: bold;
-      border: none;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-
-    button:hover {
-      background: #0056b3;
-    }
-
-    .mensagem {
-      text-align: center;
-      font-size: 1rem;
-      font-weight: bold;
-      margin-top: 10px;
-      color: green;
-    }
-
-    @media (max-width: 600px) {
-      .avaliar-container {
-        margin: 10px;
-        padding: 15px;
-      }
-
-      h1 {
-        font-size: 1.2rem;
-      }
-
-      .star {
-        font-size: 1.8rem;
-      }
-    }
+    .wrap{ width:100%; max-width:560px }
+    .card{ background:#fff; border:1px solid var(--bd); border-radius:16px; padding:16px }
+    .header{ display:flex; align-items:center; gap:10px; margin-bottom:12px }
+    .avatar{ width:48px; height:48px; border-radius:999px; object-fit:cover; border:1px solid var(--bd); background:#fff }
+    .h-title{ margin:0; font-size:18px }
+    .h-meta{ margin:0; color:var(--mut); font-size:13px }
+    .links{ margin-left:auto; display:flex; gap:8px; flex-wrap:wrap }
+    .btn{ border:none; background:var(--c1); color:#fff; padding:10px 14px; border-radius:10px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:8px }
+    .btn.ghost{ background:#eef2ff; color:#1e3a8a }
+    .btn.outline{ background:transparent; border:1px solid var(--bd); color:var(--txt) }
+    .btn.full{ width:100%; justify-content:center }
+    .btn-wa{ background:#16a34a }
+    .btn:hover{ filter:brightness(.98) }
+    h1{ font-size:20px; margin:0 0 6px }
+    label{ font-weight:600; display:block; margin:12px 0 6px }
+    input, textarea, select{ width:100%; padding:10px; border-radius:10px; border:1px solid var(--bd); font-size:15px; background:#fff }
+    textarea{ resize:vertical; min-height:90px }
+    .stars{ display:flex; gap:6px; justify-content:center; margin:6px 0 8px }
+    .star{ font-size:30px; line-height:1; cursor:pointer; color:#cbd5e1; transition:transform .08s ease; user-select:none }
+    .star.on{ color:#f59e0b }
+    .star:focus{ outline:3px solid #a5b4fc; border-radius:6px }
+    .help{ color:var(--mut); font-size:13px }
+    .msg{ text-align:center; font-size:15px; margin-top:8px }
+    .msg.ok{ color:var(--ok) } .msg.err{ color:var(--warn) }
+    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+    .mt{ margin-top:10px } .mb{ margin-bottom:10px }
+    .divider{ height:1px; background:var(--bd); margin:12px 0 }
+    .topbar{ display:flex; align-items:center; gap:8px; margin-bottom:12px }
+    .topbar a{ color:#1e40af; text-decoration:none }
+    .topbar a:hover{ text-decoration:underline }
+    @media (max-width:420px){ .links{ width:100%; justify-content:flex-end } }
   </style>
 </head>
 <body>
-  <div class="avaliar-container">
-    <h1>Avaliar Profissional</h1>
-    <form id="avaliarForm">
-      <label for="nome">Seu nome (opcional)</label>
-      <input type="text" id="nome" name="nome" placeholder="Digite seu nome">
+  <div class="wrap">
+    <!-- Topo com link de volta -->
+    <div class="topbar">
+      <a href="/" aria-label="Início">← Início</a>
+      <span class="help">/</span>
+      <a id="backPerfil" href="/clientes.html">Voltar ao perfil</a>
+    </div>
 
-      <label>Nota</label>
-      <div class="stars" id="stars">
-        <span class="star" data-value="1">★</span>
-        <span class="star" data-value="2">★</span>
-        <span class="star" data-value="3">★</span>
-        <span class="star" data-value="4">★</span>
-        <span class="star" data-value="5">★</span>
+    <div class="card">
+      <!-- Header do profissional -->
+      <div class="header">
+        <img id="foto" class="avatar" alt="Foto do profissional" src="/icons/icon-192.png">
+        <div>
+          <p id="nome" class="h-title">Profissional</p>
+          <p id="meta" class="h-meta">—</p>
+        </div>
+        <div class="links">
+          <a id="btnWA" class="btn btn-wa" target="_blank" rel="noopener">WhatsApp</a>
+        </div>
       </div>
-      <input type="hidden" name="nota" id="nota" value="0">
 
-      <label for="comentario">Comentário</label>
-      <textarea id="comentario" name="comentario" placeholder="Escreva seu comentário..."></textarea>
+      <h1>Avaliar Profissional</h1>
+      <p class="help">Dê uma nota de 1 a 5 estrelas e, se quiser, escreva um comentário.</p>
 
-      <button type="submit">Enviar Avaliação</button>
-      <p class="mensagem" id="mensagem"></p>
-    </form>
+      <form id="f" autocomplete="on" novalidate>
+        <label for="nomeCli">Seu nome (opcional)</label>
+        <input id="nomeCli" name="nome" placeholder="Digite seu nome">
+
+        <label>Nota</label>
+        <div id="stars" class="stars" role="radiogroup" aria-label="Nota em estrelas">
+          <button type="button" class="star" data-v="1" aria-label="1 estrela">★</button>
+          <button type="button" class="star" data-v="2" aria-label="2 estrelas">★</button>
+          <button type="button" class="star" data-v="3" aria-label="3 estrelas">★</button>
+          <button type="button" class="star" data-v="4" aria-label="4 estrelas">★</button>
+          <button type="button" class="star" data-v="5" aria-label="5 estrelas">★</button>
+        </div>
+        <input type="hidden" id="nota" name="nota" value="0">
+        <p id="starHelp" class="help" aria-live="polite">Selecione uma nota.</p>
+
+        <label for="coment">Comentário</label>
+        <textarea id="coment" name="comentario" placeholder="Como foi sua experiência? (opcional)"></textarea>
+
+        <div class="divider"></div>
+        <button id="send" class="btn full" type="submit">Enviar Avaliação</button>
+        <p id="status" class="msg" aria-live="polite"></p>
+      </form>
+    </div>
   </div>
 
   <script>
-    // Captura o ID do profissional da URL
-    const profissionalId = window.location.pathname.split("/").pop();
+  (function(){
+    const $ = (s)=> document.querySelector(s);
+    const esc = (s)=> String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 
-    const stars = document.querySelectorAll(".star");
-    const notaInput = document.getElementById("nota");
+    // ====== Captura ID (suporta /avaliar/:id e /avaliar.html?id=) ======
+    function getId(){
+      const url = new URL(location.href);
+      const qid = url.searchParams.get('id');
+      if (qid) return qid;
+      const parts = location.pathname.split('/').filter(Boolean);
+      const i = parts.indexOf('avaliar');
+      if (i>=0 && parts[i+1]) return parts[i+1];
+      return '';
+    }
+    const PROF_ID = getId();
+    if(!PROF_ID){ location.href='/clientes.html'; return; }
 
-    stars.forEach(star => {
-      star.addEventListener("click", () => {
-        const value = star.getAttribute("data-value");
-        notaInput.value = value;
+    // ====== WhatsApp message ======
+    function waLink(p){
+      if(!p || !p.whatsapp) return null;
+      const d = String(p.whatsapp).replace(/\D/g,'');
+      const num = d.startsWith('55') ? d : ('55'+d);
+      const partes = [];
+      partes.push('Olá, vi seu perfil no Autônoma.app');
+      const svc = p.servico || p.profissao;
+      if (svc) partes.push('e gostaria de contratar seus serviços de ' + svc);
+      else partes.push('e gostaria de contratar seus serviços');
+      if (p.cidade) partes.push('em ' + p.cidade);
+      const msg = partes.join(' ') + '. Podemos conversar?';
+      return 'https://wa.me/' + num + '?text=' + encodeURIComponent(msg);
+    }
 
-        stars.forEach(s => s.classList.remove("selected"));
-        for (let i = 0; i < value; i++) {
-          stars[i].classList.add("selected");
-        }
-      });
-    });
-
-    const form = document.getElementById("avaliarForm");
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const data = {
-        nome: form.nome.value,
-        nota: form.nota.value,
-        comentario: form.comentario.value
-      };
-
-      const response = await fetch(`/avaliar/${profissionalId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
-
-      if (response.ok) {
-        document.getElementById("mensagem").textContent = "✅ Obrigado pela sua avaliação!";
-        form.reset();
-        stars.forEach(s => s.classList.remove("selected"));
-        notaInput.value = 0;
-      } else {
-        document.getElementById("mensagem").textContent = "❌ Erro ao enviar avaliação.";
-        document.getElementById("mensagem").style.color = "red";
+    // ====== Carrega dados do profissional para o cabeçalho ======
+    async function getJSON(u){ const r=await fetch(u,{cache:'no-store'}); if(!r.ok) throw new Error('http '+r.status); return r.json(); }
+    async function loadPro(pid){
+      const tries = [
+        '/api/profissional/' + encodeURIComponent(pid),
+        '/api/public/profissional?id=' + encodeURIComponent(pid),
+        '/api/profissionais?id=' + encodeURIComponent(pid)
+      ];
+      for (const u of tries){
+        try{
+          const js = await getJSON(u);
+          if (js?.item) return js.item;
+          if (js && (js.id!=null || js.nome)) return js;
+        }catch(_){}
       }
+      throw new Error('notfound');
+    }
+
+    // ====== Estrelas ======
+    const stars = Array.from(document.querySelectorAll('.star'));
+    const notaEl = $('#nota');
+    const starHelp = $('#starHelp');
+
+    function paintStars(n){
+      stars.forEach((s)=> s.classList.toggle('on', Number(s.dataset.v) <= n));
+      if (n>0) starHelp.textContent = 'Sua nota: ' + n + (n===1 ? ' estrela' : ' estrelas');
+      else starHelp.textContent = 'Selecione uma nota.';
+    }
+    stars.forEach((s)=>{
+      s.addEventListener('mouseenter', ()=> paintStars(Number(s.dataset.v)));
+      s.addEventListener('mouseleave', ()=> paintStars(Number(notaEl.value||0)));
+      s.addEventListener('click', ()=>{ notaEl.value = String(s.dataset.v); paintStars(Number(notaEl.value)); });
+      s.addEventListener('keydown', (ev)=>{
+        const cur = Number(notaEl.value||0);
+        if (ev.key==='ArrowRight' || ev.key==='ArrowUp'){ ev.preventDefault(); const n=Math.min(5, cur+1); notaEl.value=String(n); paintStars(n); s.blur(); stars[n-1].focus(); }
+        if (ev.key==='ArrowLeft' || ev.key==='ArrowDown'){ ev.preventDefault(); const n=Math.max(1, cur?cur-1:1); notaEl.value=String(n); paintStars(n); s.blur(); stars[n-1].focus(); }
+        if (ev.key==='Enter' || ev.key===' '){ ev.preventDefault(); if(!notaEl.value) { notaEl.value=String(s.dataset.v); paintStars(Number(notaEl.value)); } }
+      });
     });
+
+    // ====== Envio ======
+    const f = $('#f');
+    const status = $('#status');
+    const sendBtn = $('#send');
+
+    function setStatus(msg, ok){
+      status.textContent = msg || '';
+      status.className = 'msg ' + (ok===true ? 'ok' : ok===false ? 'err' : '');
+    }
+
+    async function submitAvaliacao(ev){
+      ev.preventDefault();
+      const nota = Number(notaEl.value||0);
+      const nome = String($('#nomeCli').value||'').trim();
+      const comentario = String($('#coment').value||'').trim();
+
+      if (nota<1 || nota>5){
+        setStatus('Por favor, selecione uma nota de 1 a 5.', false);
+        paintStars(0);
+        return;
+      }
+
+      sendBtn.disabled = true; setStatus('Enviando...', null);
+
+      try{
+        const r = await fetch('/api/profissional/' + encodeURIComponent(PROF_ID) + '/avaliar', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ nome, nota, comentario })
+        });
+        if (!r.ok) throw new Error('http '+r.status);
+
+        setStatus('✅ Obrigado pela sua avaliação!', true);
+        f.reset(); notaEl.value='0'; paintStars(0);
+
+        // Botões de ação pós-envio
+        const back = document.createElement('div');
+        back.className='row mt';
+        back.innerHTML = `
+          <a class="btn outline" href="/profissional/${encodeURIComponent(PROF_ID)}">Voltar ao perfil</a>
+          <a class="btn ghost" href="/top10.html">Ver Top 10</a>
+        `;
+        status.after(back);
+      }catch(e){
+        setStatus('❌ Erro ao enviar sua avaliação. Tente novamente.', false);
+      }finally{
+        sendBtn.disabled = false;
+      }
+    }
+
+    f.addEventListener('submit', submitAvaliacao);
+
+    // ====== Boot: preenche cabeçalho e links ======
+    (async function init(){
+      paintStars(0);
+      try{
+        const p = await loadPro(PROF_ID);
+        $('#foto').src = p.foto || '/icons/icon-192.png';
+        $('#nome').textContent = p.nome || 'Profissional';
+        $('#meta').textContent = [p.servico || p.profissao, [p.bairro, p.cidade].filter(Boolean).join(' • ')].filter(Boolean).join(' • ') || '—';
+        $('#backPerfil').href = '/profissional/' + encodeURIComponent(PROF_ID);
+
+        const wa = waLink(p);
+        const waBtn = $('#btnWA');
+        if (wa){ waBtn.href = wa; }
+        else { waBtn.classList.add('outline'); waBtn.textContent='WhatsApp indisponível'; waBtn.removeAttribute('href'); }
+      }catch(_){
+        // mesmo sem header, ainda permite avaliar
+        $('#nome').textContent = 'Profissional #' + PROF_ID;
+        $('#meta').textContent = '—';
+      }
+    })();
+  })();
   </script>
 </body>
 </html>

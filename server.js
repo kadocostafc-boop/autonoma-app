@@ -2,16 +2,18 @@
 // Autônoma.app • server.js (CONSOLIDADO)
 // Data: 2025-09-08
 // - Páginas públicas + PWA + SEO
-// - Admin (login obrigatório) + export CSV (suporta ADMIN_PASS_HASH com bcrypt)
+// - Admin (login obrigatório) + export CSV + métricas/gráficos (endpoints JSON)
 // - Painel do Profissional (login via token WhatsApp, Radar on/off, raio, cidades extras)
 // - Busca com ranking (planos + distância + Radar)
 // - Perfil público (/perfil.html?id=... e /profissional/:id)
+// - Página Avaliar: GET /avaliar/:id  (POST já existia: /profissional/:id/avaliar)
 // - Top10 semanal (visitas/chamadas/avaliações)
 // - Denúncias
 // - Pagamentos (stub Pix/Cartão) + taxas configuráveis
 // - QR Code (/api/qr)
 // - Favoritos (servidor) com cookie anônimo FAV_UID
 // - Compat: /api/profissionais/:id
+// - Frase WhatsApp nos JSONs (waMessageDefault) e /api/whatsapp-msg
 // - Respeita .env: PRIMARY_HOST, FORCE_HTTPS, SECURE_COOKIES, REDIRECTS_DISABLED
 // ============================================================================
 require("dotenv").config();
@@ -85,10 +87,8 @@ const SESSION_SECRET  = process.env.SESSION_SECRET || "troque-isto";
 const trim = (s)=> (s??"").toString().trim();
 const norm = (s)=> (s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
 const escapeHTML = (s="") => String(s)
-  .replace(/&/g,"&amp;")
-  .replace(/</g,"&lt;")
-  .replace(/>/g,"&gt;")
-  .replace(/"/g,"&quot;")
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+  .replace(/>/g,"&gt;").replace(/"/g,"&quot;")
   .replace(/'/g,"&#39;");
 const getIP = (req)=> (req.headers["x-forwarded-for"]||"").split(",")[0].trim() || req.socket?.remoteAddress || "";
 const onlyDigits = (v)=> trim(v).replace(/\D/g,"");
@@ -109,8 +109,15 @@ function haversineKm(aLat, aLng, bLat, bLng){
   const R=6371, toRad=d=>d*Math.PI/180;
   const dLat=toRad(bLat-aLat), dLng=toRad(bLng-aLng);
   const lat1=toRad(aLat), lat2=toRad(bLat);
-  const x=Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
+  const x=Math.sin(dLat/2)**2+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
   return 2*R*Math.asin(Math.sqrt(x));
+}
+
+// Frase padrão WhatsApp
+function buildWaMessage(p){
+  const nome = p?.nome ? ` ${p.nome}` : "";
+  const serv = (p?.servico || p?.profissao || "seu serviço");
+  return `Olá${nome}, vi seu perfil na Autônoma.app e gostaria de contratar ${serv}. Podemos conversar?`;
 }
 
 // ----------------------------------------------------------------------------
@@ -147,7 +154,7 @@ if (!REDIRECTS_DISABLED){
 app.use(express.static(PUBLIC_DIR, { maxAge:"7d", fallthrough: true }));
 app.use("/uploads", express.static(UPLOAD_DIR, { maxAge:"30d", immutable:true }));
 
-// Evita cache dos endpoints /api/* (especialmente em mobile/PWA)
+// Evita cache dos endpoints /api/*
 app.use(/^\/api\//, (_req, res, next) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.set("Pragma", "no-cache");
@@ -156,7 +163,7 @@ app.use(/^\/api\//, (_req, res, next) => {
   next();
 });
 
-// Sessões (compatível com HTTPS)
+// Sessões
 app.use(session({
   name: "aut_sess",
   secret: SESSION_SECRET,
@@ -169,15 +176,9 @@ app.use(session({
   }
 }));
 
-// Limiter básico
-const loginLimiter = rateLimit({
-  windowMs: 15*60*1000, max: 20,
-  standardHeaders: true, legacyHeaders: false
-});
-const reviewsLimiter = rateLimit({
-  windowMs: 5*60*1000, max: 40,
-  standardHeaders: true, legacyHeaders: false
-});
+// Limiter
+const loginLimiter = rateLimit({ windowMs: 15*60*1000, max: 20, standardHeaders: true, legacyHeaders: false });
+const reviewsLimiter = rateLimit({ windowMs: 5*60*1000,  max: 40, standardHeaders: true, legacyHeaders: false });
 
 // ----------------------------------------------------------------------------
 // GEO / AUTOCOMPLETE / GPS (base simples)
@@ -312,7 +313,6 @@ function computeVerified(p){
   return !!(p?.foto && isWhatsappValid(p.whatsapp) && p.cidade && p.bairro);
 }
 
-// migração leve
 (function fixDB(){
   const db = readDB();
   let changed=false;
@@ -356,13 +356,13 @@ function computeVerified(p){
 // Upload (multer)
 // ----------------------------------------------------------------------------
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename:    (_req, file, cb) => cb(null, `${Date.now()}-${Math.round(Math.random()*1e9)}${path.extname(file.originalname)}`)
+  destination: (_, __, cb) => cb(null, UPLOAD_DIR),
+  filename:    (_, file, cb) => cb(null, `${Date.now()}-${Math.round(Math.random()*1e9)}${path.extname(file.originalname)}`)
 });
 const upload = multer({
   storage,
   limits:{ fileSize: 3*1024*1024 },
-  fileFilter: (_req, file, cb) => file.mimetype?.startsWith("image/") ? cb(null,true) : cb(new Error("Apenas imagens (JPG/PNG)."))
+  fileFilter: (_, file, cb) => file.mimetype?.startsWith("image/") ? cb(null,true) : cb(new Error("Apenas imagens (JPG/PNG)."))
 });
 
 // ----------------------------------------------------------------------------
@@ -400,7 +400,20 @@ function normalizeCidadeUF(input){
 }
 
 // ----------------------------------------------------------------------------
-// Cadastro (simples)
+// Config de UI (frases/flags para o front)
+// ----------------------------------------------------------------------------
+const WHATSAPP_DEFAULT_MSG =
+  "Olá! Vi seu perfil na Autônoma.app e gostaria de contratar seu serviço. Podemos conversar?";
+app.get("/api/ui-config", (_req, res) => {
+  res.json({
+    ok: true,
+    evaluateCTA: true,                 // para mostrar botão Avaliar no perfil
+    whatsappTemplate: WHATSAPP_DEFAULT_MSG
+  });
+});
+
+// ----------------------------------------------------------------------------
+// Cadastro (com upload obrigatório de foto)
 // ----------------------------------------------------------------------------
 const CATS = ["Beleza","Construção","Manutenção","Tecnologia","Educação","Saúde","Pets","Eventos","Transporte","Outros"];
 
@@ -614,7 +627,7 @@ app.get("/api/profissionais", (req, res) => {
   }
 });
 
-// ---------- PROFISSIONAL (por ID) — compat: /api/profissionais/:id ----------
+// ----------------- Perfil (APIs) -----------------
 app.get("/api/profissionais/:id", (req, res) => {
   const id = Number(req.params.id || "0");
   if (!Number.isFinite(id) || id <= 0) return res.status(400).json({ ok:false, error:"id inválido" });
@@ -645,7 +658,7 @@ app.get("/api/profissionais/:id", (req, res) => {
   });
 });
 
-// ========================= PERFIL (PÚBLICO) =========================
+// Compat
 app.get("/api/profissional/:id", (req, res) => {
   const id = Number(req.params.id || "0");
   if (!Number.isFinite(id) || id <= 0) { return res.status(400).json({ ok: false, error: "id inválido" }); }
@@ -681,7 +694,7 @@ app.get("/api/profissional/:id", (req, res) => {
   });
 });
 
-// -------------------- AVALIAÇÕES (APIs JSON novas) --------------------
+// -------------------- Avaliações --------------------
 app.get("/api/avaliacoes/:id", (req,res)=>{
   const id = Number(req.params.id||"0");
   if (!Number.isFinite(id) || id<=0) return res.status(400).json({ ok:false, error:"id inválido" });
@@ -698,7 +711,7 @@ app.get("/api/avaliacoes/:id", (req,res)=>{
   res.json({ ok:true, total, items:slice });
 });
 
-// Anti-spam simples por cookie/IP
+// Anti-spam por cookie/IP
 function ensureReviewCookie(req,res){
   const raw = req.cookies || {};
   if (raw && raw.rev_uid) return raw.rev_uid;
@@ -713,7 +726,6 @@ function ensureReviewCookie(req,res){
   return uid;
 }
 
-// POST /api/avaliacoes
 app.post("/api/avaliacoes", reviewsLimiter, (req,res)=>{
   try{
     const proId = Number(req.body?.proId||"0");
@@ -731,6 +743,7 @@ app.post("/api/avaliacoes", reviewsLimiter, (req,res)=>{
     const uid = ensureReviewCookie(req,res);
     const ip = getIP(req);
 
+    // Bloqueio: mesmo cookie/ip em 12h
     const twelveH = Date.now()-12*3600*1000;
     const recent = (p.avaliacoes||[]).some(a=>{
       const t = Date.parse(a.at||"");
@@ -751,7 +764,7 @@ app.post("/api/avaliacoes", reviewsLimiter, (req,res)=>{
   }
 });
 
-// POST avaliação (form do perfil) — HTML
+// POST (compat do formulário)
 app.post("/profissional/:id/avaliar", (req,res)=>{
   const id = Number(req.params.id || "0");
   try{
@@ -772,6 +785,46 @@ app.post("/profissional/:id/avaliar", (req,res)=>{
   }
 });
 
+// Página de avaliação (HTML simples) -> /avaliar/:id
+app.get("/avaliar/:id", (req,res)=>{
+  const id = Number(req.params.id||"0");
+  const db = readDB();
+  const p = db.find(x => Number(x.id)===id && !x.excluido);
+  if (!p) return res.status(404).send(htmlMsg("Não encontrado","Profissional não localizado.","/clientes.html"));
+
+  const avals = (p.avaliacoes||[]).slice().reverse().slice(0,30);
+  const stars = (n)=>"★".repeat(n)+"☆".repeat(5-n);
+  const itens = avals.map(a=>`<li><b>${escapeHTML(a.autor||"Cliente")}</b> • ${stars(Math.max(1,Math.min(5,Number(a.nota)||0)))}<br><span class="meta">${escapeHTML(new Date(a.at).toLocaleString())}</span><div>${escapeHTML(a.comentario||"")}</div></li>`).join("");
+  res.send(`<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="/css/app.css">
+  <div class="wrap">
+    <div class="card">
+      <h1>Avaliar ${escapeHTML(p.nome)}</h1>
+      <form method="POST" action="/profissional/${p.id}/avaliar">
+        <label>Seu nome</label>
+        <input name="autor" placeholder="Opcional" />
+        <label>Nota</label>
+        <select name="nota" required>
+          <option value="5">5 - Excelente</option>
+          <option value="4">4 - Muito bom</option>
+          <option value="3">3 - Bom</option>
+          <option value="2">2 - Regular</option>
+          <option value="1">1 - Ruim</option>
+        </select>
+        <label>Comentário</label>
+        <textarea name="comentario" required minlength="5" placeholder="Conte como foi sua experiência"></textarea>
+        <div class="row" style="gap:8px;margin-top:10px">
+          <button class="btn" type="submit">Enviar avaliação</button>
+          <a class="btn ghost" href="/perfil.html?id=${p.id}">Voltar ao perfil</a>
+        </div>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Comentários recentes</h2>
+      <ul class="list">${itens || "<li class='meta'>Sem comentários ainda.</li>"}</ul>
+    </div>
+  </div>`);
+});
+
 // SSR leve /profissional/:id
 app.get("/profissional/:id", (req,res)=>{
   const idNum = Number(req.params.id || "0");
@@ -780,7 +833,7 @@ app.get("/profissional/:id", (req,res)=>{
 });
 
 // ----------------------------------------------------------------------------
-// Métricas/Tracking (visita, call, QR)
+// Métricas/Tracking (visita, call, QR) — alimenta gráficos do Admin
 // ----------------------------------------------------------------------------
 function appendMetric(key, payload){
   const metr = readJSON(METRICS_FILE, {});
@@ -835,7 +888,8 @@ app.get("/api/qr", async (req, res) => {
     if (req.query.phone) {
       const d = String(req.query.phone).replace(/\D/g,"");
       if (!d) return res.status(400).json({ ok:false, error:"phone inválido" });
-      text = "https://wa.me/" + d;
+      const msg = String(req.query.text||"").trim();
+      text = "https://wa.me/" + d + (msg?`?text=${encodeURIComponent(msg)}`:"");
     } else if (req.query.text) {
       text = String(req.query.text);
     } else {
@@ -851,31 +905,27 @@ app.get("/api/qr", async (req, res) => {
 // ----------------------------------------------------------------------------
 // Top 10 semanal (API)
 // ----------------------------------------------------------------------------
+function weekKeyFor(d){
+  const dt = new Date(d);
+  const y = dt.getFullYear();
+  const onejan = new Date(y,0,1);
+  const day = Math.floor((dt - onejan)/86400000);
+  const wk = Math.ceil((day + onejan.getDay() + 1) / 7);
+  return `${y}-W${String(wk).padStart(2,"0")}`;
+}
 function scoreTop10(p){
   const notas = (p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
   const rating = notas.length ? (notas.reduce((a,b)=>a+b,0)/notas.length) : 0;
 
-  const thisWeek = weekKey();
-  const calls = (p.callsLog||[]).filter(x=>{
-    const d = new Date(x.at); if (isNaN(d)) return false;
-    const y = d.getFullYear();
-    const onejan = new Date(y,0,1);
-    const day = Math.floor((d - onejan) / 86400000);
-    const wk = Math.ceil((day + onejan.getDay() + 1) / 7);
-    const wkKey = `${y}-W${String(wk).padStart(2,"0")}`;
-    return wkKey === thisWeek;
-  }).length;
+  const thisWeek = weekKeyFor(new Date());
+  const calls = (p.callsLog||[]).filter(x=> weekKeyFor(x.at)===thisWeek ).length;
 
   const sevenAgo = Date.now() - 6*86400000;
-  const visits = (p.visitsLog||[]).filter(x=>{
-    const t = Date.parse(x.at);
-    return Number.isFinite(t) && t >= sevenAgo;
-  }).length;
+  const visits = (p.visitsLog||[]).filter(x=> Date.parse(x.at)>=sevenAgo ).length;
 
   const planBoost = p.plano==="premium" ? 1 : (p.plano==="pro" ? 0.5 : 0);
   return (calls*2) + (visits*0.5) + (rating*3) + (p.verificado?0.5:0) + planBoost;
 }
-
 app.get("/api/top10", (req,res)=>{
   const cidade = norm(trim(req.query.cidade||""));
   const serv   = norm(trim(req.query.servico||""));
@@ -898,16 +948,18 @@ app.get("/api/top10", (req,res)=>{
 });
 
 // ----------------------------------------------------------------------------
-// Painel do Profissional — Sessão/Estado/Login + Compat endpoints
+// Painel do Profissional — login por token (whatsapp) e preferências
 // ----------------------------------------------------------------------------
 app.get("/api/painel/me", (req, res) => {
   try {
     const db = readDB();
     let pro = null;
 
+    // sessão
     if (req.session?.painel?.ok) {
       pro = db.find(p => Number(p.id) === Number(req.session.painel.proId) && !p.excluido);
     }
+    // Authorization: Bearer <token> (whatsapp normalizado)
     if (!pro) {
       const auth = String(req.headers.authorization || "");
       if (auth.startsWith("Bearer ")) {
@@ -956,14 +1008,13 @@ app.get("/painel.html", (req, res) => {
     const pro = db.find(p => ensureBR(onlyDigits(p.whatsapp)) === token && !p.excluido);
     if (pro) {
       req.session.painel = { ok:true, proId: pro.id, when: Date.now() };
-      return res.redirect("/painel.html");
+      return res.redirect("/painel.html"); // limpa query
     }
   }
   if (!(req.session?.painel?.ok)) return res.redirect("/painel_login.html");
   return res.sendFile(path.join(PUBLIC_DIR, "painel.html"));
 });
 
-// Login/out Painel
 app.post("/api/painel/login", (req,res)=>{
   const token = ensureBR(onlyDigits(req.body?.token||""));
   if (!token) return res.status(400).json({ ok:false, error:"token" });
@@ -975,7 +1026,6 @@ app.post("/api/painel/login", (req,res)=>{
 });
 app.post("/api/painel/logout", (req,res)=>{ if (req.session) req.session.painel=null; res.json({ ok:true }); });
 
-// Estado leve
 app.get("/api/painel/state", (req,res)=>{
   const s = (req.session && req.session.painel) ? req.session.painel : null;
   if (!s || !s.ok || !s.proId) return res.json({ ok:false });
@@ -993,22 +1043,6 @@ app.get("/api/painel/state", (req,res)=>{
   });
 });
 
-// Atualizações do painel
-app.post("/api/painel/pos", (req,res)=>{
-  const s = req.session?.painel;
-  if (!s?.ok || !s?.proId) return res.status(401).json({ ok:false });
-  const { lat, lng } = req.body || {};
-  const latN = Number(lat), lngN = Number(lng);
-  if (!Number.isFinite(latN) || !Number.isFinite(lngN)) return res.status(400).json({ ok:false, error:"lat/lng" });
-  const db = readDB();
-  const p = db.find(x=> Number(x.id)===s.proId);
-  if (!p) return res.status(404).json({ ok:false });
-  p.lastPos = { lat: latN, lng: lngN, at: nowISO() };
-  writeDB(db);
-  res.json({ ok:true });
-});
-
-// Radar / limites
 function proLimits(p){
   if (p.plano==="premium") return { maxRaio:50, maxCidades:10, uberUnlimited:true, maxUberActivations:Infinity };
   if (p.plano==="pro")     return { maxRaio:30, maxCidades:3,  uberUnlimited:false, maxUberActivations:5 };
@@ -1128,7 +1162,7 @@ app.get("/api/painel/export.csv", (req,res)=>{
 });
 
 // ----------------------------------------------------------------------------
-// Pagamentos (STUB)
+// Pagamentos (stub)
 // ----------------------------------------------------------------------------
 function newPaymentId(){ return crypto.randomBytes(10).toString("hex"); }
 app.get("/api/checkout/options", (_req,res)=>{
@@ -1208,10 +1242,10 @@ app.post("/api/denuncias", (req,res)=>{
 });
 
 // ----------------------------------------------------------------------------
-// FAVORITOS (por dispositivo) - Cookie FAV_UID
+// Favoritos (por cookie anônimo FAV_UID)
 // ----------------------------------------------------------------------------
 const FAV_FILE = path.join(DATA_DIR, "favorites.json");
-if (!fs.existsSync(FAV_FILE)) writeJSON(FAV_FILE, {}); // mapa { favUid: [ids...] }
+if (!fs.existsSync(FAV_FILE)) writeJSON(FAV_FILE, {});
 const readFavMap  = ()=> readJSON(FAV_FILE, {});
 const writeFavMap = (m)=> writeJSON(FAV_FILE, m);
 
@@ -1258,7 +1292,15 @@ app.get("/api/favoritos", (req,res)=>{
       .map(p=>{
         const notas = (p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
         const rating = notas.length ? (notas.reduce((a,b)=>a+b,0)/notas.length) : 0;
-        return { id: p.id, nome: p.nome, servico: p.servico || p.profissao || "", cidade: p.cidade || "", bairro: p.bairro || "", foto: p.foto || "", rating };
+        return {
+          id: p.id,
+          nome: p.nome,
+          servico: p.servico || p.profissao || "",
+          cidade: p.cidade || "",
+          bairro: p.bairro || "",
+          foto: p.foto || "",
+          rating
+        };
       });
     res.json({ ok:true, ids, items });
   }catch(e){ res.status(500).json({ ok:false, error:String(e) }); }
@@ -1271,6 +1313,7 @@ app.post("/api/favoritos/toggle", (req,res)=>{
     const db = readDB();
     const exists = db.some(p => Number(p.id)===id && !p.excluido);
     if (!exists) return res.status(404).json({ ok:false, error:"profissional não encontrado" });
+
     const map = readFavMap();
     const list = Array.isArray(map[uid]) ? map[uid] : [];
     const i = list.findIndex(x => Number(x)===id);
@@ -1295,14 +1338,11 @@ app.delete("/api/favoritos/:id", (req,res)=>{
 });
 
 // ----------------------------------------------------------------------------
-// Admin páginas + APIs (protegidas) – versão compacta do dashboard
+// Admin — login, dashboard com gráficos e APIs
 // ----------------------------------------------------------------------------
 function requireAdmin(req,res,next){ if (req.session?.isAdmin) return next(); return res.status(401).json({ ok:false }); }
 
-app.get("/admin", (req,res)=>{
-  if (!(req.session && req.session.isAdmin)) return res.redirect("/admin/login");
-  res.sendFile(path.join(PUBLIC_DIR, "admin.html"));
-});
+// Página de login (HTML)
 app.get("/admin/login", (_req,res)=>{
   res.send(`<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="/css/app.css">
   <div class="wrap"><div class="card" style="max-width:420px;margin:auto">
@@ -1326,278 +1366,189 @@ app.get("/admin/login", (_req,res)=>{
   </div></div>`);
 });
 
-// Stats simples pro admin (cards + série 30d)
-app.get("/api/admin/stats", requireAdmin, (_req, res) => {
-  try {
-    const db = readDB();
-    const metr = readJSON(METRICS_FILE, {});
-    const today = new Date();
-    const dayKey = (d)=> d.toISOString().slice(0,10);
-
-    const totalAtivos    = db.filter(p=>!p.excluido && !p.suspenso).length;
-    const totalSuspensos = db.filter(p=> p.suspenso).length;
-    const totalExcluidos = db.filter(p=> p.excluido).length;
-    const visitasTotais  = db.reduce((a,p)=> a + (Number(p.visitas)||0), 0);
-    const chamadasTotais = db.reduce((a,p)=> a + (Number(p.chamadas)||0), 0);
-
-    const days = [];
-    for (let i=29;i>=0;i--){
-      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate()-i);
-      const k = dayKey(d);
-      const v = (metr.visit && Array.isArray(metr.visit[k])) ? metr.visit[k].length : 0;
-      const c = (metr.call  && Array.isArray(metr.call[k]))  ? metr.call[k].length  : 0;
-      const r = (metr.report&& Array.isArray(metr.report[k]))? metr.report[k].length: 0;
-      const q = (metr.qr    && Array.isArray(metr.qr[k]))    ? metr.qr[k].length    : 0;
-      days.push({ day:k, visits:v, calls:c, reports:r, qr:q });
-    }
-    res.json({
-      ok:true,
-      cards:{ ativos: totalAtivos, suspensos: totalSuspensos, excluidos: totalExcluidos, visitas: visitasTotais, chamadas: chamadasTotais, favoritos: 0 },
-      last30: days
-    });
-  } catch(e){
-    res.status(500).json({ ok:false, error:String(e) });
+// POST login
+app.post("/admin/login", loginLimiter, (req,res)=>{
+  const user = trim(req.body?.user||"");
+  const pass = String(req.body?.password||"");
+  const userOk = user === ADMIN_USER;
+  let passOk = false;
+  if (ADMIN_PASS_HASH){
+    try{ passOk = bcrypt.compareSync(pass, ADMIN_PASS_HASH); } catch{ passOk=false; }
+  }else{
+    passOk = pass === ADMIN_PASS;
   }
-});
-
-// Lista de profissionais (filtros + paginação)
-app.get("/api/admin/profissionais", requireAdmin, (req,res)=>{
-  try{
-    let items = readDB().slice();
-    const q        = (req.query.q||"").toString().trim().toLowerCase();
-    const cidade   = (req.query.cidade||"").toString().trim().toLowerCase();
-    const servicoQ = (req.query.servico||"").toString().trim().toLowerCase();
-    const plano    = (req.query.plano||"").toString().trim().toLowerCase(); // premium|pro|free|""
-    const verif    = (req.query.verificado||"").toString().trim().toLowerCase(); // "1"|"0"|"" 
-    const status   = (req.query.status||"").toString().trim().toLowerCase(); // "ativos"|"suspensos"|"excluidos"|"" 
-
-    if (status==="ativos")    items = items.filter(p=>!p.excluido && !p.suspenso);
-    if (status==="suspensos") items = items.filter(p=> p.suspenso);
-    if (status==="excluidos") items = items.filter(p=> p.excluido);
-
-    if (q){
-      const N = q.normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-      items = items.filter(p=>{
-        const txt = `${p.nome} ${p.servico||p.profissao||""} ${p.cidade} ${p.bairro}`.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
-        return txt.includes(N);
-      });
-    }
-    if (cidade){
-      items = items.filter(p => (p.cidade||"").toLowerCase().includes(cidade));
-    }
-    if (servicoQ){
-      items = items.filter(p => ((p.servico||p.profissao||"").toLowerCase().includes(servicoQ)));
-    }
-    if (plano && ["premium","pro","free"].includes(plano)){
-      items = items.filter(p => (p.plano||"free").toLowerCase()===plano);
-    }
-    if (verif==="1") items = items.filter(p=> !!p.verificado);
-    if (verif==="0") items = items.filter(p=> !p.verificado);
-
-    items = items.map(p=>{
-      const notas = (p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
-      const rating = notas.length ? (notas.reduce((a,b)=>a+b,0)/notas.length) : 0;
-      return { ...p, _rating:rating };
-    });
-
-    const sort = String(req.query.sort||"recentes"); // "recentes"|"rating"|"visitas"|"chamadas"|"nome"
-    const dir  = String(req.query.dir||"desc").toLowerCase()==="asc" ? 1 : -1;
-    items.sort((a,b)=>{
-      const by = {
-        recentes: (x)=> Date.parse(x.createdAt||0)||0,
-        rating:   (x)=> Number(x._rating||0),
-        visitas:  (x)=> Number(x.visitas||0),
-        chamadas: (x)=> Number(x.chamadas||0),
-        nome:     (x)=> String(x.nome||"").toLowerCase()
-      }[sort] || ((x)=> Date.parse(x.createdAt||0)||0);
-      const va = by(a), vb = by(b);
-      if (typeof va === "string" || typeof vb === "string"){
-        return va.localeCompare(vb) * dir;
-      }
-      return (va - vb) * dir;
-    });
-
-    const page  = Math.max(1, Number(req.query.page||1));
-    const limit = Math.max(1, Math.min(100, Number(req.query.limit||30)));
-    const total = items.length;
-    const start = (page-1)*limit;
-    const slice = items.slice(start, start+limit).map(p=>({
-      id: p.id,
-      nome: p.nome,
-      cidade: p.cidade||"",
-      bairro: p.bairro||"",
-      servico: p.servico||p.profissao||"",
-      plano: p.plano||"free",
-      verificado: !!p.verificado,
-      rating: Number(p._rating||0),
-      avals: Array.isArray(p.avaliacoes)? p.avaliacoes.length : 0,
-      visitas: Number(p.visitas||0),
-      chamadas: Number(p.chamadas||0),
-      suspenso: !!p.suspenso,
-      excluido: !!p.excluido
-    }));
-    res.json({ ok:true, total, items:slice });
-  }catch(e){
-    res.status(500).json({ ok:false, error:String(e) });
-  }
-});
-
-// Recalcular “verificado” em toda a base
-app.post("/api/admin/recalc-verified", requireAdmin, (_req,res)=>{
-  try{
-    const db = readDB();
-    for (const p of db){
-      p.verificado = !!(p?.foto && isWhatsappValid(p.whatsapp) && p.cidade && p.bairro);
-    }
-    writeDB(db);
-    res.json({ ok:true, changed: db.length });
-  }catch(e){
-    res.status(500).json({ ok:false, error:String(e) });
-  }
-});
-
-// CSV de métricas (últimos 30 dias)
-app.get("/api/admin/metrics.csv", requireAdmin, (_req,res)=>{
-  try{
-    const metr = readJSON(METRICS_FILE, {});
-    const today = new Date();
-    const rows = [["dia","visitas","chamadas","denuncias","qr"]];
-    for (let i=29;i>=0;i--){
-      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate()-i);
-      const k = d.toISOString().slice(0,10);
-      const v = (metr.visit && Array.isArray(metr.visit[k])) ? metr.visit[k].length : 0;
-      const c = (metr.call  && Array.isArray(metr.call[k]))  ? metr.call[k].length  : 0;
-      const r = (metr.report&& Array.isArray(metr.report[k]))? metr.report[k].length: 0;
-      const q = (metr.qr    && Array.isArray(metr.qr[k]))    ? metr.qr[k].length    : 0;
-      rows.push([k,v,c,r,q]);
-    }
-    const csv = rows.map(r=> r.map(v=> `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
-    res.setHeader("Content-Type","text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition","attachment; filename=metrics_30d.csv");
-    res.send(csv);
-  }catch(e){
-    res.status(500).type("text").send(String(e));
-  }
-});
-
-// Login admin
-app.post("/admin/login", loginLimiter, async (req,res)=>{
-  const user = trim(req.body.user);
-  const pass = trim(req.body.password || "");
-  try{
-    if (user !== ADMIN_USER) {
-      return res.status(401).send(htmlMsg("Falha no login","Usuário ou senha incorretos.","/admin/login"));
-    }
-    let ok = false;
-    if (ADMIN_PASS_HASH) ok = await bcrypt.compare(pass, ADMIN_PASS_HASH);
-    else ok = (pass === ADMIN_PASS);
-    if (!ok) return res.status(401).send(htmlMsg("Falha no login","Usuário ou senha incorretos.","/admin/login"));
+  if (userOk && passOk){
     req.session.isAdmin = true;
-    req.session.adminUser = user;
+    req.session.adminAt = Date.now();
     return res.redirect("/admin");
-  }catch(e){
-    return res.status(500).send(htmlMsg("Erro", String(e), "/admin/login"));
   }
+  return res.status(401).send(htmlMsg("Login inválido","Usuário/senha incorretos.","/admin/login"));
 });
-app.get("/admin/logout", (req,res)=>{ req.session.destroy(()=> res.redirect("/admin/login")); });
+
+// Logout
+app.post("/admin/logout", (req,res)=>{ if (req.session) req.session.isAdmin = false; res.redirect("/admin/login"); });
+
+// Helpers de stats
+function adminBuildStats(){
+  const db = readDB().filter(p=>!p.excluido);
+  const metr = readJSON(METRICS_FILE, {});
+  const total = db.length;
+  const ativos = db.filter(p=>!p.suspenso).length;
+  const suspensos = db.filter(p=>p.suspenso).length;
+  const excluidos = readDB().filter(p=>p.excluido).length;
+  const verificados = db.filter(p=>computeVerified(p)).length;
+  const mediaRating = (() => {
+    const arr = db.map(p=>{
+      const ns=(p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
+      return ns.length ? ns.reduce((a,b)=>a+b,0)/ns.length : 0;
+    }).filter(x=>x>0);
+    return arr.length ? Math.round((arr.reduce((a,b)=>a+b,0)/arr.length)*100)/100 : 0;
+  })();
+
+  // métricas últimos 30 dias
+  const days = [];
+  for(let i=29;i>=0;i--){
+    const d = new Date(Date.now()-i*24*3600e3).toISOString().slice(0,10);
+    const v = (metr.visit?.[d]||[]).length||0;
+    const c = (metr.call?.[d]||[]).length||0;
+    const q = (metr.qr?.[d]||[]).length||0;
+    days.push({ day:d, visits:v, calls:c, qrs:q });
+  }
+  return {
+    ok:true,
+    counters:{ total, ativos, suspensos, excluidos, verificados, mediaRating },
+    last30: days
+  };
+}
+
+function adminBuildList(query){
+  const db = readDB().filter(p=>!p.excluido);
+  const q = (query?.q||"").toString().trim();
+  const cidade = (query?.cidade||"").toString().trim();
+  const serv   = (query?.servico||query?.profissao||"").toString().trim();
+  let items = db;
+  if (q){
+    const N = norm(q);
+    items = items.filter(p =>
+      norm(p.nome).includes(N) ||
+      norm(p.bairro||"").includes(N) ||
+      norm(p.cidade||"").includes(N) ||
+      norm(p.servico||p.profissao||"").includes(N));
+  }
+  if (cidade){
+    const C = norm(cidade);
+    items = items.filter(p => norm(p.cidade||"").includes(C));
+  }
+  if (serv){
+    const S = norm(serv);
+    items = items.filter(p => norm(p.servico||p.profissao||"").includes(S));
+  }
+  items.sort((a,b)=> Number(b.id)-Number(a.id));
+  return items.map(p=>({
+    id:p.id, nome:p.nome, servico:p.servico||p.profissao||"",
+    cidade:p.cidade||"", bairro:p.bairro||"",
+    visitas:p.visitas||0, chamadas:p.chamadas||0,
+    rating: (p.avaliacoes||[]).length ? (p.avaliacoes.reduce((a,c)=>a+Number(c.nota||0),0)/(p.avaliacoes.length)) : 0,
+    plano:p.plano||"free", verificado:!!p.verificado
+  }));
+}
+
+// Página admin (DASHBOARD DINÂMICO com gráfico SVG)
+app.get("/admin", (req,res)=>{
+  if (!(req.session && req.session.isAdmin)) return res.redirect("/admin/login");
+  const stats = adminBuildStats();
+  const s = stats.counters;
+  const days = stats.last30;
+  const maxY = Math.max(5, ...days.map(d=>Math.max(d.visits,d.calls,d.qrs)));
+  const W=680, H=240, P=30;
+  const stepX = (W-2*P) / Math.max(1,days.length-1);
+  const toX = (i)=> P + i*stepX;
+  const toY = (v)=> H-P - (v/maxY)*(H-2*P);
+  function pathFor(key){
+    return days.map((d,i)=> `${i?"L":"M"}${toX(i).toFixed(1)},${toY(d[key]).toFixed(1)}`).join(" ");
+  }
+  const xLabels = days.map((d,i)=> (i%5===0? d.day.slice(5) : ""));
+
+  res.send(`<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="/css/app.css">
+  <div class="wrap">
+    <div class="card">
+      <h1>Dashboard • Admin</h1>
+      <form method="POST" action="/admin/logout" style="float:right;margin-top:-38px"><button class="btn ghost">Sair</button></form>
+      <div class="grid" style="grid-template-columns:repeat(3,1fr);gap:10px">
+        <div class="stat"><div class="stat-k">${s.total}</div><div class="stat-l">Total</div></div>
+        <div class="stat"><div class="stat-k">${s.ativos}</div><div class="stat-l">Ativos</div></div>
+        <div class="stat"><div class="stat-k">${s.verificados}</div><div class="stat-l">Verificados</div></div>
+        <div class="stat"><div class="stat-k">${s.mediaRating}</div><div class="stat-l">Rating médio</div></div>
+        <div class="stat"><div class="stat-k">${s.suspensos}</div><div class="stat-l">Suspensos</div></div>
+        <div class="stat"><div class="stat-k">${s.excluidos}</div><div class="stat-l">Excluídos</div></div>
+      </div>
+
+      <h2 style="margin-top:18px">Últimos 30 dias</h2>
+      <svg viewBox="0 0 ${W} ${H}" width="100%" height="260" style="background:#fafafa;border:1px solid #eee;border-radius:8px">
+        <g stroke="#ddd" stroke-width="1">
+          ${Array.from({length:5},(_,i)=> {
+            const y = P + i*( (H-2*P)/4 );
+            return `<line x1="${P}" y1="${y}" x2="${W-P}" y2="${y}"></line>`
+          }).join("")}
+        </g>
+        <path d="${pathFor('visits')}" fill="none" stroke="#1f77b4" stroke-width="2"/>
+        <path d="${pathFor('calls')}"  fill="none" stroke="#2ca02c" stroke-width="2"/>
+        <path d="${pathFor('qrs')}"    fill="none" stroke="#ff7f0e" stroke-width="2"/>
+        ${days.map((d,i)=> `<circle cx="${toX(i)}" cy="${toY(d.visits)}" r="2" fill="#1f77b4"/>
+                            <circle cx="${toX(i)}" cy="${toY(d.calls)}"  r="2" fill="#2ca02c"/>
+                            <circle cx="${toX(i)}" cy="${toY(d.qrs)}"    r="2" fill="#ff7f0e"/>`).join("")}
+        <g font-size="10" fill="#666">
+          ${xLabels.map((t,i)=> t? `<text x="${toX(i)}" y="${H-8}" text-anchor="middle">${t}</text>`:"").join("")}
+        </g>
+        <g font-size="11" fill="#333">
+          <text x="${P}" y="${P-8}">Visitas</text>
+          <text x="${P+60}" y="${P-8}">Chamadas</text>
+          <text x="${P+140}" y="${P-8}">QRs</text>
+        </g>
+      </svg>
+      <p class="meta">Linhas: azul=visitas, verde=chamadas, laranja=QRs.</p>
+    </div>
+
+    <div class="card">
+      <h2>Exportação</h2>
+      <a class="btn" href="/api/admin/export.csv">Exportar base (CSV)</a>
+    </div>
+  </div>
+
+  <style>
+    .stat{background:#fafafa;border:1px solid #eee;border-radius:12px;padding:12px}
+    .stat-k{font-size:22px;font-weight:700}
+    .stat-l{font-size:12px;color:#666}
+    .grid{display:grid}
+    .list{list-style: none; padding-left:0}
+    .list li{margin:8px 0;padding-bottom:8px;border-bottom:1px solid #eee}
+  </style>
+  `);
+});
+
+// APIs admin
+app.get("/api/admin/stats", requireAdmin, (_req,res)=> res.json(adminBuildStats()));
+app.get("/api/admin/list",  requireAdmin, (req,res)=> res.json({ ok:true, items: adminBuildList(req.query||{}) }));
+
+// CSV geral (admin)
+app.get("/api/admin/export.csv", requireAdmin, (_req,res)=>{
+  const db = readDB().filter(p=>!p.excluido);
+  const header = ["id","nome","whatsapp","cidade","bairro","servico","plano","raioKm","visitas","chamadas","rating"].join(",");
+  const rows = db.map(p=>{
+    const rating = (p.avaliacoes||[]).length ? (p.avaliacoes.reduce((a,c)=>a+Number(c.nota||0),0)/(p.avaliacoes.length)) : 0;
+    const vals = [p.id,p.nome,p.whatsapp,p.cidade,p.bairro,(p.servico||p.profissao||""),p.plano,(p.raioKm||0),(p.visitas||0),(p.chamadas||0),rating.toFixed(2)];
+    return vals.map(v=> `"${String(v).replace(/"/g,'""')}"`).join(",");
+  });
+  const csv = [header, ...rows].join("\n");
+  res.setHeader("Content-Type","text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition","attachment; filename=base_profissionais.csv");
+  res.send(csv);
+});
 
 // ----------------------------------------------------------------------------
-// CRON leve: auto-desligar Radar quando 'until' expirar (a cada request)
+// Inicialização do servidor
 // ----------------------------------------------------------------------------
-app.use((req,_res,next)=>{
-  try{
-    const db = readDB();
-    let changed=false;
-    const now = Date.now();
-    for(const p of db){
-      if (p?.radar?.on && p.radar.until){
-        const t = Date.parse(p.radar.until);
-        if (Number.isFinite(t) && now > t){ p.radar.on = false; p.radar.until = null; changed=true; }
-      }
-      const ref = monthRefOf();
-      if (p?.radar && p.radar.monthRef !== ref){ p.radar.monthRef=ref; p.radar.monthlyUsed=0; changed=true; }
-    }
-    if (changed) writeDB(db);
-  }catch{}
-  next();
-});
-// === ROTAS FINAIS DO ADMIN (stats/list/recalc/metrics.csv) ===================
-app.get("/api/admin/stats", requireAdmin, (_req, res) => {
-  try {
-    const payload = adminBuildStats();
-    res.json(payload);
-  } catch (e) {
-    res.status(500).json({ ok:false, error:String(e) });
-  }
-});
-
-app.get("/api/admin/profissionais", requireAdmin, (req,res) => {
-  try {
-    const all = adminBuildList(req.query);
-    // paginação simples (compat com tabela do admin)
-    const page  = Math.max(1, Number(req.query.page||1));
-    const limit = Math.max(1, Math.min(100, Number(req.query.limit||30)));
-    const start = (page-1)*limit;
-    const slice = all.slice(start, start+limit).map(p => ({
-      id: p.id,
-      nome: p.nome,
-      cidade: p.cidade||"",
-      bairro: p.bairro||"",
-      servico: p.servico||p.profissao||"",
-      plano: p.plano||"free",
-      verificado: !!p.verificado,
-      rating: (() => {
-        const ns=(p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
-        return ns.length ? ns.reduce((a,b)=>a+b,0)/ns.length : 0;
-      })(),
-      avals: Array.isArray(p.avaliacoes)? p.avaliacoes.length : 0,
-      visitas: Number(p.visitas||0),
-      chamadas: Number(p.chamadas||0),
-      suspenso: !!p.suspenso,
-      excluido: !!p.excluido
-    }));
-    res.json({ ok:true, total: all.length, items: slice });
-  } catch (e) {
-    res.status(500).json({ ok:false, error:String(e) });
-  }
-});
-
-app.post("/api/admin/recalc-verified", requireAdmin, (_req,res) => {
-  try{
-    const db = readDB();
-    for (const p of db){
-      p.verificado = !!(p?.foto && isWhatsappValid(p.whatsapp) && p.cidade && p.bairro);
-    }
-    writeDB(db);
-    res.json({ ok:true, changed: db.length });
-  }catch(e){
-    res.status(500).json({ ok:false, error:String(e) });
-  }
-});
-
-app.get("/api/admin/metrics.csv", requireAdmin, (_req,res)=>{
-  try{
-    const metr = readJSON(METRICS_FILE, {});
-    const today = new Date();
-    const rows = [["dia","visitas","chamadas","denuncias","qr"]];
-    for (let i=29;i>=0;i--){
-      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate()-i).toISOString().slice(0,10);
-      const v = (metr.visit && Array.isArray(metr.visit[d])) ? metr.visit[d].length : 0;
-      const c = (metr.call  && Array.isArray(metr.call[d]))  ? metr.call[d].length  : 0;
-      const r = (metr.report&& Array.isArray(metr.report[d]))? metr.report[d].length: 0;
-      const q = (metr.qr    && Array.isArray(metr.qr[d]))    ? metr.qr[d].length    : 0;
-      rows.push([d,v,c,r,q]);
-    }
-    const csv = rows.map(r=> r.map(v=> `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
-    res.setHeader("Content-Type","text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition","attachment; filename=metrics_30d.csv");
-    res.send(csv);
-  }catch(e){
-    res.status(500).type("text").send(String(e));
-  }
-});
-// -------------------- INÍCIO DO SERVIDOR --------------------
-const PORT = process.env.PORT || BASE_PORT || 3000;
-app.listen(PORT, HOST, () => {
-  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+const port = BASE_PORT;
+app.listen(port, HOST, ()=>{
+  console.log(`Autônoma.app rodando em http://localhost:${port}`);
 });
