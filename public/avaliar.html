@@ -4,57 +4,55 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Avaliar Profissional • Autônoma.app</title>
-  <meta name="theme-color" content="#2563eb">
+  <meta name="theme-color" content="#0b1f63">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/css/app.css?v=avaliar-2025-09-08b">
+  <link rel="stylesheet" href="/css/app.css?v=avaliar-hero-2025-09-08">
   <style>
-    /* Herdando o visual padrão das páginas (cards, botões, etc.) */
-    .wrap{max-width:1120px;margin:0 auto;padding:16px}
+    /* Topbar igual ao /clientes */
     .header{display:flex;align-items:center;gap:12px;padding:12px 16px;background:#0b1f63}
-    .header .logo{height:32px;width:auto;display:block;filter:brightness(1.05)}
+    .header .logo{height:32px;width:auto;display:block}
     .topbar-links{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
     .btn{border:none;background:#2563eb;color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;font-weight:800}
-    .btn.ghost{background:#f1f5f9;color:#111827}
+    .btn.ghost{background:#f1f5f9;color:#0f172a}
     .btn.outline{background:#fff;color:#0f172a;border:1px solid #e5e7eb}
     .btn-wa{background:#16a34a}
     .btn:hover{filter:brightness(.98)}
-    .card-soft{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:14px}
-    .grid{display:grid;grid-template-columns:1fr;gap:12px}
-    @media(min-width:920px){ .grid{grid-template-columns:1fr 1fr} }
+    .wrap{max-width:1120px;margin:0 auto;padding:16px}
+    /* ===== HERO azul (mesmo espírito do /clientes) ===== */
+    .hero{background:linear-gradient(180deg,#1e3a8a 0%,#2563eb 100%);border-radius:20px;padding:16px;border:1px solid #1d4ed8;box-shadow:0 12px 30px rgba(2,6,23,.15)}
+    .hero-title{color:#fff;margin:0 0 12px;font-size:28px;line-height:1.15;font-weight:900}
+    .hero-sub{color:#c7d2fe;margin:0 0 12px}
+    .hero-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:12px}
     .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .meta{color:#64748b}
-    /* Header do profissional */
-    .pro-head{display:flex;align-items:center;gap:10px}
-    .avatar{width:54px;height:54px;border-radius:999px;object-fit:cover;border:1px solid #e5e7eb;background:#fff}
-    .h-title{margin:0;font-size:18px;font-weight:800}
-    .h-meta{margin:0;color:#64748b;font-size:13px}
-    /* Form */
-    label{font-weight:700;display:block;margin:10px 0 6px}
-    .input, select, textarea{width:100%;padding:10px;border-radius:12px;border:1px solid #e5e7eb;background:#fff;font-size:15px}
+    .avatar{width:46px;height:46px;border-radius:999px;object-fit:cover;border:1px solid #e5e7eb;background:#fff}
+    .pro-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .pro-name{margin:0;font-weight:900}
+    .pro-meta{margin:0;color:#64748b;font-size:13px}
+    label{font-weight:700;display:block;margin:10px 0 6px;color:#0f172a}
+    .input,select,textarea{width:100%;padding:10px;border-radius:12px;border:1px solid #e5e7eb;background:#fff;font-size:15px}
     textarea{resize:vertical;min-height:90px}
-    .msg{font-size:14px}
-    .msg.ok{color:#166534}
-    .msg.err{color:#b91c1c}
-    /* Lista de comentários */
+    /* Cards padrões */
+    .card-soft{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:14px}
     .list{display:grid;grid-template-columns:1fr;gap:8px}
     @media(min-width:720px){ .list{grid-template-columns:1fr 1fr} }
     .item{padding:10px;border:1px solid #e5e7eb;border-radius:12px;background:#f8fafc}
     .rating{color:#f59e0b}
-    footer { padding:28px 12px; background:#0b1f63; margin-top:16px }
-    .foot-links { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
-    .foot-links a { color:#cde1ff; font-size:14px; text-decoration:none; }
-    .foot-links a:hover { text-decoration:underline; }
+    .meta{color:#64748b}
+    footer{padding:28px 12px;background:#0b1f63;margin-top:16px}
+    .foot-links{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+    .foot-links a{color:#cde1ff;font-size:14px;text-decoration:none}
+    .foot-links a:hover{text-decoration:underline}
   </style>
 </head>
 <body>
-  <!-- Topbar igual às outras páginas -->
+  <!-- Topbar -->
   <header class="header" role="banner">
     <a href="/" aria-label="Início">
       <img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display='none'">
     </a>
-    <nav class="topbar-links" aria-label="Navegação">
+    <nav class="topbar-links" aria-label="Navegação principal">
       <a class="btn ghost" href="/">Início</a>
       <a class="btn ghost" href="/clientes.html">Buscar</a>
       <a class="btn ghost" href="/top10.html">🏆 Top 10</a>
@@ -63,27 +61,27 @@
   </header>
 
   <main class="wrap">
-    <div class="grid">
-      <!-- Coluna esquerda: formulário -->
-      <section class="card-soft">
+    <!-- HERO azul com o formulário dentro (como /clientes) -->
+    <section class="hero">
+      <h1 id="heroTitle" class="hero-title">Avaliar profissional</h1>
+      <p class="hero-sub">Dê sua nota e deixe um comentário. Ajuda outros clientes a escolher melhor.</p>
+
+      <div class="hero-card">
         <div class="pro-head">
           <img id="foto" class="avatar" src="/icons/icon-192.png" alt="Foto do profissional">
           <div>
-            <p id="nome" class="h-title">Profissional</p>
-            <p id="meta" class="h-meta">—</p>
+            <p id="nome" class="pro-name">Profissional</p>
+            <p id="meta" class="pro-meta">—</p>
           </div>
           <div class="row" style="margin-left:auto">
-            <a id="btnWA" class="btn btn-wa" target="_blank" rel="noopener">WhatsApp</a>
+            <a id="btnWA" class="btn-wa btn" target="_blank" rel="noopener">WhatsApp</a>
             <a id="backPerfil" class="btn outline" href="/clientes.html">Voltar ao perfil</a>
           </div>
         </div>
 
-        <h1 style="font-size:20px;margin:12px 0 6px">Avaliar Profissional</h1>
-        <p class="meta">Dê uma nota de 1 a 5 e, se quiser, escreva um comentário.</p>
-
         <form id="f" autocomplete="on" novalidate>
           <label for="nomeCli">Seu nome <span class="meta">(opcional)</span></label>
-          <input id="nomeCli" name="nome" class="input" placeholder="Digite seu nome">
+          <input id="nomeCli" name="nome" class="input" placeholder="Ex.: Maria Silva">
 
           <label for="notaSel">Nota</label>
           <select id="notaSel" class="input">
@@ -102,17 +100,17 @@
             <button id="send" class="btn" type="submit">Enviar avaliação</button>
             <a id="voltarPerfil2" class="btn outline" href="#">Voltar ao perfil</a>
           </div>
-          <p id="status" class="msg" aria-live="polite"></p>
+          <p id="status" class="meta" aria-live="polite" style="margin-top:6px"></p>
         </form>
-      </section>
+      </div>
+    </section>
 
-      <!-- Coluna direita: comentários -->
-      <aside class="card-soft">
-        <h2 style="margin:0 0 8px">Comentários recentes</h2>
-        <div id="reviews" class="list"></div>
-        <p id="noReviews" class="meta" style="display:none">Ainda não há comentários.</p>
-      </aside>
-    </div>
+    <!-- Comentários recentes -->
+    <section class="card-soft" style="margin-top:12px">
+      <h2 style="margin:0 0 8px">Comentários recentes</h2>
+      <div id="reviews" class="list"></div>
+      <p id="noReviews" class="meta" style="display:none">Ainda não há comentários.</p>
+    </section>
   </main>
 
   <footer>
@@ -200,8 +198,7 @@
       const nome = a.autor || a.nome || a.cliente || a.user || 'Cliente';
       const nota = a.nota ?? a.rating ?? a.estrelas ?? a.score ?? 0;
       const texto = a.texto || a.comentario || a.comment || a.mensagem || '';
-      const when  = a.createdAt || a.data || '';
-      return { nome:String(nome), nota:Number(nota), texto:String(texto), when:String(when) };
+      return { nome:String(nome), nota:Number(nota), texto:String(texto) };
     }
 
     function renderReviews(list){
@@ -222,16 +219,18 @@
       }).join('');
     }
 
-    // ===== Envio =====
+    // Envio
     const f = $('#f'), status = $('#status'), sendBtn = $('#send');
-    function setStatus(msg, ok){ status.textContent = msg||''; status.className='msg'+(ok===true?' ok':ok===false?' err':''); }
+    function setStatus(msg, ok){
+      status.textContent = msg||'';
+      status.style.color = ok===true ? '#166534' : ok===false ? '#b91c1c' : '#64748b';
+    }
 
     f.addEventListener('submit', async (ev)=>{
       ev.preventDefault();
       const nome = String($('#nomeCli').value||'').trim();
       const nota = Number($('#notaSel').value||0);
       const comentario = String($('#coment').value||'').trim();
-
       if (nota<1 || nota>5){ setStatus('Selecione uma nota de 1 a 5.', false); return; }
 
       sendBtn.disabled = true; setStatus('Enviando...', null);
@@ -244,22 +243,21 @@
         if(!r.ok) throw new Error('http '+r.status);
         setStatus('✅ Obrigado pela sua avaliação!', true);
         f.reset();
-        // recarrega comentários
         try{ const arr = await fetchReviews(PRO_ID); renderReviews(arr); }catch(_){}
-      }catch(e){
+      }catch(_){
         setStatus('❌ Erro ao enviar. Tente novamente.', false);
       }finally{
         sendBtn.disabled = false;
       }
     });
 
-    // ===== Boot =====
+    // Boot
     (async function init(){
-      // perfil
       try{
         const p = await loadPro(PRO_ID);
         $('#foto').src = p.foto || '/icons/icon-192.png';
         $('#nome').textContent = p.nome || 'Profissional';
+        $('#heroTitle').textContent = 'Avaliar ' + (p.nome || 'profissional');
         $('#meta').textContent = [p.servico || p.profissao, [p.bairro, p.cidade].filter(Boolean).join(' • ')].filter(Boolean).join(' • ') || '—';
         const perfilUrl = '/profissional/' + encodeURIComponent(PRO_ID);
         $('#backPerfil').href = perfilUrl;
@@ -269,7 +267,6 @@
         if (wa){ waBtn.href = wa; } else { waBtn.classList.add('outline'); waBtn.textContent='WhatsApp indisponível'; waBtn.removeAttribute('href'); }
       }catch(_){}
 
-      // comentários
       try{
         const arr = await fetchReviews(PRO_ID);
         renderReviews(arr);
