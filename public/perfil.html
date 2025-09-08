@@ -14,21 +14,17 @@
     .header{display:flex;align-items:center;gap:12px;padding:12px 16px}
     .header .logo{height:32px;width:auto;display:block}
     .topbar-links{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
-
     .grid{display:grid;grid-template-columns:1fr;gap:12px}
     @media(min-width:980px){ .grid{grid-template-columns: 380px 1fr} }
-
     .card-soft{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:14px}
     .avatar-box{display:flex;flex-direction:column;align-items:center;gap:10px}
     .avatar{width:180px;height:180px;border-radius:999px;object-fit:cover;border:1px solid #e5e7eb;background:#f8fafc}
     .nome{font-size:22px;margin:0;text-align:center}
     .serv-local{color:#64748b;text-align:center}
-
     .kpis{display:flex;justify-content:space-between;gap:8px;margin-top:10px}
     .kpi{flex:1;background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:8px;text-align:center}
     .kpi .label{font-size:12px;color:#64748b}
     .kpi .val{font-weight:700}
-
     .actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:12px}
     .btn {border:none;background:#2563eb;color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
     .btn.outline{background:transparent;border:1px solid #e5e7eb;color:#111827}
@@ -39,22 +35,18 @@
     .fav.on{color:#d97706;border-color:#fcd34d;background:#fff7ed}
     .rec.on{color:#0ea5e9;border-color:#bae6fd;background:#ecfeff}
     .aval.on{color:#f59e0b;border-color:#fde68a;background:#fffbeb}
-
     .title{margin:0 0 8px}
     .meta{color:#64748b}
     .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-
     .item{padding:10px;border:1px solid #e5e7eb;border-radius:12px;background:#f8fafc}
     .item strong{display:block}
     .list{display:grid;grid-template-columns:1fr;gap:8px}
     @media(min-width:720px){ .list{grid-template-columns:1fr 1fr} }
-
     .rating{color:#f59e0b}
     .muted{color:#64748b}
     .msg{font-size:14px}
     .msg.ok{color:#166534}
     .msg.warn{color:#b91c1c}
-
     footer { padding:28px 12px; background:#0b1f63; margin-top:16px }
     .foot-links { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
     .foot-links a { color:#cde1ff; font-size:14px; text-decoration:none; }
@@ -77,21 +69,18 @@
 
   <main class="wrap">
     <div id="flash" class="card-soft msg" style="display:none"></div>
-
     <div class="grid">
       <aside class="card-soft">
         <div class="avatar-box">
           <img id="foto" class="avatar" alt="Foto do profissional">
           <h1 id="nome" class="nome">Profissional</h1>
           <div id="servLocal" class="serv-local">—</div>
-
           <div class="kpis">
             <div class="kpi"><div class="label">Trabalhos</div><div id="k_trab" class="val">—</div></div>
             <div class="kpi"><div class="label">Experiência</div><div id="k_exp" class="val">—</div></div>
             <div class="kpi"><div class="label">Chamadas</div><div id="k_calls" class="val">—</div></div>
             <div class="kpi"><div class="label">Visitas</div><div id="k_vis" class="val">—</div></div>
           </div>
-
           <div class="actions">
             <a id="btnWa" class="btn btn-wa" target="_blank" rel="noopener">WhatsApp</a>
             <button id="btnFav" class="btn outline fav"><span>★</span> Favoritar</button>
@@ -104,7 +93,6 @@
 
       <section class="card-soft">
         <h2 class="title">Sobre o profissional</h2>
-
         <div class="list" style="margin-bottom:10px">
           <div class="item"><span class="muted">Preço base</span><strong id="precoBase">—</strong></div>
           <div class="item"><span class="muted">Site/Catálogo</span><strong><a id="site" href="#" target="_blank" rel="noopener">—</a></strong></div>
@@ -244,20 +232,18 @@
       if(!p || !p.whatsapp) return null;
       const d = String(p.whatsapp).replace(/\D/g,'');
       const num = d.startsWith('55') ? d : ('55'+d);
-
       const partes = [];
-      partes.push('Olá, vi seu perfil no Autônoma.app');
+      partes.push('Olá! Vi seu perfil no Autônoma.app');
       const svc = p.servico || p.profissao;
-      if (svc) partes.push(`e gostaria de contratar seus serviços de ${svc}`);
-      else partes.push('e gostaria de contratar seus serviços');
+      if (svc) partes.push(`e gostaria de conversar sobre um serviço de ${svc}`);
+      else partes.push('e gostaria de conversar sobre um serviço');
       if (p.cidade) partes.push(`em ${p.cidade}`);
-      const msg = partes.join(' ') + '. Podemos conversar?';
-
+      const msg = partes.join(' ') + '. Podemos falar?';
       const url = `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
       return url;
     }
 
-    // Abre link de avaliação: prioriza /avaliar/:id, fallback /avaliar.html?id=...
+    // Abre link de avaliação: prioriza /avaliar/:id
     function buildAvalLink(pid){
       if (!pid) return '#';
       return `/avaliar/${encodeURIComponent(pid)}`;
@@ -271,11 +257,9 @@
     }
 
     let PROF=null;
-
     async function init(){
       try{
         PROF = await loadProfile(id);
-
         $('#foto').src = PROF.foto || '/icons/icon-192.png';
         $('#foto').alt = 'Foto de ' + (PROF.nome || 'Profissional');
         $('#nome').textContent = PROF.nome || 'Profissional';
@@ -302,6 +286,7 @@
         $('#stars').textContent = stars(ratingNum);
         const avalCount = Array.isArray(PROF.avaliacoes) ? PROF.avaliacoes.length : Number(PROF.avaliacoes||0);
         $('#count').textContent = `(${isNaN(avalCount)?0:avalCount})`;
+
         $('#desc').textContent = PROF.descricao || '—';
 
         // WhatsApp + mensagem
