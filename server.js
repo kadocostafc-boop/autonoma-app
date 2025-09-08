@@ -1,6 +1,6 @@
 // ============================================================================
 // Autônoma.app • server.js (CONSOLIDADO)
-// Data: 2025-09-07 (auth admin com hash + avaliações JSON)
+// Data: 2025-09-08
 // - Páginas públicas + PWA + SEO
 // - Admin (login obrigatório) + export CSV (suporta ADMIN_PASS_HASH com bcrypt)
 // - Painel do Profissional (login via token WhatsApp, Radar on/off, raio, cidades extras)
@@ -15,8 +15,7 @@
 // - Respeita .env: PRIMARY_HOST, FORCE_HTTPS, SECURE_COOKIES, REDIRECTS_DISABLED
 // ============================================================================
 require("dotenv").config();
-  console.log("🔑 ADMIN_USER atual:", process.env.ADMIN_USER);
-console.log("🔑 ADMIN_PASS atual:", process.env.ADMIN_PASS);
+
 const express = require("express");
 const session = require("express-session");
 const multer  = require("multer");
@@ -75,6 +74,8 @@ if (!fs.existsSync(PAYMENTS_FILE))   writeJSON(PAYMENTS_FILE, []);
 if (!fs.existsSync(METRICS_FILE))    writeJSON(METRICS_FILE, {});
 
 // ----------------------------------------------------------------------------
+// Admin / Sessão
+// ----------------------------------------------------------------------------
 const ADMIN_USER      = process.env.ADMIN_USER || "admin";
 const ADMIN_PASS      = process.env.ADMIN_PASS || process.env.ADMIN_PASSWORD || "admin123";
 const ADMIN_PASS_HASH = process.env.ADMIN_PASS_HASH || ""; // se existir, tem prioridade
@@ -83,7 +84,12 @@ const SESSION_SECRET  = process.env.SESSION_SECRET || "troque-isto";
 // Helpers
 const trim = (s)=> (s??"").toString().trim();
 const norm = (s)=> (s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
-const escapeHTML = (s="") => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+const escapeHTML = (s="") => String(s)
+  .replace(/&/g,"&amp;")
+  .replace(/</g,"&lt;")
+  .replace(/>/g,"&gt;")
+  .replace(/"/g,"&quot;")
+  .replace(/'/g,"&#39;");
 const getIP = (req)=> (req.headers["x-forwarded-for"]||"").split(",")[0].trim() || req.socket?.remoteAddress || "";
 const onlyDigits = (v)=> trim(v).replace(/\D/g,"");
 const ensureBR  = (d)=> (d && /^\d{10,13}$/.test(d) ? (d.startsWith("55")? d : "55"+d) : d);
@@ -103,7 +109,7 @@ function haversineKm(aLat, aLng, bLat, bLng){
   const R=6371, toRad=d=>d*Math.PI/180;
   const dLat=toRad(bLat-aLat), dLng=toRad(bLng-aLng);
   const lat1=toRad(aLat), lat2=toRad(bLat);
-  const x=Math.sin(dLat/2)**2+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
+  const x=Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
   return 2*R*Math.asin(Math.sqrt(x));
 }
 
@@ -115,7 +121,7 @@ app.use(express.urlencoded({ extended:true }));
 app.use(express.json({ limit:"1.2mb" }));
 app.use(cookieParser());
 
-// Canonical/HTTPS
+// Canonical/HTTPS (respeita REDIRECTS_DISABLED)
 if (!REDIRECTS_DISABLED){
   app.use((req,res,next)=>{
     try{
@@ -141,7 +147,7 @@ if (!REDIRECTS_DISABLED){
 app.use(express.static(PUBLIC_DIR, { maxAge:"7d", fallthrough: true }));
 app.use("/uploads", express.static(UPLOAD_DIR, { maxAge:"30d", immutable:true }));
 
-// Evita cache dos endpoints /api/*
+// Evita cache dos endpoints /api/* (especialmente em mobile/PWA)
 app.use(/^\/api\//, (_req, res, next) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.set("Pragma", "no-cache");
@@ -150,7 +156,7 @@ app.use(/^\/api\//, (_req, res, next) => {
   next();
 });
 
-// Sessões
+// Sessões (compatível com HTTPS)
 app.use(session({
   name: "aut_sess",
   secret: SESSION_SECRET,
@@ -164,23 +170,29 @@ app.use(session({
 }));
 
 // Limiter básico
-const loginLimiter = rateLimit({ windowMs: 15*60*1000, max: 20, standardHeaders: true, legacyHeaders: false });
-const reviewsLimiter = rateLimit({ windowMs: 5*60*1000,  max: 40, standardHeaders: true, legacyHeaders: false });
+const loginLimiter = rateLimit({
+  windowMs: 15*60*1000, max: 20,
+  standardHeaders: true, legacyHeaders: false
+});
+const reviewsLimiter = rateLimit({
+  windowMs: 5*60*1000, max: 40,
+  standardHeaders: true, legacyHeaders: false
+});
 
 // ----------------------------------------------------------------------------
 // GEO / AUTOCOMPLETE / GPS (base simples)
 // ----------------------------------------------------------------------------
 const CIDADES_BASE = [
-  { nome: "Rio de Janeiro/RJ", lat: -22.9068, lng: -43.1729,    bairros: ["Copacabana","Ipanema","Botafogo","Tijuca","Barra da Tijuca","Leblon","Centro"] },
-  { nome: "São Paulo/SP",      lat: -23.5505, lng: -46.6333,    bairros: ["Pinheiros","Vila Mariana","Moema","Tatuapé","Santana","Itaim Bibi","Centro"] },
-  { nome: "Belo Horizonte/MG", lat: -19.9167, lng: -43.9345,    bairros: ["Savassi","Lourdes","Funcionários","Pampulha","Centro","Cidade Nova"] },
-  { nome: "Brasília/DF",       lat: -15.7939, lng: -47.8828,    bairros: ["Asa Sul","Asa Norte","Lago Sul","Lago Norte","Sudoeste","Noroeste"] },
-  { nome: "Salvador/BA",       lat: -12.9711, lng: -38.5108,    bairros: ["Barra","Ondina","Rio Vermelho","Pituba","Itapuã","Stella Maris"] },
-  { nome: "Porto Alegre/RS",   lat: -30.0346, lng: -51.2177,    bairros: ["Moinhos de Vento","Centro","Cidade Baixa","Petrópolis","Tristeza"] },
-  { nome: "Curitiba/PR",       lat: -25.4284, lng: -49.2733,    bairros: ["Batel","Centro","Água Verde","Bigorrilho","Cabral","Portão"] },
-  { nome: "Recife/PE",         lat: -8.0476,  lng: -34.8770,    bairros: ["Boa Viagem","Casa Forte","Graças","Espinheiro","Pina","Boa Vista"] },
-  { nome: "Fortaleza/CE",      lat: -3.7319,  lng: -38.5267,    bairros: ["Meireles","Aldeota","Praia de Iracema","Praia do Futuro","Centro"] },
-  { nome: "Manaus/AM",         lat: -3.1190,  lng: -60.0217,    bairros: ["Adrianópolis","Centro","Ponta Negra","Flores","Parque 10"] },
+  { nome: "Rio de Janeiro/RJ", lat: -22.9068, lng: -43.1729, bairros: ["Copacabana","Ipanema","Botafogo","Tijuca","Barra da Tijuca","Leblon","Centro"] },
+  { nome: "São Paulo/SP",      lat: -23.5505, lng: -46.6333, bairros: ["Pinheiros","Vila Mariana","Moema","Tatuapé","Santana","Itaim Bibi","Centro"] },
+  { nome: "Belo Horizonte/MG", lat: -19.9167, lng: -43.9345, bairros: ["Savassi","Lourdes","Funcionários","Pampulha","Centro","Cidade Nova"] },
+  { nome: "Brasília/DF",       lat: -15.7939, lng: -47.8828, bairros: ["Asa Sul","Asa Norte","Lago Sul","Lago Norte","Sudoeste","Noroeste"] },
+  { nome: "Salvador/BA",       lat: -12.9711, lng: -38.5108, bairros: ["Barra","Ondina","Rio Vermelho","Pituba","Itapuã","Stella Maris"] },
+  { nome: "Porto Alegre/RS",   lat: -30.0346, lng: -51.2177, bairros: ["Moinhos de Vento","Centro","Cidade Baixa","Petrópolis","Tristeza"] },
+  { nome: "Curitiba/PR",       lat: -25.4284, lng: -49.2733, bairros: ["Batel","Centro","Água Verde","Bigorrilho","Cabral","Portão"] },
+  { nome: "Recife/PE",         lat: -8.0476,  lng: -34.8770, bairros: ["Boa Viagem","Casa Forte","Graças","Espinheiro","Pina","Boa Vista"] },
+  { nome: "Fortaleza/CE",      lat: -3.7319,  lng: -38.5267, bairros: ["Meireles","Aldeota","Praia de Iracema","Praia do Futuro","Centro"] },
+  { nome: "Manaus/AM",         lat: -3.1190,  lng: -60.0217, bairros: ["Adrianópolis","Centro","Ponta Negra","Flores","Parque 10"] },
 ];
 const SERVICOS_BASE = [
   "Eletricista","Hidráulico","Pintor","Marceneiro","Diarista","Pedreiro","Técnico em informática",
@@ -295,8 +307,12 @@ app.get("/admin.html", (_req,res)=> res.redirect(302, "/admin"));
 // ----------------------------------------------------------------------------
 const readDB  = ()=> readJSON(DB_FILE, []);
 const writeDB = (data)=> writeJSON(DB_FILE, data);
-function computeVerified(p){ return !!(p?.foto && isWhatsappValid(p.whatsapp) && p.cidade && p.bairro); }
 
+function computeVerified(p){
+  return !!(p?.foto && isWhatsappValid(p.whatsapp) && p.cidade && p.bairro);
+}
+
+// migração leve
 (function fixDB(){
   const db = readDB();
   let changed=false;
@@ -318,7 +334,8 @@ function computeVerified(p){ return !!(p?.foto && isWhatsappValid(p.whatsapp) &&
     if(!p.excluidoEm && p.excluido) p.excluidoEm=nowISO();
     if(p.lat!=null && typeof p.lat!=="number"){ p.lat=Number(p.lat); changed=true; }
     if(p.lng!=null && typeof p.lng!=="number"){ p.lng=Number(p.lng); changed=true; }
-    const newVer = computeVerified(p); if(p.verificado!==newVer){ p.verificado=newVer; changed=true; }
+    const newVer = computeVerified(p);
+    if(p.verificado!==newVer){ p.verificado=newVer; changed=true; }
     if(!p.plano) p.plano = "free";
     if(typeof p.raioKm!=="number") p.raioKm = 0;
     if(!Array.isArray(p.cidadesExtras)) p.cidadesExtras=[];
@@ -339,13 +356,13 @@ function computeVerified(p){ return !!(p?.foto && isWhatsappValid(p.whatsapp) &&
 // Upload (multer)
 // ----------------------------------------------------------------------------
 const storage = multer.diskStorage({
-  destination: (_, __, cb) => cb(null, UPLOAD_DIR),
-  filename:    (_, file, cb) => cb(null, `${Date.now()}-${Math.round(Math.random()*1e9)}${path.extname(file.originalname)}`)
+  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
+  filename:    (_req, file, cb) => cb(null, `${Date.now()}-${Math.round(Math.random()*1e9)}${path.extname(file.originalname)}`)
 });
 const upload = multer({
   storage,
   limits:{ fileSize: 3*1024*1024 },
-  fileFilter: (_, file, cb) => file.mimetype?.startsWith("image/") ? cb(null,true) : cb(new Error("Apenas imagens (JPG/PNG)."))
+  fileFilter: (_req, file, cb) => file.mimetype?.startsWith("image/") ? cb(null,true) : cb(new Error("Apenas imagens (JPG/PNG)."))
 });
 
 // ----------------------------------------------------------------------------
@@ -665,7 +682,6 @@ app.get("/api/profissional/:id", (req, res) => {
 });
 
 // -------------------- AVALIAÇÕES (APIs JSON novas) --------------------
-// GET /api/avaliacoes/:id?page=1&limit=20
 app.get("/api/avaliacoes/:id", (req,res)=>{
   const id = Number(req.params.id||"0");
   if (!Number.isFinite(id) || id<=0) return res.status(400).json({ ok:false, error:"id inválido" });
@@ -697,7 +713,7 @@ function ensureReviewCookie(req,res){
   return uid;
 }
 
-// POST /api/avaliacoes  { proId, nota, comentario, autor }
+// POST /api/avaliacoes
 app.post("/api/avaliacoes", reviewsLimiter, (req,res)=>{
   try{
     const proId = Number(req.body?.proId||"0");
@@ -715,7 +731,6 @@ app.post("/api/avaliacoes", reviewsLimiter, (req,res)=>{
     const uid = ensureReviewCookie(req,res);
     const ip = getIP(req);
 
-    // Bloqueio simples: mesmo cookie/ip não avalia o mesmo profissional em 12h
     const twelveH = Date.now()-12*3600*1000;
     const recent = (p.avaliacoes||[]).some(a=>{
       const t = Date.parse(a.at||"");
@@ -723,7 +738,12 @@ app.post("/api/avaliacoes", reviewsLimiter, (req,res)=>{
     });
     if (recent) return res.status(429).json({ ok:false, error:"aguarde para avaliar novamente" });
 
-    (p.avaliacoes ||= []).push({ autor, nota, comentario, at: nowISO(), meta: { ip, uid } });
+    (p.avaliacoes ||= []).push({
+      autor, nota, comentario,
+      at: nowISO(),
+      meta: { ip, uid }
+    });
+
     writeDB(db);
     res.json({ ok:true });
   }catch(e){
@@ -800,7 +820,7 @@ app.post("/api/track/qr/:id", (req,res)=>{
   const p = db.find(x=> Number(x.id)===id && !x.excluido);
   if (p){
     (p.qrLog ||= []).push({ at: nowISO(), ip:getIP(req) });
-    writeDB(db); // <— FIX: usar writeDB para persistir
+    writeDB(db);
     appendMetric("qr", { id, at: nowISO() });
   }
   res.json({ ok:true });
@@ -964,7 +984,12 @@ app.get("/api/painel/state", (req,res)=>{
   if (!p) return res.json({ ok:false });
   res.json({
     ok:true,
-    pro:{ id:p.id, nome:p.nome, plano:p.plano, raioKm:p.raioKm, cidadesExtras:p.cidadesExtras||[], radar:p.radar||p.uber||{}, receiveViaApp: !!p.receiveViaApp }
+    pro:{
+      id:p.id, nome:p.nome, plano:p.plano,
+      raioKm:p.raioKm, cidadesExtras:p.cidadesExtras||[],
+      radar:p.radar||p.uber||{},
+      receiveViaApp: !!p.receiveViaApp
+    }
   });
 });
 
@@ -983,6 +1008,7 @@ app.post("/api/painel/pos", (req,res)=>{
   res.json({ ok:true });
 });
 
+// Radar / limites
 function proLimits(p){
   if (p.plano==="premium") return { maxRaio:50, maxCidades:10, uberUnlimited:true, maxUberActivations:Infinity };
   if (p.plano==="pro")     return { maxRaio:30, maxCidades:3,  uberUnlimited:false, maxUberActivations:5 };
@@ -1167,7 +1193,12 @@ app.post("/api/denuncias", (req,res)=>{
     const detalhes = trim(body.detalhes);
     if (!proId || !motivo) return res.status(400).json({ ok:false, error:"Dados inválidos" });
     const arr = readJSON(DENUNCIAS_FILE, []);
-    arr.push({ id: arr.length? arr[arr.length-1].id+1 : 1, proId, motivo, detalhes, at: nowISO(), ip:getIP(req), resolved:false });
+    arr.push({
+      id: arr.length? arr[arr.length-1].id+1 : 1,
+      proId, motivo, detalhes,
+      at: nowISO(), ip:getIP(req),
+      resolved:false
+    });
     writeJSON(DENUNCIAS_FILE, arr);
     appendMetric("report", { proId, at: nowISO() });
     res.json({ ok:true });
@@ -1183,11 +1214,17 @@ const FAV_FILE = path.join(DATA_DIR, "favorites.json");
 if (!fs.existsSync(FAV_FILE)) writeJSON(FAV_FILE, {}); // mapa { favUid: [ids...] }
 const readFavMap  = ()=> readJSON(FAV_FILE, {});
 const writeFavMap = (m)=> writeJSON(FAV_FILE, m);
+
 function parseCookies(req){
   const raw = req.headers.cookie || "";
   const out = {};
   raw.split(";").forEach(p=>{
-    const i = p.indexOf("="); if (i>0){ const k = p.slice(0,i).trim(); const v = decodeURIComponent(p.slice(i+1).trim()); out[k] = v; }
+    const i = p.indexOf("=");
+    if (i>0){
+      const k = p.slice(0,i).trim();
+      const v = decodeURIComponent(p.slice(i+1).trim());
+      out[k] = v;
+    }
   });
   return out;
 }
@@ -1258,7 +1295,7 @@ app.delete("/api/favoritos/:id", (req,res)=>{
 });
 
 // ----------------------------------------------------------------------------
-// Admin páginas + APIs (protegidas)
+// Admin páginas + APIs (protegidas) – versão compacta do dashboard
 // ----------------------------------------------------------------------------
 function requireAdmin(req,res,next){ if (req.session?.isAdmin) return next(); return res.status(401).json({ ok:false }); }
 
@@ -1266,7 +1303,6 @@ app.get("/admin", (req,res)=>{
   if (!(req.session && req.session.isAdmin)) return res.redirect("/admin/login");
   res.sendFile(path.join(PUBLIC_DIR, "admin.html"));
 });
-
 app.get("/admin/login", (_req,res)=>{
   res.send(`<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="/css/app.css">
   <div class="wrap"><div class="card" style="max-width:420px;margin:auto">
@@ -1289,8 +1325,8 @@ app.get("/admin/login", (_req,res)=>{
     </form>
   </div></div>`);
 });
-// ========================= ADMIN APIs — DASHBOARD =========================
-// Estatísticas para os cards + série de últimos 30 dias
+
+// Stats simples pro admin (cards + série 30d)
 app.get("/api/admin/stats", requireAdmin, (_req, res) => {
   try {
     const db = readDB();
@@ -1303,31 +1339,20 @@ app.get("/api/admin/stats", requireAdmin, (_req, res) => {
     const totalExcluidos = db.filter(p=> p.excluido).length;
     const visitasTotais  = db.reduce((a,p)=> a + (Number(p.visitas)||0), 0);
     const chamadasTotais = db.reduce((a,p)=> a + (Number(p.chamadas)||0), 0);
-    const favoritosTotais= 0; // (se quiser, migramos depois do arquivo favorites.json)
 
-    // série de 30 dias (visits/calls/reports/qr)
     const days = [];
     for (let i=29;i>=0;i--){
       const d = new Date(today.getFullYear(), today.getMonth(), today.getDate()-i);
       const k = dayKey(d);
-      const line = metr[k] || {}; // (compat antiga — caso tenha salvo diferente)
       const v = (metr.visit && Array.isArray(metr.visit[k])) ? metr.visit[k].length : 0;
       const c = (metr.call  && Array.isArray(metr.call[k]))  ? metr.call[k].length  : 0;
       const r = (metr.report&& Array.isArray(metr.report[k]))? metr.report[k].length: 0;
       const q = (metr.qr    && Array.isArray(metr.qr[k]))    ? metr.qr[k].length    : 0;
       days.push({ day:k, visits:v, calls:c, reports:r, qr:q });
     }
-
     res.json({
       ok:true,
-      cards:{
-        ativos: totalAtivos,
-        suspensos: totalSuspensos,
-        excluidos: totalExcluidos,
-        visitas: visitasTotais,
-        chamadas: chamadasTotais,
-        favoritos: favoritosTotais
-      },
+      cards:{ ativos: totalAtivos, suspensos: totalSuspensos, excluidos: totalExcluidos, visitas: visitasTotais, chamadas: chamadasTotais, favoritos: 0 },
       last30: days
     });
   } catch(e){
@@ -1335,15 +1360,14 @@ app.get("/api/admin/stats", requireAdmin, (_req, res) => {
   }
 });
 
-// Lista de profissionais (filtros + paginação) para a tabela do admin
+// Lista de profissionais (filtros + paginação)
 app.get("/api/admin/profissionais", requireAdmin, (req,res)=>{
   try{
     let items = readDB().slice();
-
     const q        = (req.query.q||"").toString().trim().toLowerCase();
     const cidade   = (req.query.cidade||"").toString().trim().toLowerCase();
     const servicoQ = (req.query.servico||"").toString().trim().toLowerCase();
-    const plano    = (req.query.plano||"").toString().trim().toLowerCase(); // premium|pro|free|""(todos)
+    const plano    = (req.query.plano||"").toString().trim().toLowerCase(); // premium|pro|free|""
     const verif    = (req.query.verificado||"").toString().trim().toLowerCase(); // "1"|"0"|"" 
     const status   = (req.query.status||"").toString().trim().toLowerCase(); // "ativos"|"suspensos"|"excluidos"|"" 
 
@@ -1370,7 +1394,6 @@ app.get("/api/admin/profissionais", requireAdmin, (req,res)=>{
     if (verif==="1") items = items.filter(p=> !!p.verificado);
     if (verif==="0") items = items.filter(p=> !p.verificado);
 
-    // score simples p/ ordenações conhecidas
     items = items.map(p=>{
       const notas = (p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
       const rating = notas.length ? (notas.reduce((a,b)=>a+b,0)/notas.length) : 0;
@@ -1379,7 +1402,6 @@ app.get("/api/admin/profissionais", requireAdmin, (req,res)=>{
 
     const sort = String(req.query.sort||"recentes"); // "recentes"|"rating"|"visitas"|"chamadas"|"nome"
     const dir  = String(req.query.dir||"desc").toLowerCase()==="asc" ? 1 : -1;
-
     items.sort((a,b)=>{
       const by = {
         recentes: (x)=> Date.parse(x.createdAt||0)||0,
@@ -1414,14 +1436,13 @@ app.get("/api/admin/profissionais", requireAdmin, (req,res)=>{
       suspenso: !!p.suspenso,
       excluido: !!p.excluido
     }));
-
     res.json({ ok:true, total, items:slice });
   }catch(e){
     res.status(500).json({ ok:false, error:String(e) });
   }
 });
 
-// Recalcular “verificado” em toda a base (botão do admin)
+// Recalcular “verificado” em toda a base
 app.post("/api/admin/recalc-verified", requireAdmin, (_req,res)=>{
   try{
     const db = readDB();
@@ -1435,7 +1456,7 @@ app.post("/api/admin/recalc-verified", requireAdmin, (_req,res)=>{
   }
 });
 
-// (Opcional) CSV de métricas agregadas (últimos 30 dias)
+// CSV de métricas (últimos 30 dias)
 app.get("/api/admin/metrics.csv", requireAdmin, (_req,res)=>{
   try{
     const metr = readJSON(METRICS_FILE, {});
@@ -1459,6 +1480,7 @@ app.get("/api/admin/metrics.csv", requireAdmin, (_req,res)=>{
   }
 });
 
+// Login admin
 app.post("/admin/login", loginLimiter, async (req,res)=>{
   const user = trim(req.body.user);
   const pass = trim(req.body.password || "");
@@ -1470,7 +1492,6 @@ app.post("/admin/login", loginLimiter, async (req,res)=>{
     if (ADMIN_PASS_HASH) ok = await bcrypt.compare(pass, ADMIN_PASS_HASH);
     else ok = (pass === ADMIN_PASS);
     if (!ok) return res.status(401).send(htmlMsg("Falha no login","Usuário ou senha incorretos.","/admin/login"));
-
     req.session.isAdmin = true;
     req.session.adminUser = user;
     return res.redirect("/admin");
@@ -1478,46 +1499,7 @@ app.post("/admin/login", loginLimiter, async (req,res)=>{
     return res.status(500).send(htmlMsg("Erro", String(e), "/admin/login"));
   }
 });
-
 app.get("/admin/logout", (req,res)=>{ req.session.destroy(()=> res.redirect("/admin/login")); });
-
-app.get("/api/admin/denuncias", requireAdmin, (_req,res)=> res.json(readJSON(DENUNCIAS_FILE, [])));
-app.post("/api/admin/denuncias/:id/resolve", requireAdmin, (req,res)=>{
-  const id = Number(req.params.id||"0");
-  const arr = readJSON(DENUNCIAS_FILE, []);
-  const it = arr.find(x=> Number(x.id)===id);
-  if (!it) return res.status(404).json({ ok:false });
-  it.resolved = true; it.resolvedAt = nowISO();
-  writeJSON(DENUNCIAS_FILE, arr);
-  res.json({ ok:true });
-});
-app.get("/admin/export.csv", requireAdmin, (_req,res)=>{
-  const db = readDB();
-  const header = ["id","nome","whatsapp","cidade","bairro","servico","profissao","plano","raioKm","atendimentos","visitas","chamadas","rating"].join(",");
-  const lines = db.map(p=>{
-    const notas = (p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
-    const rating = notas.length ? (notas.reduce((a,b)=>a+b,0)/notas.length).toFixed(2) : "0";
-    return [
-      p.id,
-      `"${(p.nome||"").replace(/"/g,'""')}"`,
-      `"${p.whatsapp||""}"`,
-      `"${(p.cidade||"").replace(/"/g,'""')}"`,
-      `"${(p.bairro||"").replace(/"/g,'""')}"`,
-      `"${(p.servico||"").replace(/"/g,'""')}"`,
-      `"${(p.profissao||"").replace(/"/g,'""')}"`,
-      p.plano||"free",
-      p.raioKm||0,
-      p.atendimentos||0,
-      p.visitas||0,
-      p.chamadas||0,
-      rating
-    ].join(",");
-  });
-  const csv = [header, ...lines].join("\n");
-  res.setHeader("Content-Type","text/csv; charset=utf-8");
-  res.setHeader("Content-Disposition","attachment; filename=profissionais.csv");
-  res.send(csv);
-});
 
 // ----------------------------------------------------------------------------
 // CRON leve: auto-desligar Radar quando 'until' expirar (a cada request)
@@ -1539,7 +1521,81 @@ app.use((req,_res,next)=>{
   }catch{}
   next();
 });
+// === ROTAS FINAIS DO ADMIN (stats/list/recalc/metrics.csv) ===================
+app.get("/api/admin/stats", requireAdmin, (_req, res) => {
+  try {
+    const payload = adminBuildStats();
+    res.json(payload);
+  } catch (e) {
+    res.status(500).json({ ok:false, error:String(e) });
+  }
+});
 
+app.get("/api/admin/profissionais", requireAdmin, (req,res) => {
+  try {
+    const all = adminBuildList(req.query);
+    // paginação simples (compat com tabela do admin)
+    const page  = Math.max(1, Number(req.query.page||1));
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit||30)));
+    const start = (page-1)*limit;
+    const slice = all.slice(start, start+limit).map(p => ({
+      id: p.id,
+      nome: p.nome,
+      cidade: p.cidade||"",
+      bairro: p.bairro||"",
+      servico: p.servico||p.profissao||"",
+      plano: p.plano||"free",
+      verificado: !!p.verificado,
+      rating: (() => {
+        const ns=(p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
+        return ns.length ? ns.reduce((a,b)=>a+b,0)/ns.length : 0;
+      })(),
+      avals: Array.isArray(p.avaliacoes)? p.avaliacoes.length : 0,
+      visitas: Number(p.visitas||0),
+      chamadas: Number(p.chamadas||0),
+      suspenso: !!p.suspenso,
+      excluido: !!p.excluido
+    }));
+    res.json({ ok:true, total: all.length, items: slice });
+  } catch (e) {
+    res.status(500).json({ ok:false, error:String(e) });
+  }
+});
+
+app.post("/api/admin/recalc-verified", requireAdmin, (_req,res) => {
+  try{
+    const db = readDB();
+    for (const p of db){
+      p.verificado = !!(p?.foto && isWhatsappValid(p.whatsapp) && p.cidade && p.bairro);
+    }
+    writeDB(db);
+    res.json({ ok:true, changed: db.length });
+  }catch(e){
+    res.status(500).json({ ok:false, error:String(e) });
+  }
+});
+
+app.get("/api/admin/metrics.csv", requireAdmin, (_req,res)=>{
+  try{
+    const metr = readJSON(METRICS_FILE, {});
+    const today = new Date();
+    const rows = [["dia","visitas","chamadas","denuncias","qr"]];
+    for (let i=29;i>=0;i--){
+      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate()-i).toISOString().slice(0,10);
+      const v = (metr.visit && Array.isArray(metr.visit[d])) ? metr.visit[d].length : 0;
+      const c = (metr.call  && Array.isArray(metr.call[d]))  ? metr.call[d].length  : 0;
+      const r = (metr.report&& Array.isArray(metr.report[d]))? metr.report[d].length: 0;
+      const q = (metr.qr    && Array.isArray(metr.qr[d]))    ? metr.qr[d].length    : 0;
+      rows.push([d,v,c,r,q]);
+    }
+    const csv = rows.map(r=> r.map(v=> `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+    res.setHeader("Content-Type","text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition","attachment; filename=metrics_30d.csv");
+    res.send(csv);
+  }catch(e){
+    res.status(500).type("text").send(String(e));
+  }
+});
 // -------------------- INÍCIO DO SERVIDOR --------------------
 const PORT = process.env.PORT || BASE_PORT || 3000;
 app.listen(PORT, HOST, () => {
