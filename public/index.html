@@ -195,7 +195,7 @@
     /* SW com auto-reload quando atualizar */
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=home-2025-09-07v').catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=36').catch(()=>{});
       });
       let reloaded=false;
       navigator.serviceWorker.addEventListener('controllerchange', ()=>{
