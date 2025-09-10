@@ -1,5 +1,5 @@
 // ============================================================================
-// Autônoma.app • server.js (CONSOLIDADO)
+// Autônoma.app • server.js (CONSOLIDADO E CORRIGIDO)
 // Data: 2025-09-10
 // - Páginas públicas + PWA + SEO
 // - Admin (login obrigatório) + export CSV + métricas/gráficos (endpoints JSON)
@@ -31,6 +31,8 @@ const cookieParser = require("cookie-parser");
 
 const app = express();
 app.set("trust proxy", 1);
+
+// =========================[ Config ]==========================
 const HOST = "0.0.0.0";
 const BASE_PORT = Number(process.env.PORT || 3000);
 
@@ -61,7 +63,10 @@ const METRICS_FILE   = path.join(DATA_DIR, "metrics.json");
 
 [PUBLIC_DIR, DATA_DIR, UPLOAD_DIR].forEach(p => { if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive:true }); });
 
-function readJSON(file, fallback){ try{ return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file,"utf8")) : fallback; }catch{ return fallback; } }
+function readJSON(file, fallback){
+  try{ return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file,"utf8")) : fallback; }
+  catch{ return fallback; }
+}
 function writeJSON(file, data){ fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf8"); }
 
 // Inicia arquivos essenciais
@@ -76,7 +81,7 @@ const ADMIN_PASS      = process.env.ADMIN_PASS || process.env.ADMIN_PASSWORD || 
 const ADMIN_PASS_HASH = process.env.ADMIN_PASS_HASH || ""; // se existir, tem prioridade
 const SESSION_SECRET  = process.env.SESSION_SECRET || "troque-isto";
 
-// Helpers
+// =========================[ Helpers ]==========================
 const trim = (s)=> (s??"").toString().trim();
 const norm = (s)=> (s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
 const escapeHTML = (s="") => String(s)
@@ -89,10 +94,14 @@ const ensureBR  = (d)=> (d && /^\d{10,13}$/.test(d) ? (d.startsWith("55")? d : "
 const isWhatsappValid = (w)=> { const d=onlyDigits(w); const br=ensureBR(d); return !!(br && /^\d{12,13}$/.test(br)); };
 const nowISO = ()=> new Date().toISOString();
 const monthRefOf = (d)=> (d||nowISO()).slice(0,7); // "YYYY-MM"
-const weekKey = ()=>{  const d=new Date(); const onejan=new Date(d.getFullYear(),0,1);
+
+function weekKey (){
+  const d=new Date();
+  const onejan=new Date(d.getFullYear(),0,1);
   const day=Math.floor((d - onejan) / 86400000);
   const week=Math.ceil((day + onejan.getDay() + 1) / 7);
-  return `${d.getFullYear()}-W${String(week).padStart(2,"0")}`;};
+  return `${d.getFullYear()}-W${String(week).padStart(2,"0")}`;
+}
 
 // Haversine
 function haversineKm(aLat, aLng, bLat, bLng){
@@ -111,7 +120,7 @@ function buildWaMessage(p){
   return `Olá${nome}, vi seu perfil na Autônoma.app e gostaria de contratar ${serv}. Podemos conversar?`;
 }
 
-// Middlewares
+// =========================[ Middlewares ]=====================
 app.use(compression());
 app.use(express.urlencoded({ extended:true }));
 app.use(express.json({ limit:"1.2mb" }));
@@ -123,6 +132,7 @@ if (!REDIRECTS_DISABLED){
     try{
       const hostNow = (req.headers.host||"").toLowerCase();
       const isHttps = (req.protocol==="https") || (req.headers["x-forwarded-proto"]==="https");
+
       if (PRIMARY_HOST){
         const target = PRIMARY_HOST.toLowerCase();
         if (hostNow && hostNow !== target) {
@@ -152,7 +162,7 @@ app.use(/^\/api\//, (_req, res, next) => {
   next();
 });
 
-// Sessões
+// Sessões (alinhado a SECURE_COOKIES)
 app.use(session({
   name: "aut_sess",
   secret: SESSION_SECRET,
@@ -169,7 +179,7 @@ app.use(session({
 const loginLimiter = rateLimit({ windowMs: 15*60*1000, max: 20, standardHeaders: true, legacyHeaders: false });
 const reviewsLimiter = rateLimit({ windowMs: 5*60*1000,  max: 40, standardHeaders: true, legacyHeaders: false });
 
-// GEO / AUTOCOMPLETE (base simples para fallback)
+// =========================[ GEO / AUTOCOMPLETE ]=====================
 const CIDADES_BASE = [
   { nome: "Rio de Janeiro/RJ", lat: -22.9068, lng: -43.1729, bairros: ["Copacabana","Ipanema","Botafogo","Tijuca","Barra da Tijuca","Leblon","Centro"] },
   { nome: "São Paulo/SP",      lat: -23.5505, lng: -46.6333, bairros: ["Pinheiros","Vila Mariana","Moema","Tatuapé","Santana","Itaim Bibi","Centro"] },
@@ -182,13 +192,14 @@ const CIDADES_BASE = [
   { nome: "Fortaleza/CE",      lat: -3.7319,  lng: -38.5267, bairros: ["Meireles","Aldeota","Praia de Iracema","Praia do Futuro","Centro"] },
   { nome: "Manaus/AM",         lat: -3.1190,  lng: -60.0217, bairros: ["Adrianópolis","Centro","Ponta Negra","Flores","Parque 10"] },
 ];
-
 const SERVICOS_BASE = [
   "Eletricista","Hidráulico","Pintor","Marceneiro","Diarista","Pedreiro","Técnico em informática",
   "Manicure","Cabeleireiro","Encanador","Chaveiro","Jardinheiro","Fotógrafo","Personal Trainer"
 ];
 
-app.get('/api/geo/cidades', (_req, res) => { try{ res.json(CIDADES_BASE.map(c => c.nome)); }catch{ res.json([]); }});
+app.get('/api/geo/cidades', (_req, res) => {
+  try{ res.json(CIDADES_BASE.map(c => c.nome)); }catch{ res.json([]); }
+});
 app.get('/api/geo/cidades/suggest', (req, res) => {
   try{
     const q = trim(req.query.q||""); if (!q) return res.json([]);
@@ -234,7 +245,7 @@ app.get('/api/geo/closest-city', (req, res) => {
   return res.json({ ok:true, cidade: best.nome, distKm: Math.round(bestD*10)/10 });
 });
 
-// HTML helpers
+// =========================[ HTML helpers ]=====================
 const htmlMsg = (title, text, backHref="/") =>
 `<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="/css/app.css">
 <div class="wrap"><div class="card"><h1>${escapeHTML(title)}</h1><p class="meta">${escapeHTML(text||"")}</p><a class="btn" href="${escapeHTML(backHref)}">Voltar</a></div></div>`;
@@ -243,7 +254,7 @@ const htmlErrors = (title, list, backHref="/") =>
 `<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="/css/app.css">
 <div class="wrap"><div class="card"><h1>${escapeHTML(title)}</h1><ul>${(list||[]).map(e=>`<li>${escapeHTML(e)}</li>`).join("")}</ul><a class="btn" href="${escapeHTML(backHref)}">Voltar</a></div></div>`;
 
-// Health/diagnóstico
+// =========================[ Health/diag ]======================
 app.get("/healthz", (_req,res)=> res.type("text").send("ok"));
 app.get("/admin/check", (req,res)=>{
   const info = {
@@ -263,7 +274,7 @@ app.get("/admin/check", (req,res)=>{
   <a class="btn" href="/">Início</a></div></div>`);
 });
 
-// Páginas estáticas & redirects
+// =====================[ Páginas/redirects ]====================
 app.get("/",                 (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "index.html")));
 app.get("/clientes.html",    (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "clientes.html")));
 app.get("/cadastro.html",    (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "cadastro.html")));
@@ -285,11 +296,16 @@ app.get(["/perfil.html","/perfil"], (req,res)=>{
 app.get("/clientes", (_req,res)=> res.redirect(301, "/clientes.html"));
 app.get("/cadastro", (_req,res)=> res.redirect(301, "/cadastro.html"));
 
-// Banco (JSON) + migração/normalização
+// =========================[ Banco (JSON) ]=====================
 const readDB  = ()=> readJSON(DB_FILE, []);
 const writeDB = (data)=> writeJSON(DB_FILE, data);
-function computeVerified(p){ return !!(p?.foto && isWhatsappValid(p.whatsapp) && p.cidade && p.bairro); }
 
+// Verificado (regra pragmática para UX boa)
+function computeVerified(p){
+  return !!(p?.foto && isWhatsappValid(p.whatsapp) && p.cidade && p.bairro);
+}
+
+// Migração/normalização inicial
 (function fixDB(){
   const db = readDB();
   let changed=false;
@@ -321,10 +337,10 @@ function computeVerified(p){ return !!(p?.foto && isWhatsappValid(p.whatsapp) &&
     if(typeof p.receiveViaApp!=="boolean") p.receiveViaApp=false;
   }
   if (changed) writeDB(db);
-  console.log("✔ Base OK (ids/logs/planos/radar).");
+  console.log("✔ Base OK (ids/logs/planos/radar/verificado).");
 })();
 
-// Upload (multer)
+// =========================[ Upload (multer) ]==================
 const storage = multer.diskStorage({
   destination: (_, __, cb) => cb(null, UPLOAD_DIR),
   filename:    (_, file, cb) => cb(null, `${Date.now()}-${Math.round(Math.random()*1e9)}${path.extname(file.originalname)}`)
@@ -335,7 +351,7 @@ const upload = multer({
   fileFilter: (_, file, cb) => file.mimetype?.startsWith("image/") ? cb(null,true) : cb(new Error("Apenas imagens (JPG/PNG)."))
 });
 
-// GEO utils + arquivos
+// =========================[ GEO utils + arquivos ]==============
 function loadGeoMaps(){
   const bairrosMap = readJSON(BAIRROS_FILE, {}) || {};
   let cidades = readJSON(CIDADES_FILE, []);
@@ -353,7 +369,7 @@ function loadGeoMaps(){
   const servExtra = readJSON(SERVICOS_FILE, []);
   const fromDB = new Set(readDB().map(p => (p.servico||p.profissao||"").toString().trim()).filter(Boolean));
   const servicos = Array.from(new Set([...baseServ, ...(Array.isArray(servExtra)?servExtra:[]), ...Array.from(fromDB)]
-                      .map(s=>s.trim()).filter(Boolean))).sort((a,b)=> a.localeCompare(b,"pt-BR"));
+                        .map(s=>s.trim()).filter(Boolean))).sort((a,b)=> a.localeCompare(b,"pt-BR"));
   return { bairrosMap, cidades, servicos };
 }
 function normalizeCidadeUF(input){
@@ -366,39 +382,44 @@ function normalizeCidadeUF(input){
   return hit || input;
 }
 
-// UI config
+// =========================[ UI config ]========================
 const WHATSAPP_DEFAULT_MSG =
   "Olá! Vi seu perfil na Autônoma.app e gostaria de contratar seu serviço. Podemos conversar?";
-
 app.get("/api/ui-config", (_req, res) => {
   res.json({ ok: true, evaluateCTA: true, whatsappTemplate: WHATSAPP_DEFAULT_MSG });
 });
 
-// Cadastro (com upload obrigatório)
+// =========================[ Cadastro ]=========================
 function validateCadastro(body){
   const e=[];
   const nome = trim(body.nome);
   if (!nome || nome.length<2 || nome.length>80) e.push("Nome é obrigatório (2–80).");
+
   const cidadeInput = trim(body.cidade);
   const cidade = normalizeCidadeUF(cidadeInput);
   const bairro = trim(body.bairro);
   if(!cidade) e.push("Cidade é obrigatória.");
   if(!bairro) e.push("Bairro é obrigatório.");
+
   const servico   = trim(body.servico);
   const profissao = trim(body.profissao);
   if(!servico && !profissao) e.push("Informe Categoria ou Profissão.");
+
   const email = trim(body.email);
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.push("E-mail inválido.");
+
   const telefone = ensureBR(onlyDigits(body.telefone));
   const whatsapp = ensureBR(onlyDigits(body.whatsapp));
   if (!whatsapp || !/^\d{12,13}$/.test(whatsapp)) e.push("WhatsApp inválido (use DDD).");
   if (telefone && !/^\d{12,13}$/.test(telefone)) e.push("Telefone inválido (use DDD).");
+
   let lat = (body.lat ?? "").toString().trim();
   let lng = (body.lng ?? "").toString().trim();
   lat = lat === "" ? null : Number(lat);
   lng = lng === "" ? null : Number(lng);
   if (lat!=null && !(Number.isFinite(lat) && lat>=-90 && lat<=90)) e.push("Latitude inválida.");
   if (lng!=null && !(Number.isFinite(lng) && lng>=-180 && lng<=180)) e.push("Longitude inválida.");
+
   return {
     ok: e.length===0, errors:e,
     values:{
@@ -421,12 +442,16 @@ function isDuplicate(db, novo){
 }
 
 app.post("/cadastrar",
-  (req,res,next)=> upload.single("foto")(req,res,(err)=> { if (err) return res.status(400).send(htmlMsg("Erro no upload", err.message, "/cadastro.html")); next(); }),
+  (req,res,next)=> upload.single("foto")(req,res,(err)=> {
+    if (err) return res.status(400).send(htmlMsg("Erro no upload", err.message, "/cadastro.html"));
+    next();
+  }),
   (req,res)=>{
     try{
       const { ok, errors, values } = validateCadastro(req.body);
       if (!req.file?.filename) errors.push("Foto é obrigatória.");
       if (!ok || errors.length) return res.status(400).send(htmlErrors("Dados inválidos", errors, "/cadastro.html"));
+
       const db = readDB();
       if (isDuplicate(db, values)){
         return res.status(400).send(htmlMsg("Cadastro duplicado","Já existe um profissional com o mesmo WhatsApp neste bairro/cidade.","/cadastro.html"));
@@ -456,9 +481,11 @@ app.post("/cadastrar",
   }
 );
 
-// Busca pública de profissionais
-function isRecent(iso, mins=15){ if (!iso) return false; const t=new Date(iso).getTime(); if (!Number.isFinite(t)) return false; return (Date.now()-t) <= (mins*60*1000); }
-
+// =========================[ Busca pública ]====================
+function isRecent(iso, mins=15){
+  if (!iso) return false; const t=new Date(iso).getTime(); if (!Number.isFinite(t)) return false;
+  return (Date.now()-t) <= (mins*60*1000);
+}
 app.get("/api/profissionais", (req, res) => {
   try{
     const db = readDB().filter(p => !p.excluido && !p.suspenso);
@@ -474,6 +501,7 @@ app.get("/api/profissionais", (req, res) => {
 
     let items = db;
     if (featured) items = items.filter(p => p.verificado || (p.plano && p.plano !== 'free'));
+
     if (cidade) {
       const alvo = normalizeCidadeUF(cidade);
       const N = norm(alvo);
@@ -499,6 +527,7 @@ app.get("/api/profissionais", (req, res) => {
     for (const p of items) {
       const notas = (p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
       p._rating = notas.length ? notas.reduce((a,b)=>a+b,0)/notas.length : 0;
+
       let plat = Number(p.lat); let plng = Number(p.lng);
       if (!Number.isFinite(plat) || !Number.isFinite(plng)) {
         if (p.lastPos && Number.isFinite(p.lastPos.lat) && Number.isFinite(p.lastPos.lng)) {
@@ -517,6 +546,7 @@ app.get("/api/profissionais", (req, res) => {
 
     const sort = String(req.query.sort || "score");
     const dir  = String(req.query.dir || "desc").toLowerCase() === "asc" ? 1 : -1;
+
     items.sort((a,b)=>{
       if (sort === "dist") {
         const da = (a._distKm==null ? Infinity : a._distKm);
@@ -558,7 +588,7 @@ app.get("/api/profissionais", (req, res) => {
   }
 });
 
-// ----------------- Perfil (APIs) -----------------
+// =========================[ Perfil (APIs) ]====================
 app.get("/api/profissionais/:id", (req, res) => {
   const id = Number(req.params.id || "0");
   if (!Number.isFinite(id) || id <= 0) return res.status(400).json({ ok:false, error:"id inválido" });
@@ -587,7 +617,9 @@ app.get("/api/profissionais/:id", (req, res) => {
     badge: p.plano==="premium"?"PREMIUM":(p.plano==="pro"?"PRO":""),
     distanceKm: (typeof p.distanceKm === "number") ? p.distanceKm : null
   });
-});// Compat
+});
+
+// Compat
 app.get("/api/profissional/:id", (req, res) => {
   const id = Number(req.params.id || "0");
   if (!Number.isFinite(id) || id <= 0) { return res.status(400).json({ ok: false, error: "id inválido" }); }
@@ -623,7 +655,7 @@ app.get("/api/profissional/:id", (req, res) => {
   });
 });
 
-// -------------------- Avaliações --------------------
+// =========================[ Avaliações ]=======================
 app.get("/api/avaliacoes/:id", (req,res)=>{
   const id = Number(req.params.id||"0");
   if (!Number.isFinite(id) || id<=0) return res.status(400).json({ ok:false, error:"id inválido" });
@@ -651,7 +683,7 @@ function ensureReviewCookie(req,res){
     secure: (process.env.SECURE_COOKIES === "true"),
     maxAge: 180*24*3600*1000,
     path: "/"
-  });
+      });
   return uid;
 }
 
@@ -661,14 +693,18 @@ app.post("/api/avaliacoes", reviewsLimiter, (req,res)=>{
     const nota = Number(req.body?.nota||0);
     const comentario = trim(req.body?.comentario||"");
     const autor = trim(req.body?.autor||"Cliente");
+
     if (!Number.isFinite(proId) || proId<=0) return res.status(400).json({ ok:false, error:"proId inválido" });
     if (!(nota>=1 && nota<=5)) return res.status(400).json({ ok:false, error:"nota inválida" });
     if (comentario.length < 5) return res.status(400).json({ ok:false, error:"comentário muito curto" });
+
     const db = readDB();
     const p = db.find(x=> Number(x.id)===proId && !x.excluido);
     if (!p) return res.status(404).json({ ok:false, error:"profissional não encontrado" });
+
     const uid = ensureReviewCookie(req,res);
     const ip = getIP(req);
+
     // Bloqueio: mesmo cookie/ip em 12h
     const twelveH = Date.now()-12*3600*1000;
     const recent = (p.avaliacoes||[]).some(a=>{
@@ -676,6 +712,7 @@ app.post("/api/avaliacoes", reviewsLimiter, (req,res)=>{
       return a.meta && (a.meta.ip===ip || a.meta.uid===uid) && Number.isFinite(t) && t>=twelveH;
     });
     if (recent) return res.status(429).json({ ok:false, error:"aguarde para avaliar novamente" });
+
     (p.avaliacoes ||= []).push({
       autor, nota, comentario,
       at: nowISO(),
@@ -755,7 +792,7 @@ app.get("/profissional/:id", (req,res)=>{
   return res.redirect(`/perfil.html?id=${idNum}`);
 });
 
-// ---------------- Métricas/Tracking ----------------
+// =======================[ Métricas/Tracking ]===================
 function appendMetric(key, payload){
   const metr = readJSON(METRICS_FILE, {});
   const day = (new Date()).toISOString().slice(0,10);
@@ -764,6 +801,7 @@ function appendMetric(key, payload){
   metr[key][day].push(payload);
   writeJSON(METRICS_FILE, metr);
 }
+
 app.post("/api/track/visit/:id", (req,res)=>{
   const id = Number(req.params.id||"0");
   const db = readDB();
@@ -800,7 +838,7 @@ app.post("/api/track/qr/:id", (req,res)=>{
   res.json({ ok:true });
 });
 
-// ---------------- QR CODE ----------------
+// ===========================[ QR CODE ]=========================
 app.get("/api/qr", async (req, res) => {
   try{
     let text = "";
@@ -821,7 +859,7 @@ app.get("/api/qr", async (req, res) => {
   }
 });
 
-// ---------------- Top 10 semanal ----------------
+// =========================[ Top 10 semanal ]====================
 function weekKeyFor(d){
   const dt = new Date(d);
   const y = dt.getFullYear();
@@ -861,11 +899,12 @@ app.get("/api/top10", (req,res)=>{
   res.json({ ok:true, week: weekKey(), items:list });
 });
 
-// ---------------- Painel do Profissional ----------------
+// =====================[ Painel do Profissional ]================
 app.get("/api/painel/me", (req, res) => {
   try {
     const db = readDB();
     let pro = null;
+
     if (req.session?.painel?.ok) {
       pro = db.find(p => Number(p.id) === Number(req.session.painel.proId) && !p.excluido);
     }
@@ -880,9 +919,11 @@ app.get("/api/painel/me", (req, res) => {
       }
     }
     if (!pro) return res.status(401).json({ ok:false });
+
     const notas = (pro.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
     const rating = notas.length ? notas.reduce((a,b)=>a+b,0)/notas.length : 0;
     const fees = { cardPercent: FEE_CARD_PERCENT, pixPercent: FEE_PIX_PERCENT };
+
     return res.json({
       ok: true,
       id: pro.id,
@@ -967,6 +1008,7 @@ app.post("/api/painel/radar", (req,res)=>{
   const nowRef = monthRefOf();
   p.radar ||= { on:false, until:null, lastOnAt:null, monthlyUsed:0, monthRef:nowRef };
   if (p.radar.monthRef !== nowRef){ p.radar.monthRef=nowRef; p.radar.monthlyUsed=0; }
+
   const lim = proLimits(p);
   if (on===true){
     if (p.plano==="free") return res.status(403).json({ ok:false, error:"Somente Pro/Premium" });
@@ -983,15 +1025,6 @@ app.post("/api/painel/radar", (req,res)=>{
   }
   writeDB(db);
   res.json({ ok:true, radar:p.radar });
-});
-
-app.post("/api/painel/radar/toggle", (req,res)=>{
-  const s = req.session?.painel; if (!s?.ok) return res.status(401).json({ ok:false });
-  const db = readDB(); const p = db.find(x=> Number(x.id)===s.proId); if (!p) return res.status(404).json({ ok:false });
-  const want = !(p.radar?.on);
-  const durHrs = p.radar?.until ? ( (Date.parse(p.radar.until)-Date.now())/3600e3 ) : null;
-  req.body = { on: want, durationHours: durHrs };
-  return app._router.handle(req,res, ()=>{}, "/api/painel/radar");
 });
 
 app.post("/api/painel/radar/autooff", (req,res)=>{
@@ -1077,8 +1110,9 @@ app.get("/api/painel/export.csv", (req,res)=>{
   res.send(csv);
 });
 
-// ---------------- Pagamentos (stub) ----------------
+// ===========================[ Pagamentos ]=====================
 function newPaymentId(){ return crypto.randomBytes(10).toString("hex"); }
+
 app.get("/api/checkout/options", (_req,res)=>{
   res.json({ ok:true, pix: PIX_ENABLED, card: CARD_ENABLED, fees: { cardPercent:FEE_CARD_PERCENT, pixPercent:FEE_PIX_PERCENT } });
 });
@@ -1130,7 +1164,7 @@ app.get("/api/checkout/pro/:id", (req,res)=>{
   });
 });
 
-// ---------------- Denúncias ----------------
+// ===========================[ Denúncias ]======================
 app.post("/api/denuncias", (req,res)=>{
   try{
     const body = req.body||{};
@@ -1153,7 +1187,7 @@ app.post("/api/denuncias", (req,res)=>{
   }
 });
 
-// ---------------- Favoritos (cookie anônimo) ----------------
+// =====================[ Favoritos (FAV_UID) ]==================
 const FAV_FILE = path.join(DATA_DIR, "favorites.json");
 if (!fs.existsSync(FAV_FILE)) writeJSON(FAV_FILE, {});
 const readFavMap  = ()=> readJSON(FAV_FILE, {});
@@ -1216,6 +1250,7 @@ app.get("/api/favoritos", (req,res)=>{
     res.json({ ok:true, ids, items });
   }catch(e){ res.status(500).json({ ok:false, error:String(e) }); }
 });
+
 app.post("/api/favoritos/toggle", (req,res)=>{
   try{
     const uid = ensureFavUID(req,res);
@@ -1224,6 +1259,7 @@ app.post("/api/favoritos/toggle", (req,res)=>{
     const db = readDB();
     const exists = db.some(p => Number(p.id)===id && !p.excluido);
     if (!exists) return res.status(404).json({ ok:false, error:"profissional não encontrado" });
+
     const map = readFavMap();
     const list = Array.isArray(map[uid]) ? map[uid] : [];
     const i = list.findIndex(x => Number(x)===id);
@@ -1234,6 +1270,7 @@ app.post("/api/favoritos/toggle", (req,res)=>{
     res.json({ ok:true, action, ids:list });
   }catch(e){ res.status(500).json({ ok:false, error:String(e) }); }
 });
+
 app.delete("/api/favoritos/:id", (req,res)=>{
   try{
     const uid = ensureFavUID(req,res);
@@ -1247,22 +1284,20 @@ app.delete("/api/favoritos/:id", (req,res)=>{
   }catch(e){ res.status(500).json({ ok:false, error:String(e) }); }
 });
 
-// ---------------- Admin — login, dashboard e APIs ----------------
+// ===================[ Admin — login & dashboard ]=================
 function requireAdmin(req,res,next){ if (req.session?.isAdmin) return next(); return res.status(401).json({ ok:false }); }
 
-// 1) /admin -> redireciona para /admin/login
+// /admin -> redireciona para /admin/login ou /admin.html
 app.get("/admin", (req,res)=>{
   if (!(req.session && req.session.isAdmin)) return res.redirect("/admin/login");
-  // logado? manda para /admin.html
   return res.redirect("/admin.html");
 });
 
-// GET /admin/login -> serve layout novo do public/admin-login.html
+// GET /admin/login -> serve layout (public/admin-login.html se existir)
 app.get("/admin/login", (_req,res)=>{
   const file = path.join(PUBLIC_DIR, "admin-login.html");
   if (fs.existsSync(file)) return res.sendFile(file);
-
-  // fallback simples (HTML direto)
+  // fallback simples
   return res.send(`<!doctype html>
   <meta charset="utf-8">
   <link rel="stylesheet" href="/css/app.css">
@@ -1271,9 +1306,9 @@ app.get("/admin/login", (_req,res)=>{
       <h1>Admin • Entrar</h1>
       <form method="POST" action="/admin/login" style="margin-top:8px">
         <label for="usuario">Usuário</label>
-        <input id="usuario" name="usuario" type="text" required placeholder="admin" />
+        <input id="usuario" name="user" type="text" required placeholder="admin" />
         <label for="senha">Senha</label>
-        <input id="senha" name="senha" type="password" required placeholder="admin123" />
+        <input id="senha" name="password" type="password" required placeholder="admin123" />
         <div class="row" style="margin-top:10px;gap:8px">
           <button class="btn" type="submit">Entrar</button>
           <a class="btn ghost" href="/">Início</a>
@@ -1283,7 +1318,7 @@ app.get("/admin/login", (_req,res)=>{
   </div>`);
 });
 
-// 3) POST /admin/login -> autentica usuário/senha
+// POST /admin/login
 app.post("/admin/login", loginLimiter, (req,res)=>{
   const user = trim(req.body?.user||"");
   const pass = String(req.body?.password||"");
@@ -1302,16 +1337,16 @@ app.post("/admin/login", loginLimiter, (req,res)=>{
   return res.status(401).send(htmlMsg("Login inválido","Usuário/senha incorretos.","/admin/login"));
 });
 
-// 4) Logout
+// Logout
 app.post("/admin/logout", (req,res)=>{ if (req.session) req.session.isAdmin = false; res.redirect("/admin/login"); });
 
-// 5) /admin.html protegido
+// /admin.html protegido
 app.get("/admin.html", (req,res)=>{
   if (!(req.session && req.session.isAdmin)) return res.redirect("/admin/login");
   return res.sendFile(path.join(PUBLIC_DIR, "admin.html"));
 });
 
-// Helpers de stats p/ admin
+// ---- helpers de stats p/ admin (legados) ----
 function adminBuildStats(){
   const db = readDB().filter(p=>!p.excluido);
   const metr = readJSON(METRICS_FILE, {});
@@ -1331,8 +1366,8 @@ function adminBuildStats(){
   for(let i=29;i>=0;i--){
     const d = new Date(Date.now()-i*24*3600e3).toISOString().slice(0,10);
     const v = (metr.visit?.[d]||[]).length||0;
-    const c = (metr.call?.[d]||[]).length||0;
-    const q = (metr.qr  ?. [d]||[]).length||0;
+    const c = (metr.call ?. [d]||[]).length||0;
+    const q = (metr.qr   ?. [d]||[]).length||0;
     days.push({ day:d, visits:v, calls:c, qrs:q });
   }
   return { ok:true, counters:{ total, ativos, suspensos, excluidos, verificados, mediaRating }, last30: days };
@@ -1369,136 +1404,11 @@ function adminBuildList(query){
   }));
 }
 
-// APIs admin
+// ---- APIs admin ----
 app.get("/api/admin/stats", requireAdmin, (_req,res)=> res.json(adminBuildStats()));
 app.get("/api/admin/list",  requireAdmin, (req,res)=> res.json({ ok:true, items: adminBuildList(req.query||{}) }));
-app.get("/api/admin/export.csv", requireAdmin, (_req,res)=>{
-  const db = readDB().filter(p=>!p.excluido);
-  const header = ["id","nome","whatsapp","cidade","bairro","servico","plano","raioKm","visitas","chamadas","rating"].join(",");
-  const rows = db.map(p=>{
-    const rating = (p.avaliacoes||[]).length ? (p.avaliacoes.reduce((a,c)=>a+Number(c.nota||0),0)/(p.avaliacoes.length)) : 0;
-    const vals = [p.id,p.nome,p.whatsapp,p.cidade,p.bairro,(p.servico||p.profissao||""),p.plano,(p.raioKm||0),(p.visitas||0),(p.chamadas||0),rating.toFixed(2)];
-    return vals.map(v=> `"${String(v).replace(/"/g,'""')}"`).join(",");
-  });
-  const csv = [header, ...rows].join("\n");
-  res.setHeader("Content-Type","text/csv; charset=utf-8");
-  res.setHeader("Content-Disposition","attachment; filename=base_profissionais.csv");
-  res.send(csv);
-});
 
-// -------------- Util: Dump (somente admin) --------------
-app.get("/api/admin/_dump_all", requireAdmin, (_req,res)=>{
-  const dump = {
-    profissionais: readDB(),
-    denuncias: readJSON(DENUNCIAS_FILE, []),
-    payments: readJSON(PAYMENTS_FILE, []),
-    metrics: readJSON(METRICS_FILE, {})
-  };
-  res.setHeader("Content-Type","application/json; charset=utf-8");
-  res.send(JSON.stringify(dump,null,2));
-});
-
-// Pagamentos últimos (para admin.html)
-app.get("/api/admin/payments", requireAdmin, (req,res)=>{
-  const lim = Math.max(1, Math.min(50, Number(req.query.limit||10)));
-  const list = readJSON(PAYMENTS_FILE, []).slice().reverse().slice(0, lim);
-  res.json(list);
-});
-// =====================[ API ADMIN para admin.html ]=====================
-// Tudo abaixo usa requireAdmin (precisa estar logado em /admin/login)
-function requireAdmin(req,res,next){ if (req.session?.isAdmin) return next(); return res.status(401).json({ ok:false }); }
-
-// ---- Métricas (painel) ----
-// Estrutura que o admin.html espera:
-// { ativos, suspensos, excluidos, visitas, chamadas, mediaGeral,
-//   verified:{ yes,no }, timeseries:{ days:[{date,visitas,chamadas,cadastros}] },
-//   top:{ servicos:[{name,value}] } }
-app.get("/api/admin/metrics", requireAdmin, (_req,res)=>{
-  try{
-    const dbAll = readDB();
-    const db = dbAll.filter(p=>!p.excluido);
-    const metr = readJSON(METRICS_FILE, {});
-
-    const ativos    = db.filter(p=>!p.suspenso).length;
-    const suspensos = db.filter(p=> p.suspenso).length;
-    const excluidos = dbAll.filter(p=> p.excluido).length;
-
-    // totais (somando tudo no arquivo de métricas)
-    const sumKey = (key)=>{
-      const m = metr[key]||{};
-      return Object.values(m).reduce((acc,arr)=> acc + (Array.isArray(arr)?arr.length:0), 0);
-    };
-    const visitasTot = sumKey("visit");
-    const chamadasTot= sumKey("call");
-
-    // média geral de rating
-    const medias = db.map(p=>{
-      const ns=(p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
-      return ns.length ? ns.reduce((a,b)=>a+b,0)/ns.length : null;
-    }).filter(v=>v!=null);
-    const mediaGeral = medias.length ? Math.round((medias.reduce((a,b)=>a+b,0)/medias.length)*100)/100 : 0;
-
-    // verificados
-    const vYes = db.filter(p=> computeVerified(p)).length;
-    const vNo  = Math.max(0, db.length - vYes);
-
-    // série dos últimos 30 dias
-    const days = [];
-    for(let i=29;i>=0;i--){
-      const d = new Date(Date.now()-i*24*3600e3).toISOString().slice(0,10);
-      const vis = (metr.visit?.[d]||[]).length||0;
-      const cal = (metr.call?.[d] ||[]).length||0;
-      const cad = dbAll.filter(p=> (p.createdAt||"").slice(0,10)===d).length;
-      days.push({ date:d, visitas:vis, chamadas:cal, cadastros:cad });
-    }
-
-    // top serviços
-    const freq = {};
-    db.forEach(p=>{
-      const s = (p.servico || p.profissao || "").toString().trim();
-      if(!s) return;
-      freq[s] = (freq[s]||0)+1;
-    });
-    const topServ = Object.entries(freq)
-      .sort((a,b)=> b[1]-a[1])
-      .slice(0,8)
-      .map(([name,value])=>({ name, value }));
-
-    res.json({
-      ok:true,
-      ativos, suspensos, excluidos,
-      visitas: visitasTot,
-      chamadas: chamadasTot,
-      mediaGeral,
-      verified:{ yes:vYes, no:vNo },
-      timeseries:{ days },
-      top:{ servicos: topServ }
-    });
-  }catch(e){
-    console.error("ERR /api/admin/metrics", e);
-    res.status(500).json({ ok:false, error:"server_error" });
-  }
-});
-
-// ---- Recalcular flags de verificado (botão 'Recalcular verificações') ----
-app.post("/api/admin/recompute", requireAdmin, (_req,res)=>{
-  try{
-    const db = readDB();
-    let changed = 0;
-    for (const p of db){
-      const newV = computeVerified(p);
-      if (p.verificado !== newV){ p.verificado = newV; changed++; }
-    }
-    writeDB(db);
-    res.json({ ok:true, changed });
-  }catch(e){
-    res.status(500).json({ ok:false, error:String(e) });
-  }
-});
-
-// ---- Lista de profissionais (filtros + paginação) ----
-// Inputs esperados: q, cidade, servico, verificado=all|true|false, status=all|ativos|suspensos|excluidos,
-// sort=recent|nome|cidade|servico|verificado|avaliacoes|rating|visitas|chamadas, dir=asc|desc
+// Lista de profissionais (filtros + paginação)
 app.get("/api/admin/profissionais", requireAdmin, (req,res)=>{
   try{
     const q        = String(req.query.q||"").trim();
@@ -1510,15 +1420,15 @@ app.get("/api/admin/profissionais", requireAdmin, (req,res)=>{
     const dirAsc   = String(req.query.dir||"desc").toLowerCase()==="asc";
     const page     = Math.max(1, Number(req.query.page||1));
     const limit    = Math.max(1, Math.min(50, Number(req.query.limit||20)));
-
     const N = (s)=> norm(String(s||""));
+
     let items = readDB().slice();
 
     // status
-    if (statusQ==="ativos")     items = items.filter(p=> !p.excluido && !p.suspenso);
+    if (statusQ==="ativos")      items = items.filter(p=> !p.excluido && !p.suspenso);
     else if (statusQ==="suspensos") items = items.filter(p=> p.suspenso && !p.excluido);
     else if (statusQ==="excluidos") items = items.filter(p=> p.excluido);
-    else /*all*/                items = items;
+    // else all
 
     // texto livre
     if (q){
@@ -1593,7 +1503,7 @@ app.get("/api/admin/profissionais", requireAdmin, (req,res)=>{
   }
 });
 
-// ---- Ações em profissional (suspender/ativar/excluir/restaurar) ----
+// Ações: suspender / ativar / excluir / restaurar
 app.post("/api/admin/profissionais/:id/suspender", requireAdmin, (req,res)=>{
   try{
     const id = Number(req.params.id||"0");
@@ -1607,7 +1517,6 @@ app.post("/api/admin/profissionais/:id/suspender", requireAdmin, (req,res)=>{
     res.json({ ok:true });
   }catch(e){ res.status(500).json({ ok:false, error:String(e) }); }
 });
-
 app.post("/api/admin/profissionais/:id/ativar", requireAdmin, (req,res)=>{
   try{
     const id = Number(req.params.id||"0");
@@ -1620,7 +1529,6 @@ app.post("/api/admin/profissionais/:id/ativar", requireAdmin, (req,res)=>{
     res.json({ ok:true });
   }catch(e){ res.status(500).json({ ok:false, error:String(e) }); }
 });
-
 app.delete("/api/admin/profissionais/:id", requireAdmin, (req,res)=>{
   try{
     const id = Number(req.params.id||"0");
@@ -1633,7 +1541,6 @@ app.delete("/api/admin/profissionais/:id", requireAdmin, (req,res)=>{
     res.json({ ok:true });
   }catch(e){ res.status(500).json({ ok:false, error:String(e) }); }
 });
-
 app.post("/api/admin/profissionais/:id/restaurar", requireAdmin, (req,res)=>{
   try{
     const id = Number(req.params.id||"0");
@@ -1647,17 +1554,16 @@ app.post("/api/admin/profissionais/:id/restaurar", requireAdmin, (req,res)=>{
   }catch(e){ res.status(500).json({ ok:false, error:String(e) }); }
 });
 
-// ---- Denúncias: lista + atualização de status ----
-// Espera: /api/admin/denuncias?status=all|aberta|em_analise|resolvida|descartada&q=...&page=&limit=
+// Denúncias: lista e atualização
 app.get("/api/admin/denuncias", requireAdmin, (req,res)=>{
   try{
     const statusQ = String(req.query.status||"all");
     const q = String(req.query.q||"").trim().toLowerCase();
     const page  = Math.max(1, Number(req.query.page||1));
     const limit = Math.max(1, Math.min(50, Number(req.query.limit||20)));
-
     const arr = readJSON(DENUNCIAS_FILE, []).slice();
-    // normalizar campo status (legado: só "resolved")
+
+    // normalizar campo status (legado)
     arr.forEach(d=>{
       if (!d.status){
         d.status = d.resolved===true ? "resolvida" : "aberta";
@@ -1694,7 +1600,6 @@ app.get("/api/admin/denuncias", requireAdmin, (req,res)=>{
     });
 
     list.sort((a,b)=> String(b.createdAt).localeCompare(String(a.createdAt)));
-
     const total = list.length;
     const start = (page-1)*limit;
     const slice = list.slice(start, start+limit);
@@ -1705,7 +1610,6 @@ app.get("/api/admin/denuncias", requireAdmin, (req,res)=>{
   }
 });
 
-// Atualizar status da denúncia
 app.post("/api/admin/denuncias/:id/status", requireAdmin, (req,res)=>{
   try{
     const id = Number(req.params.id||"0");
@@ -1725,43 +1629,18 @@ app.post("/api/admin/denuncias/:id/status", requireAdmin, (req,res)=>{
   }
 });
 
-// ---- Pagamentos (últimos) ----
-// admin.html espera array simples com { id, proId, method, status, amount, fees, net, createdAt }
-app.get("/api/admin/payments", requireAdmin, (req,res)=>{
-  try{
-    const lim = Math.max(1, Math.min(50, Number(req.query.limit||10)));
-    const list = readJSON(PAYMENTS_FILE, []).slice().reverse().slice(0, lim);
-    const out = list.map(p=>({
-      id: p.pid, proId: p.proId, method: p.method?.toUpperCase(),
-      status: p.status, amount: p.amount, fees: p.appFee, net: p.toPro,
-      createdAt: p.createdAt
-    }));
-    res.json(out);
-  }catch(e){
-    res.status(500).json({ ok:false, error:String(e) });
-  }
-});
-
-// ---- Exportações CSV (novas URLs usadas pelo admin.html) ----
-// Alias para compat: /api/admin/export/csv (antes você tinha /api/admin/export.csv)
+// Exportações CSV (novas URLs)
 app.get("/api/admin/export/csv", requireAdmin, (req,res)=>{
   try{
-    // respeita os mesmos filtros da lista para CSV geral
-    const fakeReq = { query: req.query };
-    const fakeRes = {
-      _json:null,
-      json(x){ this._json=x; }
-    };
-    // reutiliza listagem
-    app._router.handle(
-      { ...req, method:"GET", url:"/api/admin/profissionais", query:req.query, session:req.session },
-      fakeRes,
-      ()=>{}
-    );
+    // Reutiliza listagem com filtros
+    const req2 = { ...req, method:"GET", url:"/api/admin/profissionais", query:req.query, session:req.session };
+    let data = null;
+    const res2 = { json(x){ data=x; } };
+    app._router.handle(req2, res2, ()=>{});
     setTimeout(()=>{
-      const data = fakeRes._json || {};
+      const d = data || {};
       const header = ["id","nome","cidade","bairro","servico","verificado","rating","avaliacoes","visitas","chamadas","plano","suspenso","excluido"].join(",");
-      const rows = (data.items||[]).map(p=>{
+      const rows = (d.items||[]).map(p=>{
         const vals = [p.id,p.nome,p.cidade,p.bairro,p.servico,p.verificado,p.rating.toFixed(2),p.avalCount,p.visitas,p.chamadas,p.plano,p.suspenso,p.excluido];
         return vals.map(v=> `"${String(v).replace(/"/g,'""')}"`).join(",");
       });
@@ -1827,7 +1706,20 @@ app.get("/api/admin/export", requireAdmin, (req,res)=>{
     res.status(500).type("text").send("erro");
   }
 });
-// ---------------- Inicialização ----------------
+
+// Dump completo (somente admin)
+app.get("/api/admin/_dump_all", requireAdmin, (_req,res)=>{
+  const dump = {
+    profissionais: readDB(),
+    denuncias: readJSON(DENUNCIAS_FILE, []),
+    payments: readJSON(PAYMENTS_FILE, []),
+    metrics: readJSON(METRICS_FILE, {})
+  };
+  res.setHeader("Content-Type","application/json; charset=utf-8");
+  res.send(JSON.stringify(dump,null,2));
+});
+
+// =========================[ Inicialização ]=====================
 const port = BASE_PORT;
 app.listen(port, HOST, ()=>{
   console.log(`Autônoma.app rodando em http://localhost:${port}`);
