@@ -1404,7 +1404,429 @@ app.get("/api/admin/payments", requireAdmin, (req,res)=>{
   const list = readJSON(PAYMENTS_FILE, []).slice().reverse().slice(0, lim);
   res.json(list);
 });
+// =====================[ API ADMIN para admin.html ]=====================
+// Tudo abaixo usa requireAdmin (precisa estar logado em /admin/login)
+function requireAdmin(req,res,next){ if (req.session?.isAdmin) return next(); return res.status(401).json({ ok:false }); }
 
+// ---- Métricas (painel) ----
+// Estrutura que o admin.html espera:
+// { ativos, suspensos, excluidos, visitas, chamadas, mediaGeral,
+//   verified:{ yes,no }, timeseries:{ days:[{date,visitas,chamadas,cadastros}] },
+//   top:{ servicos:[{name,value}] } }
+app.get("/api/admin/metrics", requireAdmin, (_req,res)=>{
+  try{
+    const dbAll = readDB();
+    const db = dbAll.filter(p=>!p.excluido);
+    const metr = readJSON(METRICS_FILE, {});
+
+    const ativos    = db.filter(p=>!p.suspenso).length;
+    const suspensos = db.filter(p=> p.suspenso).length;
+    const excluidos = dbAll.filter(p=> p.excluido).length;
+
+    // totais (somando tudo no arquivo de métricas)
+    const sumKey = (key)=>{
+      const m = metr[key]||{};
+      return Object.values(m).reduce((acc,arr)=> acc + (Array.isArray(arr)?arr.length:0), 0);
+    };
+    const visitasTot = sumKey("visit");
+    const chamadasTot= sumKey("call");
+
+    // média geral de rating
+    const medias = db.map(p=>{
+      const ns=(p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
+      return ns.length ? ns.reduce((a,b)=>a+b,0)/ns.length : null;
+    }).filter(v=>v!=null);
+    const mediaGeral = medias.length ? Math.round((medias.reduce((a,b)=>a+b,0)/medias.length)*100)/100 : 0;
+
+    // verificados
+    const vYes = db.filter(p=> computeVerified(p)).length;
+    const vNo  = Math.max(0, db.length - vYes);
+
+    // série dos últimos 30 dias
+    const days = [];
+    for(let i=29;i>=0;i--){
+      const d = new Date(Date.now()-i*24*3600e3).toISOString().slice(0,10);
+      const vis = (metr.visit?.[d]||[]).length||0;
+      const cal = (metr.call?.[d] ||[]).length||0;
+      const cad = dbAll.filter(p=> (p.createdAt||"").slice(0,10)===d).length;
+      days.push({ date:d, visitas:vis, chamadas:cal, cadastros:cad });
+    }
+
+    // top serviços
+    const freq = {};
+    db.forEach(p=>{
+      const s = (p.servico || p.profissao || "").toString().trim();
+      if(!s) return;
+      freq[s] = (freq[s]||0)+1;
+    });
+    const topServ = Object.entries(freq)
+      .sort((a,b)=> b[1]-a[1])
+      .slice(0,8)
+      .map(([name,value])=>({ name, value }));
+
+    res.json({
+      ok:true,
+      ativos, suspensos, excluidos,
+      visitas: visitasTot,
+      chamadas: chamadasTot,
+      mediaGeral,
+      verified:{ yes:vYes, no:vNo },
+      timeseries:{ days },
+      top:{ servicos: topServ }
+    });
+  }catch(e){
+    console.error("ERR /api/admin/metrics", e);
+    res.status(500).json({ ok:false, error:"server_error" });
+  }
+});
+
+// ---- Recalcular flags de verificado (botão 'Recalcular verificações') ----
+app.post("/api/admin/recompute", requireAdmin, (_req,res)=>{
+  try{
+    const db = readDB();
+    let changed = 0;
+    for (const p of db){
+      const newV = computeVerified(p);
+      if (p.verificado !== newV){ p.verificado = newV; changed++; }
+    }
+    writeDB(db);
+    res.json({ ok:true, changed });
+  }catch(e){
+    res.status(500).json({ ok:false, error:String(e) });
+  }
+});
+
+// ---- Lista de profissionais (filtros + paginação) ----
+// Inputs esperados: q, cidade, servico, verificado=all|true|false, status=all|ativos|suspensos|excluidos,
+// sort=recent|nome|cidade|servico|verificado|avaliacoes|rating|visitas|chamadas, dir=asc|desc
+app.get("/api/admin/profissionais", requireAdmin, (req,res)=>{
+  try{
+    const q        = String(req.query.q||"").trim();
+    const cidadeQ  = String(req.query.cidade||"").trim();
+    const servQ    = String(req.query.servico||"").trim();
+    const verifQ   = String(req.query.verificado||"all");
+    const statusQ  = String(req.query.status||"all");
+    const sort     = String(req.query.sort||"recent");
+    const dirAsc   = String(req.query.dir||"desc").toLowerCase()==="asc";
+    const page     = Math.max(1, Number(req.query.page||1));
+    const limit    = Math.max(1, Math.min(50, Number(req.query.limit||20)));
+
+    const N = (s)=> norm(String(s||""));
+    let items = readDB().slice();
+
+    // status
+    if (statusQ==="ativos")     items = items.filter(p=> !p.excluido && !p.suspenso);
+    else if (statusQ==="suspensos") items = items.filter(p=> p.suspenso && !p.excluido);
+    else if (statusQ==="excluidos") items = items.filter(p=> p.excluido);
+    else /*all*/                items = items;
+
+    // texto livre
+    if (q){
+      const QQ = N(q);
+      items = items.filter(p=>
+        N(p.nome).includes(QQ) ||
+        N(p.bairro||"").includes(QQ) ||
+        N(p.cidade||"").includes(QQ) ||
+        N(p.servico||p.profissao||"").includes(QQ)
+      );
+    }
+    // cidade
+    if (cidadeQ){
+      const C = N(cidadeQ);
+      items = items.filter(p=> N(p.cidade||"").includes(C));
+    }
+    // serviço
+    if (servQ){
+      const S = N(servQ);
+      items = items.filter(p=> N(p.servico||p.profissao||"").includes(S));
+    }
+    // verificado
+    if (verifQ==="true")  items = items.filter(p=> computeVerified(p));
+    if (verifQ==="false") items = items.filter(p=> !computeVerified(p));
+
+    // campos auxiliares
+    items = items.map(p=>{
+      const notas = (p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
+      const rating = notas.length ? (notas.reduce((a,b)=>a+b,0)/notas.length) : 0;
+      return {
+        id: p.id, nome: p.nome, foto: p.foto||"",
+        cidade: p.cidade||"", bairro: p.bairro||"",
+        servico: p.servico || p.profissao || "",
+        verificado: computeVerified(p),
+        rating,
+        avalCount: (p.avaliacoes||[]).length,
+        visitas: p.visitas||0,
+        chamadas: p.chamadas||0,
+        plano: p.plano||"free",
+        suspenso: !!p.suspenso,
+        excluido: !!p.excluido
+      };
+    });
+
+    // ordenação
+    const cmpNum = (a,b,k)=> (Number(a[k]||0)-Number(b[k]||0));
+    const cmpStr = (a,b,k)=> String(a[k]||"").localeCompare(String(b[k]||""), "pt-BR");
+    items.sort((a,b)=>{
+      let v=0;
+      switch (sort){
+        case "recent":     v = Number(b.id)-Number(a.id); break;
+        case "nome":       v = cmpStr(a,b,"nome"); break;
+        case "cidade":     v = cmpStr(a,b,"cidade"); break;
+        case "servico":    v = cmpStr(a,b,"servico"); break;
+        case "verificado": v = (a.verificado===b.verificado)?0:(a.verificado?1:-1); break;
+        case "avaliacoes": v = cmpNum(a,b,"avalCount"); break;
+        case "rating":     v = cmpNum(a,b,"rating"); break;
+        case "visitas":    v = cmpNum(a,b,"visitas"); break;
+        case "chamadas":   v = cmpNum(a,b,"chamadas"); break;
+        default:           v = Number(b.id)-Number(a.id);
+      }
+      return dirAsc ? v : -v;
+    });
+
+    const total = items.length;
+    const start = (page-1)*limit;
+    const slice = items.slice(start, start+limit);
+    res.json({ ok:true, total, page, pages: Math.max(1, Math.ceil(total/limit)), items: slice });
+  }catch(e){
+    console.error("ERR /api/admin/profissionais", e);
+    res.status(500).json({ ok:false, error:"server_error" });
+  }
+});
+
+// ---- Ações em profissional (suspender/ativar/excluir/restaurar) ----
+app.post("/api/admin/profissionais/:id/suspender", requireAdmin, (req,res)=>{
+  try{
+    const id = Number(req.params.id||"0");
+    const db = readDB();
+    const p = db.find(x=> Number(x.id)===id);
+    if (!p) return res.status(404).json({ ok:false });
+    p.suspenso = true;
+    p.suspensoMotivo = trim(req.body?.motivo||"");
+    p.suspensoEm = nowISO();
+    writeDB(db);
+    res.json({ ok:true });
+  }catch(e){ res.status(500).json({ ok:false, error:String(e) }); }
+});
+
+app.post("/api/admin/profissionais/:id/ativar", requireAdmin, (req,res)=>{
+  try{
+    const id = Number(req.params.id||"0");
+    const db = readDB();
+    const p = db.find(x=> Number(x.id)===id);
+    if (!p) return res.status(404).json({ ok:false });
+    p.suspenso = false;
+    p.suspensoMotivo = "";
+    writeDB(db);
+    res.json({ ok:true });
+  }catch(e){ res.status(500).json({ ok:false, error:String(e) }); }
+});
+
+app.delete("/api/admin/profissionais/:id", requireAdmin, (req,res)=>{
+  try{
+    const id = Number(req.params.id||"0");
+    const db = readDB();
+    const p = db.find(x=> Number(x.id)===id);
+    if (!p) return res.status(404).json({ ok:false });
+    p.excluido = true;
+    p.excluidoEm = nowISO();
+    writeDB(db);
+    res.json({ ok:true });
+  }catch(e){ res.status(500).json({ ok:false, error:String(e) }); }
+});
+
+app.post("/api/admin/profissionais/:id/restaurar", requireAdmin, (req,res)=>{
+  try{
+    const id = Number(req.params.id||"0");
+    const db = readDB();
+    const p = db.find(x=> Number(x.id)===id);
+    if (!p) return res.status(404).json({ ok:false });
+    p.excluido = false;
+    p.excluidoEm = null;
+    writeDB(db);
+    res.json({ ok:true });
+  }catch(e){ res.status(500).json({ ok:false, error:String(e) }); }
+});
+
+// ---- Denúncias: lista + atualização de status ----
+// Espera: /api/admin/denuncias?status=all|aberta|em_analise|resolvida|descartada&q=...&page=&limit=
+app.get("/api/admin/denuncias", requireAdmin, (req,res)=>{
+  try{
+    const statusQ = String(req.query.status||"all");
+    const q = String(req.query.q||"").trim().toLowerCase();
+    const page  = Math.max(1, Number(req.query.page||1));
+    const limit = Math.max(1, Math.min(50, Number(req.query.limit||20)));
+
+    const arr = readJSON(DENUNCIAS_FILE, []).slice();
+    // normalizar campo status (legado: só "resolved")
+    arr.forEach(d=>{
+      if (!d.status){
+        d.status = d.resolved===true ? "resolvida" : "aberta";
+      }
+      if (!d.createdAt) d.createdAt = d.at || nowISO();
+    });
+
+    let list = arr;
+    if (statusQ!=="all"){
+      list = list.filter(d=> String(d.status||"aberta")===statusQ);
+    }
+    if (q){
+      list = list.filter(d=>{
+        const txt = [
+          d.motivo||"", d.detalhes||"",
+          (d.profissionalNome||""),
+          String(d.profissional||d.proId||"")
+        ].join(" ").toLowerCase();
+        return txt.includes(q);
+      });
+    }
+
+    // Enriquecer com dados do profissional
+    const db = readDB();
+    list = list.map(d=>{
+      const proId = Number(d.profissional||d.proId||0);
+      const pro = db.find(p=> Number(p.id)===proId);
+      return {
+        id: d.id, createdAt: d.createdAt||d.at||"",
+        motivo: d.motivo||"",
+        status: d.status || "aberta",
+        profissional: pro ? { id: pro.id, nome: pro.nome, cidade: pro.cidade||"", bairro: pro.bairro||"" } : {}
+      };
+    });
+
+    list.sort((a,b)=> String(b.createdAt).localeCompare(String(a.createdAt)));
+
+    const total = list.length;
+    const start = (page-1)*limit;
+    const slice = list.slice(start, start+limit);
+    res.json({ ok:true, total, page, pages: Math.max(1, Math.ceil(total/limit)), items: slice });
+  }catch(e){
+    console.error("ERR /api/admin/denuncias", e);
+    res.status(500).json({ ok:false, error:"server_error" });
+  }
+});
+
+// Atualizar status da denúncia
+app.post("/api/admin/denuncias/:id/status", requireAdmin, (req,res)=>{
+  try{
+    const id = Number(req.params.id||"0");
+    const status = String(req.body?.status||"").trim(); // aberta|em_analise|resolvida|descartada
+    if (!["aberta","em_analise","resolvida","descartada"].includes(status)){
+      return res.status(400).json({ ok:false, error:"status inválido" });
+    }
+    const arr = readJSON(DENUNCIAS_FILE, []);
+    const it = arr.find(d=> Number(d.id)===id);
+    if (!it) return res.status(404).json({ ok:false });
+    it.status = status;
+    if (status==="resolvida") it.resolved = true;
+    writeJSON(DENUNCIAS_FILE, arr);
+    res.json({ ok:true });
+  }catch(e){
+    res.status(500).json({ ok:false, error:String(e) });
+  }
+});
+
+// ---- Pagamentos (últimos) ----
+// admin.html espera array simples com { id, proId, method, status, amount, fees, net, createdAt }
+app.get("/api/admin/payments", requireAdmin, (req,res)=>{
+  try{
+    const lim = Math.max(1, Math.min(50, Number(req.query.limit||10)));
+    const list = readJSON(PAYMENTS_FILE, []).slice().reverse().slice(0, lim);
+    const out = list.map(p=>({
+      id: p.pid, proId: p.proId, method: p.method?.toUpperCase(),
+      status: p.status, amount: p.amount, fees: p.appFee, net: p.toPro,
+      createdAt: p.createdAt
+    }));
+    res.json(out);
+  }catch(e){
+    res.status(500).json({ ok:false, error:String(e) });
+  }
+});
+
+// ---- Exportações CSV (novas URLs usadas pelo admin.html) ----
+// Alias para compat: /api/admin/export/csv (antes você tinha /api/admin/export.csv)
+app.get("/api/admin/export/csv", requireAdmin, (req,res)=>{
+  try{
+    // respeita os mesmos filtros da lista para CSV geral
+    const fakeReq = { query: req.query };
+    const fakeRes = {
+      _json:null,
+      json(x){ this._json=x; }
+    };
+    // reutiliza listagem
+    app._router.handle(
+      { ...req, method:"GET", url:"/api/admin/profissionais", query:req.query, session:req.session },
+      fakeRes,
+      ()=>{}
+    );
+    setTimeout(()=>{
+      const data = fakeRes._json || {};
+      const header = ["id","nome","cidade","bairro","servico","verificado","rating","avaliacoes","visitas","chamadas","plano","suspenso","excluido"].join(",");
+      const rows = (data.items||[]).map(p=>{
+        const vals = [p.id,p.nome,p.cidade,p.bairro,p.servico,p.verificado,p.rating.toFixed(2),p.avalCount,p.visitas,p.chamadas,p.plano,p.suspenso,p.excluido];
+        return vals.map(v=> `"${String(v).replace(/"/g,'""')}"`).join(",");
+      });
+      const csv = [header, ...rows].join("\n");
+      res.setHeader("Content-Type","text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition","attachment; filename=profissionais.csv");
+      res.send(csv);
+    },0);
+  }catch(e){
+    res.status(500).type("text").send("erro");
+  }
+});
+
+// /api/admin/export?what=profissionais|payments|metrics
+app.get("/api/admin/export", requireAdmin, (req,res)=>{
+  try{
+    const what = String(req.query.what||"profissionais");
+    if (what==="payments"){
+      const arr = readJSON(PAYMENTS_FILE, []);
+      const header = ["pid","proId","method","status","amount","feesPercent","appFee","toPro","createdAt","paidAt"].join(",");
+      const rows = arr.map(p=>{
+        const vals = [p.pid,p.proId,p.method,p.status,p.amount,p.feesPercent,p.appFee,p.toPro,p.createdAt||"",p.paidAt||""];
+        return vals.map(v=> `"${String(v).replace(/"/g,'""')}"`).join(",");
+      });
+      const csv = [header, ...rows].join("\n");
+      res.setHeader("Content-Type","text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition","attachment; filename=payments.csv");
+      return res.send(csv);
+    }
+    if (what==="metrics"){
+      const metr = readJSON(METRICS_FILE, {});
+      // export básico: day, visits, calls, qrs
+      const dayKeys = new Set([
+        ...Object.keys(metr.visit||{}),
+        ...Object.keys(metr.call ||{}),
+        ...Object.keys(metr.qr   ||{})
+      ]);
+      const header = ["day","visits","calls","qrs"].join(",");
+      const rows = Array.from(dayKeys).sort().map(d=>{
+        const v=(metr.visit?.[d]||[]).length||0;
+        const c=(metr.call ?. [d]||[]).length||0;
+        const q=(metr.qr   ?. [d]||[]).length||0;
+        return `"${d}",${v},${c},${q}`;
+      });
+      const csv = [header, ...rows].join("\n");
+      res.setHeader("Content-Type","text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition","attachment; filename=metrics.csv");
+      return res.send(csv);
+    }
+    // default profissionais (sem filtro para export rápida)
+    const db = readDB().filter(p=>!p.excluido);
+    const header = ["id","nome","whatsapp","cidade","bairro","servico","plano","raioKm","visitas","chamadas","rating"].join(",");
+    const rows = db.map(p=>{
+      const rating = (p.avaliacoes||[]).length ? (p.avaliacoes.reduce((a,c)=>a+Number(c.nota||0),0)/(p.avaliacoes.length)) : 0;
+      const vals = [p.id,p.nome,p.whatsapp,p.cidade,p.bairro,(p.servico||p.profissao||""),p.plano,(p.raioKm||0),(p.visitas||0),(p.chamadas||0),rating.toFixed(2)];
+      return vals.map(v=> `"${String(v).replace(/"/g,'""')}"`).join(",");
+    });
+    const csv = [header, ...rows].join("\n");
+    res.setHeader("Content-Type","text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition","attachment; filename=profissionais_all.csv");
+    return res.send(csv);
+  }catch(e){
+    res.status(500).type("text").send("erro");
+  }
+});
 // ---------------- Inicialização ----------------
 const port = BASE_PORT;
 app.listen(port, HOST, ()=>{
