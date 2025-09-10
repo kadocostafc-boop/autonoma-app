@@ -365,10 +365,28 @@ app.get("/admin.html", (req,_res,next)=> next()); // placeholder pra não confli
 // --- Admin: guardião + login + dashboard -----------------------------------
 
 // 1) Acessar /admin → manda para /admin/login
-app.get("/admin", (req, res) => {
-  if (req.session?.isAdmin) return res.redirect("/admin.html");
-  return res.redirect(302, "/admin/login");
+// --- ROTAS/MIDDLEWARES DE ADMIN (antes do static) ---
+
+// 2.1) Se pedirem /admin, manda para /admin/login
+app.get("/admin", (req, res) => res.redirect(302, "/admin/login"));
+
+// 2.2) Bloqueia acesso direto ao arquivo /admin.html quando não logado.
+//     Este middleware precisa vir ANTES do express.static para interceptar.
+app.use((req, res, next) => {
+  if (req.path === "/admin.html" && !(req.session && req.session.isAdmin)) {
+    return res.redirect("/admin/login");
+  }
+  next();
 });
+
+// 2.3) Página de login do Admin (usa o layout novo em public/admin-login.html)
+app.get("/admin/login", (_req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, "admin-login.html"));
+});
+
+// 2.4) POST do login (mantém como você já tem hoje):
+//     - compara user/senha com ADMIN_USER / ADMIN_PASS ou ADMIN_PASS_HASH
+//     - quando OK: res.redirect("/admin.html")
 
 // 2) Página de login do admin (usa o layout novo em public/admin-login.html)
 //    ATENÇÃO: o arquivo no disco é "admin-login.html" (com HÍFEN)
@@ -1665,9 +1683,8 @@ app.get("/api/admin/payments", requireAdmin, (req,res)=>{
 });
 
 // ----------------------------------------------------------------------------
-// Inicialização do servidor
-// ----------------------------------------------------------------------------
-const port = BASE_PORT;
-app.listen(port, HOST, ()=>{
+// --- Inicialização do servidor (deixe só este) ---
+const port = Number(process.env.PORT || 3000);
+app.listen(port, "0.0.0.0", () => {
   console.log(`Autônoma.app rodando em http://localhost:${port}`);
 });

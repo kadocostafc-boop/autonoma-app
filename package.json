@@ -16,6 +16,7 @@
   ],
   "author": "Kado Costa",
   "license": "MIT",
+  "engines": { "node": ">=18" },
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "compression": "^1.8.1",
