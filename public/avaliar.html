@@ -1,262 +1,172 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Avaliar Profissional • Autônoma.app</title>
-  <meta name="theme-color" content="#2563eb">
-  <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="icon" href="/favicon.ico">
-  <!-- build: avaliar-like-clientes v=2025-09-08-02 -->
-  <link rel="stylesheet" href="/css/app.css?v=avaliar-2025-09-08-02">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Avaliar • Autônoma.app</title>
+  <link rel="stylesheet" href="/css/app.css" />
+  <link rel="icon" href="/img/icon-192.png">
+  <meta name="theme-color" content="#0b2a6f" />
   <style>
-    /* Somente pequenos ajustes; o visual vem do app.css (mesmo das outras páginas) */
-    .wrap{max-width:1120px;margin:0 auto;padding:16px}
-    .grid{display:grid;grid-template-columns:1fr;gap:12px}
-    @media(min-width:980px){ .grid{grid-template-columns:380px 1fr} }
-    .avatar-box{display:flex;align-items:center;gap:10px}
-    .avatar{width:64px;height:64px;border-radius:999px;object-fit:cover;border:1px solid #e5e7eb;background:#f8fafc}
-    .nome{font-size:20px;margin:0}
-    .serv-local{color:#64748b}
-    .list{display:grid;grid-template-columns:1fr;gap:8px}
-    @media(min-width:720px){ .list{grid-template-columns:1fr 1fr} }
-    label{font-weight:700;display:block;margin:10px 0 6px}
-    input,select,textarea{width:100%;padding:10px;border-radius:12px;border:1px solid #e5e7eb;background:#fff;font-size:15px}
-    textarea{resize:vertical;min-height:90px}
-    .rating{color:#f59e0b}
-    .meta{color:#64748b}
+    /* Ajustes suaves usando a mesma base visual do admin */
+    .page { min-height: 100dvh; display: grid; place-items: start center; padding: 24px; background: var(--bg, #0b1f55); }
+    .card-wrap { width: 100%; max-width: 680px; }
+    .pro-head { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; }
+    .pro-head img { width: 64px; height: 64px; object-fit: cover; border-radius: 12px; border: 2px solid rgba(255,255,255,.15); background:#fff; }
+    .muted { color: #7e8aa6; font-size: .92rem; }
+    .list { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+    .list li { background: #0e2a66; border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 12px; }
+    .stars { color: #ffc83d; letter-spacing: .5px; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap: wrap; }
+    @media (max-width: 480px){
+      .pro-head { grid-template-columns: 56px 1fr; }
+    }
   </style>
 </head>
 <body>
-  <!-- Header igual ao restante do site -->
-  <header class="header" role="banner">
-    <a href="/" aria-label="Início">
-      <img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display='none'">
-    </a>
-    <nav class="topbar-links" aria-label="Navegação principal">
-      <a class="btn ghost" href="/">Início</a>
-      <a class="btn ghost" href="/clientes.html">Buscar</a>
-      <a class="btn ghost" href="/top10.html">🏆 Top 10</a>
-      <a class="btn ghost" href="/planos.html">⭐ Planos</a>
-      <a class="btn outline" href="/painel_login.html">🔐 Entrar no Painel</a>
-    </nav>
-  </header>
-
-  <main class="wrap">
-    <div class="grid">
-      <!-- Coluna esquerda: cartão do profissional -->
-      <aside class="card-soft">
-        <div class="avatar-box">
-          <img id="foto" class="avatar" src="/icons/icon-192.png" alt="Foto do profissional">
-          <div>
-            <h1 id="nome" class="nome">Profissional</h1>
-            <div id="servLocal" class="serv-local">—</div>
-          </div>
+  <div class="page">
+    <div class="card card-wrap">
+      <div class="pro-head" id="pro-head">
+        <img id="pro-foto" alt="Foto" src="/img/placeholder-user.png" />
+        <div>
+          <h1 id="title" style="margin:0">Avaliar profissional</h1>
+          <div class="muted" id="pro-sub">Carregando…</div>
         </div>
+      </div>
+
+      <form id="form-av" style="margin-top:16px">
+        <label for="autor">Seu nome (opcional)</label>
+        <input id="autor" name="autor" placeholder="Ex.: João Silva" />
+
+        <label for="nota" style="margin-top:8px">Nota</label>
+        <select id="nota" name="nota" required>
+          <option value="5">5 - Excelente</option>
+          <option value="4">4 - Muito bom</option>
+          <option value="3">3 - Bom</option>
+          <option value="2">2 - Regular</option>
+          <option value="1">1 - Ruim</option>
+        </select>
+
+        <label for="comentario" style="margin-top:8px">Comentário</label>
+        <textarea id="comentario" name="comentario" required minlength="5" rows="4" placeholder="Conte rapidamente como foi a sua experiência"></textarea>
+
         <div class="row" style="margin-top:12px">
-          <a id="btnWa" class="btn btn-wa" target="_blank" rel="noopener">WhatsApp</a>
-          <a id="btnPerfil" class="btn outline" href="#">← Voltar ao perfil</a>
+          <button class="btn" type="submit" id="btn-send">Enviar avaliação</button>
+          <a id="btn-perfil" class="btn ghost" href="/clientes.html">Voltar</a>
         </div>
-      </aside>
-
-      <!-- Coluna direita: formulário + comentários -->
-      <section class="card-soft">
-        <h2 class="title">Avaliar profissional</h2>
-
-        <form id="f" autocomplete="on" novalidate>
-          <div class="list" style="margin-bottom:10px">
-            <div class="item">
-              <label for="nomeCli">Seu nome <span class="meta">(opcional)</span></label>
-              <input id="nomeCli" name="nome" placeholder="Ex.: Maria Silva">
-            </div>
-            <div class="item">
-              <label for="notaSel">Nota</label>
-              <select id="notaSel">
-                <option value="0" selected>Selecione…</option>
-                <option value="5">5 - Excelente</option>
-                <option value="4">4 - Muito bom</option>
-                <option value="3">3 - Bom</option>
-                <option value="2">2 - Regular</option>
-                <option value="1">1 - Ruim</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="item" style="margin-bottom:10px">
-            <label for="coment">Comentário</label>
-            <textarea id="coment" name="comentario" placeholder="Como foi sua experiência? (opcional)"></textarea>
-          </div>
-
-          <div class="row">
-            <button id="send" class="btn" type="submit">Enviar avaliação</button>
-            <a id="btnPerfil2" class="btn outline" href="#">Voltar ao perfil</a>
-          </div>
-          <p id="status" class="meta" aria-live="polite" style="margin-top:6px"></p>
-        </form>
-
-        <h3 class="title" style="margin-top:14px">Comentários recentes</h3>
-        <div id="reviews" class="list"></div>
-        <p id="noReviews" class="meta" style="display:none">Ainda não há comentários.</p>
-      </section>
+      </form>
     </div>
-  </main>
 
-  <footer>
-    <nav class="foot-links" aria-label="Links do rodapé">
-      <a href="/termos.html">Termos</a>
-      <a href="/privacidade.html">Privacidade</a>
-      <a href="/top10.html">Top 10</a>
-      <a href="/planos.html">Planos</a>
-      <a href="/politica-de-seguranca.html">Segurança</a>
-      <a href="/favoritos.html">Favoritos</a>
-    </nav>
-  </footer>
+    <div class="card card-wrap" style="margin-top:16px">
+      <h2 style="margin-top:0">Comentários recentes</h2>
+      <ul class="list" id="list-avs">
+        <li class="muted">Carregando…</li>
+      </ul>
+      <div class="row" style="margin-top:10px">
+        <a class="btn ghost" id="btn-ver-perfil" href="#">Ver perfil completo</a>
+      </div>
+    </div>
+  </div>
 
   <script>
-  (function(){
-    const $ = s => document.querySelector(s);
-    const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-    const stars = n => { const r=Math.round((Number(n)||0)*2)/2; const f=Math.floor(r),h=(r%1!==0); return "★".repeat(f)+(h?"½":"")+"☆".repeat(5-f-(h?1:0)); };
-
-    function getId(){
-      const url = new URL(location.href);
-      const qid = url.searchParams.get('id');
-      if (qid) return qid;
-      const parts = location.pathname.split('/').filter(Boolean);
-      const i = parts.indexOf('avaliar');
-      if (i>=0 && parts[i+1]) return parts[i+1];
-      return '';
-    }
-    const PRO_ID = getId();
-    if(!PRO_ID){ location.href='/clientes.html'; return; }
-
-    async function getJSON(u){
-      const r = await fetch(u,{cache:'no-store'});
-      if(!r.ok) throw new Error('http '+r.status);
-      return r.json();
-    }
-
-    function waLink(p){
-      if(!p || !p.whatsapp) return null;
-      const d = String(p.whatsapp).replace(/\D/g,'');
-      const num = d.startsWith('55') ? d : ('55'+d);
-      const partes = ['Olá, vi seu perfil no Autônoma.app'];
-      const svc = p.servico || p.profissao;
-      partes.push(svc ? 'e gostaria de contratar seus serviços de '+svc : 'e gostaria de contratar seus serviços');
-      if (p.cidade) partes.push('em '+p.cidade);
-      const msg = partes.join(' ') + '. Podemos conversar?';
-      return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
-    }
-
-    async function loadPro(pid){
-      const tries = [
-        `/api/profissional/${encodeURIComponent(pid)}`,
-        `/api/public/profissional?id=${encodeURIComponent(pid)}`,
-        `/api/profissionais?id=${encodeURIComponent(pid)}`
-      ];
-      for (const u of tries){
-        try{
-          const js = await getJSON(u);
-          if (js?.item) return js.item;
-          if (js && (js.id!=null || js.nome)) return js;
-        }catch(_){}
+    (function () {
+      const $ = (sel) => document.querySelector(sel);
+      const qs = new URLSearchParams(location.search);
+      // Suporta /avaliar.html?id=123 ou rota bonitinha /avaliar/123
+      let id = Number(qs.get("id") || "");
+      if (!id) {
+        const m = location.pathname.match(/\/avaliar\/(\d+)/);
+        if (m) id = Number(m[1]);
       }
-      throw new Error('notfound');
-    }
-
-    async function fetchReviews(pid){
-      const tries = [
-        `/api/profissional/${encodeURIComponent(pid)}/avaliacoes`,
-        `/api/avaliacoes?proId=${encodeURIComponent(pid)}`,
-        `/api/public/avaliacoes?proId=${encodeURIComponent(pid)}`
-      ];
-      for (const u of tries){
-        try{
-          const js = await getJSON(u);
-          if (Array.isArray(js)) return js;
-          if (Array.isArray(js?.items)) return js.items;
-          if (Array.isArray(js?.avaliacoes)) return js.avaliacoes;
-        }catch(_){}
+      if (!id) {
+        $("#title").textContent = "Avaliar profissional";
+        $("#pro-sub").textContent = "ID do profissional não informado.";
+        $("#form-av").style.display = "none";
+        return;
       }
-      return [];
-    }
 
-    function normalizeAval(a){
-      const nome = a.autor || a.nome || a.cliente || a.user || 'Cliente';
-      const nota = a.nota ?? a.rating ?? a.estrelas ?? a.score ?? 0;
-      const texto = a.texto || a.comentario || a.comment || a.mensagem || '';
-      return { nome:String(nome), nota:Number(nota), texto:String(texto) };
-    }
+      const perfilUrl = `/perfil.html?id=${id}`;
+      $("#btn-perfil").href = perfilUrl;
+      $("#btn-ver-perfil").href = perfilUrl;
 
-    function renderReviews(list){
-      const box = $('#reviews'), empty = $('#noReviews');
-      if(!list.length){ box.innerHTML=''; empty.style.display=''; return; }
-      empty.style.display='none';
-      box.innerHTML = list.slice(0,10).map(x=>{
-        const a = normalizeAval(x);
-        return `
-          <div class="item">
-            <div class="row" style="justify-content:space-between">
-              <strong>${esc(a.nome)}</strong>
-              <span class="rating">${stars(a.nota)}</span>
-            </div>
-            ${a.texto?`<p class="meta" style="margin:6px 0 0">${esc(a.texto)}</p>`:''}
-          </div>
-        `;
-      }).join('');
-    }
-
-    const f = $('#f'), status = $('#status'), sendBtn = $('#send');
-    function setStatus(msg, ok){
-      status.textContent = msg||'';
-      status.style.color = ok===true ? '#166534' : ok===false ? '#b91c1c' : '#64748b';
-    }
-
-    f.addEventListener('submit', async (ev)=>{
-      ev.preventDefault();
-      const nome = String($('#nomeCli').value||'').trim();
-      const nota = Number($('#notaSel').value||0);
-      const comentario = String($('#coment').value||'').trim();
-      if (nota<1 || nota>5){ setStatus('Selecione uma nota de 1 a 5.', false); return; }
-      sendBtn.disabled = true; setStatus('Enviando...', null);
-      try{
-        const r = await fetch(`/api/profissional/${encodeURIComponent(PRO_ID)}/avaliar`,{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ nome, nota, comentario })
+      // Carrega dados do profissional
+      fetch(`/api/profissional/${id}`)
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(json => {
+          if (!json || !json.ok) throw new Error("notfound");
+          const p = json;
+          $("#title").textContent = `Avaliar ${p.nome}`;
+          $("#pro-sub").textContent = [p.servico || "", p.cidade ? `• ${p.cidade}` : ""].filter(Boolean).join(" ");
+          if (p.foto) $("#pro-foto").src = p.foto;
+        })
+        .catch(() => {
+          $("#pro-sub").textContent = "Profissional não encontrado.";
         });
-        if(!r.ok) throw new Error('http '+r.status);
-        setStatus('✅ Obrigado pela sua avaliação!', true);
-        f.reset();
-        try{ const arr = await fetchReviews(PRO_ID); renderReviews(arr); }catch(_){}
-      }catch(_){
-        setStatus('❌ Erro ao enviar. Tente novamente.', false);
-      }finally{
-        sendBtn.disabled = false;
-      }
-    });
 
-    // Boot
-    (async function init(){
-      try{
-        const p = await loadPro(PRO_ID);
-        $('#foto').src = p.foto || '/icons/icon-192.png';
-        $('#nome').textContent = p.nome || 'Profissional';
-        $('#servLocal').textContent = [p.servico || p.profissao, [p.bairro, p.cidade].filter(Boolean).join(' • ')].filter(Boolean).join(' • ') || '—';
-        const perfilUrl = '/profissional/' + encodeURIComponent(PRO_ID);
-        $('#btnPerfil').href = perfilUrl;
-        $('#btnPerfil2').href = perfilUrl;
-        const wa = waLink(p);
-        const waBtn = $('#btnWa');
-        if (wa){ waBtn.href = wa; } else { waBtn.classList.add('outline'); waBtn.textContent='WhatsApp indisponível'; waBtn.removeAttribute('href'); }
-      }catch(_){}
-      try{
-        const arr = await fetchReviews(PRO_ID);
-        renderReviews(arr);
-      }catch(_){}
+      // Carrega comentários recentes
+      function stars(n){ n = Math.max(1, Math.min(5, Number(n)||0)); return "★".repeat(n)+"☆".repeat(5-n); }
+      function loadAvs(){
+        fetch(`/api/avaliacoes/${id}?page=1&limit=20`)
+          .then(r => r.ok ? r.json() : Promise.reject())
+          .then(({ok, items}) => {
+            const ul = $("#list-avs");
+            if (!ok || !items || !items.length) {
+              ul.innerHTML = `<li class="muted">Sem comentários ainda.</li>`;
+              return;
+            }
+            ul.innerHTML = items.slice().reverse().map(a => {
+              const dt = a.at ? new Date(a.at).toLocaleString() : "";
+              const nome = (a.autor || "Cliente").toString().replace(/[<>&"]/g,"");
+              const com  = (a.comentario || "").toString().replace(/[<>&"]/g,"");
+              const st = stars(a.nota);
+              return `<li>
+                <div class="row" style="justify-content:space-between">
+                  <b>${nome}</b>
+                  <span class="stars">${st}</span>
+                </div>
+                <div class="muted" style="margin-top:2px">${dt}</div>
+                <div style="margin-top:6px">${com}</div>
+              </li>`;
+            }).join("");
+          })
+          .catch(() => {
+            $("#list-avs").innerHTML = `<li class="muted">Não foi possível carregar os comentários.</li>`;
+          });
+      }
+      loadAvs();
+
+      // Envio do formulário (POST compat do servidor)
+      $("#form-av").addEventListener("submit", async (ev) => {
+        ev.preventDefault();
+        const btn = $("#btn-send");
+        btn.disabled = true; btn.textContent = "Enviando…";
+        try {
+          const form = new URLSearchParams();
+          form.set("autor", $("#autor").value.trim());
+          form.set("nota", $("#nota").value);
+          form.set("comentario", $("#comentario").value.trim());
+
+          const resp = await fetch(`/profissional/${id}/avaliar`, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: form.toString()
+          });
+
+          if (resp.ok) {
+            // redireciona para o perfil com flag de sucesso
+            location.href = `/perfil.html?id=${id}&ok=1`;
+            return;
+          } else {
+            const txt = await resp.text();
+            alert("Não foi possível enviar sua avaliação.\n\n" + (txt || ""));
+          }
+        } catch (e) {
+          alert("Erro de rede. Tente novamente.");
+        } finally {
+          btn.disabled = false; btn.textContent = "Enviar avaliação";
+        }
+      });
     })();
-  })();
   </script>
 </body>
 </html>
