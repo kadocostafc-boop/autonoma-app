@@ -1319,22 +1319,30 @@ app.get("/admin/login", (_req,res)=>{
 });
 
 // POST /admin/login
-app.post("/admin/login", loginLimiter, (req,res)=>{
-  const user = trim(req.body?.user||"");
-  const pass = String(req.body?.password||"");
+// 3) POST /admin/login -> autentica usuário/senha (aceita 'user/password' e 'usuario/senha')
+app.post("/admin/login", loginLimiter, (req, res) => {
+  const user = trim((req.body?.user ?? req.body?.usuario ?? "").toString());
+  const pass = (req.body?.password ?? req.body?.senha ?? "").toString();
+
   const userOk = user === ADMIN_USER;
   let passOk = false;
-  if (ADMIN_PASS_HASH){
-    try{ passOk = bcrypt.compareSync(pass, ADMIN_PASS_HASH); } catch{ passOk=false; }
-  }else{
+
+  if (ADMIN_PASS_HASH) {
+    try { passOk = bcrypt.compareSync(pass, ADMIN_PASS_HASH); }
+    catch { passOk = false; }
+  } else {
     passOk = pass === ADMIN_PASS;
   }
-  if (userOk && passOk){
+
+  if (userOk && passOk) {
     req.session.isAdmin = true;
     req.session.adminAt = Date.now();
     return res.redirect("/admin.html");
   }
-  return res.status(401).send(htmlMsg("Login inválido","Usuário/senha incorretos.","/admin/login"));
+
+  return res
+    .status(401)
+    .send(htmlMsg("Login inválido", "Usuário/senha incorretos.", "/admin/login"));
 });
 
 // Logout
