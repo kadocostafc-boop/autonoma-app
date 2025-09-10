@@ -145,6 +145,68 @@ if (!REDIRECTS_DISABLED){
     next();
   });
 }
+// ---- Guardião do admin.html + rotas de login/admin (antes dos estáticos) ----
+
+// Redireciona /admin -> login se não logado; se logado, vai para admin.html
+app.get(['/admin', '/admin/'], (req, res) => {
+  if (req.session?.isAdmin) return res.redirect('/admin.html');
+  return res.redirect('/admin-login.html');
+});
+
+// Protege acesso direto ao admin.html (se o usuário digitar a URL)
+app.use((req, res, next) => {
+  if (req.path === '/admin.html' && !(req.session?.isAdmin)) {
+    return res.redirect('/admin-login.html');
+  }
+  next();
+});
+
+// Páginas de login do admin (layout novo em public/admin-login.html)
+// Rota canônica:
+app.get('/admin-login.html', (_req, res) =>
+  res.sendFile(path.join(PUBLIC_DIR, 'admin-login.html'))
+);
+
+// Compatibilidade de caminhos antigos:
+app.get(['/admin/login', '/admin_login.html', '/admin_login'], (_req, res) =>
+  res.redirect(302, '/admin-login.html')
+);
+
+// POST do login do admin
+app.post('/admin/login', loginLimiter, (req, res) => {
+  const user = (req.body?.user || '').toString().trim();
+  const pass = (req.body?.password || '').toString();
+
+  const userOk = user === ADMIN_USER;
+  let passOk = false;
+
+  if (ADMIN_PASS_HASH) {
+    try { passOk = bcrypt.compareSync(pass, ADMIN_PASS_HASH); } catch { passOk = false; }
+  } else {
+    passOk = pass === ADMIN_PASS; // padrão: admin / admin123 (pode trocar via .env)
+  }
+
+  if (userOk && passOk) {
+    req.session.isAdmin = true;
+    req.session.adminAt = Date.now();
+
+    // Se foi fetch/AJAX, responde JSON; se foi form tradicional, redireciona
+    const wantsJSON = (req.headers.accept || '').includes('application/json') || (req.headers['content-type'] || '').includes('json');
+    if (wantsJSON) return res.json({ ok: true, redirect: '/admin.html' });
+    return res.redirect('/admin.html');
+  }
+
+  const wantsJSON = (req.headers.accept || '').includes('application/json') || (req.headers['content-type'] || '').includes('json');
+  if (wantsJSON) return res.status(401).json({ ok: false, error: 'invalid_credentials' });
+
+  return res.status(401).send(htmlMsg('Login inválido', 'Usuário/senha incorretos.', '/admin-login.html'));
+});
+
+// Logout (mantém)
+app.post('/admin/logout', (req, res) => {
+  if (req.session) req.session.isAdmin = false;
+  res.redirect('/admin-login.html');
+});
 
 // Arquivos estáticos
 app.use(express.static(PUBLIC_DIR, { maxAge:"7d", fallthrough: true }));
