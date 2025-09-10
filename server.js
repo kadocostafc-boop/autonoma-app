@@ -1,20 +1,19 @@
 // ============================================================================
 // Autônoma.app • server.js (CONSOLIDADO)
-// Data: 2025-09-08
+// Data: 2025-09-10
 // - Páginas públicas + PWA + SEO
 // - Admin (login obrigatório) + export CSV + métricas/gráficos (endpoints JSON)
 // - Painel do Profissional (login via token WhatsApp, Radar on/off, raio, cidades extras)
 // - Busca com ranking (planos + distância + Radar)
 // - Perfil público (/perfil.html?id=... e /profissional/:id)
-// - Página Avaliar: GET /avaliar/:id  (POST já existia: /profissional/:id/avaliar)
+// - Página Avaliar: GET /avaliar/:id  (POST também em /profissional/:id/avaliar)
 // - Top10 semanal (visitas/chamadas/avaliações)
 // - Denúncias
 // - Pagamentos (stub Pix/Cartão) + taxas configuráveis
 // - QR Code (/api/qr)
-// - Favoritos (servidor) com cookie anônimo FAV_UID
-// - Compat: /api/profissionais/:id
-// - Frase WhatsApp nos JSONs (waMessageDefault) e /api/whatsapp-msg
-// - Respeita .env: PRIMARY_HOST, FORCE_HTTPS, SECURE_COOKIES, REDIRECTS_DISABLED
+// - Favoritos (cookie anônimo FAV_UID)
+// - Frase WhatsApp nos JSONs (/api/ui-config)
+// - Respeita .env: PRIMARY_HOST, FORCE_HTTPS, SECURE_COOKIES, REDIRECTS_DISABLED, DATA_DIR
 // ============================================================================
 
 require("dotenv").config();
@@ -30,9 +29,6 @@ const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcryptjs");
 const cookieParser = require("cookie-parser");
 
-// ----------------------------------------------------------------------------
-// App base
-// ----------------------------------------------------------------------------
 const app = express();
 app.set("trust proxy", 1);
 const HOST = "0.0.0.0";
@@ -49,18 +45,19 @@ const FEE_PIX_PERCENT  = Number(process.env.FEE_PIX_PERCENT  || 0);
 const PIX_ENABLED      = String(process.env.PIX_ENABLED || "true") === "true";
 const CARD_ENABLED     = String(process.env.CARD_ENABLED || "true") === "true";
 
-// ----------------------------------------------------------------------------
-const ROOT          = __dirname;
-const PUBLIC_DIR    = path.join(ROOT, "public");
-const DATA_DIR      = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(ROOT, "data");
-const UPLOAD_DIR    = path.join(DATA_DIR, "uploads");
-const DB_FILE       = path.join(DATA_DIR, "profissionais.json");
-const BAIRROS_FILE  = path.join(DATA_DIR, "bairros.json");
-const CIDADES_FILE  = path.join(DATA_DIR, "cidades.json");
-const SERVICOS_FILE = path.join(DATA_DIR, "servicos.json");
-const DENUNCIAS_FILE= path.join(DATA_DIR, "denuncias.json");
-const PAYMENTS_FILE = path.join(DATA_DIR, "payments.json");
-const METRICS_FILE  = path.join(DATA_DIR, "metrics.json");
+// Pastas/arquivos (suporta DATA_DIR=/data na Railway)
+const ROOT       = __dirname;
+const PUBLIC_DIR = path.join(ROOT, "public");
+const DATA_DIR   = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(ROOT, "data");
+const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
+
+const DB_FILE        = path.join(DATA_DIR, "profissionais.json");
+const BAIRROS_FILE   = path.join(DATA_DIR, "bairros.json");
+const CIDADES_FILE   = path.join(DATA_DIR, "cidades.json");
+const SERVICOS_FILE  = path.join(DATA_DIR, "servicos.json");
+const DENUNCIAS_FILE = path.join(DATA_DIR, "denuncias.json");
+const PAYMENTS_FILE  = path.join(DATA_DIR, "payments.json");
+const METRICS_FILE   = path.join(DATA_DIR, "metrics.json");
 
 [PUBLIC_DIR, DATA_DIR, UPLOAD_DIR].forEach(p => { if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive:true }); });
 
@@ -73,9 +70,7 @@ if (!fs.existsSync(DENUNCIAS_FILE))  writeJSON(DENUNCIAS_FILE, []);
 if (!fs.existsSync(PAYMENTS_FILE))   writeJSON(PAYMENTS_FILE, []);
 if (!fs.existsSync(METRICS_FILE))    writeJSON(METRICS_FILE, {});
 
-// ----------------------------------------------------------------------------
 // Admin / Sessão
-// ----------------------------------------------------------------------------
 const ADMIN_USER      = process.env.ADMIN_USER || "admin";
 const ADMIN_PASS      = process.env.ADMIN_PASS || process.env.ADMIN_PASSWORD || "admin123";
 const ADMIN_PASS_HASH = process.env.ADMIN_PASS_HASH || ""; // se existir, tem prioridade
@@ -116,15 +111,13 @@ function buildWaMessage(p){
   return `Olá${nome}, vi seu perfil na Autônoma.app e gostaria de contratar ${serv}. Podemos conversar?`;
 }
 
-// ----------------------------------------------------------------------------
 // Middlewares
-// ----------------------------------------------------------------------------
 app.use(compression());
 app.use(express.urlencoded({ extended:true }));
 app.use(express.json({ limit:"1.2mb" }));
 app.use(cookieParser());
 
-// Canonical/HTTPS (respeita REDIRECTS_DISABLED)
+// Canonical/HTTPS
 if (!REDIRECTS_DISABLED){
   app.use((req,res,next)=>{
     try{
@@ -145,74 +138,12 @@ if (!REDIRECTS_DISABLED){
     next();
   });
 }
-// ---- Guardião do admin.html + rotas de login/admin (antes dos estáticos) ----
 
-// Redireciona /admin -> login se não logado; se logado, vai para admin.html
-app.get(['/admin', '/admin/'], (req, res) => {
-  if (req.session?.isAdmin) return res.redirect('/admin.html');
-  return res.redirect('/admin-login.html');
-});
-
-// Protege acesso direto ao admin.html (se o usuário digitar a URL)
-app.use((req, res, next) => {
-  if (req.path === '/admin.html' && !(req.session?.isAdmin)) {
-    return res.redirect('/admin-login.html');
-  }
-  next();
-});
-
-// Páginas de login do admin (layout novo em public/admin-login.html)
-// Rota canônica:
-app.get('/admin-login.html', (_req, res) =>
-  res.sendFile(path.join(PUBLIC_DIR, 'admin-login.html'))
-);
-
-// Compatibilidade de caminhos antigos:
-app.get(['/admin/login', '/admin_login.html', '/admin_login'], (_req, res) =>
-  res.redirect(302, '/admin-login.html')
-);
-
-// POST do login do admin
-app.post('/admin/login', loginLimiter, (req, res) => {
-  const user = (req.body?.user || '').toString().trim();
-  const pass = (req.body?.password || '').toString();
-
-  const userOk = user === ADMIN_USER;
-  let passOk = false;
-
-  if (ADMIN_PASS_HASH) {
-    try { passOk = bcrypt.compareSync(pass, ADMIN_PASS_HASH); } catch { passOk = false; }
-  } else {
-    passOk = pass === ADMIN_PASS; // padrão: admin / admin123 (pode trocar via .env)
-  }
-
-  if (userOk && passOk) {
-    req.session.isAdmin = true;
-    req.session.adminAt = Date.now();
-
-    // Se foi fetch/AJAX, responde JSON; se foi form tradicional, redireciona
-    const wantsJSON = (req.headers.accept || '').includes('application/json') || (req.headers['content-type'] || '').includes('json');
-    if (wantsJSON) return res.json({ ok: true, redirect: '/admin.html' });
-    return res.redirect('/admin.html');
-  }
-
-  const wantsJSON = (req.headers.accept || '').includes('application/json') || (req.headers['content-type'] || '').includes('json');
-  if (wantsJSON) return res.status(401).json({ ok: false, error: 'invalid_credentials' });
-
-  return res.status(401).send(htmlMsg('Login inválido', 'Usuário/senha incorretos.', '/admin-login.html'));
-});
-
-// Logout (mantém)
-app.post('/admin/logout', (req, res) => {
-  if (req.session) req.session.isAdmin = false;
-  res.redirect('/admin-login.html');
-});
-
-// Arquivos estáticos
+// Estático
 app.use(express.static(PUBLIC_DIR, { maxAge:"7d", fallthrough: true }));
 app.use("/uploads", express.static(UPLOAD_DIR, { maxAge:"30d", immutable:true }));
 
-// Evita cache dos endpoints /api/*
+// No-cache para /api/*
 app.use(/^\/api\//, (_req, res, next) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.set("Pragma", "no-cache");
@@ -234,13 +165,11 @@ app.use(session({
   }
 }));
 
-// Limiter
+// Limiters
 const loginLimiter = rateLimit({ windowMs: 15*60*1000, max: 20, standardHeaders: true, legacyHeaders: false });
 const reviewsLimiter = rateLimit({ windowMs: 5*60*1000,  max: 40, standardHeaders: true, legacyHeaders: false });
 
-// ----------------------------------------------------------------------------
-// GEO / AUTOCOMPLETE / GPS (base simples)
-// ----------------------------------------------------------------------------
+// GEO / AUTOCOMPLETE (base simples para fallback)
 const CIDADES_BASE = [
   { nome: "Rio de Janeiro/RJ", lat: -22.9068, lng: -43.1729, bairros: ["Copacabana","Ipanema","Botafogo","Tijuca","Barra da Tijuca","Leblon","Centro"] },
   { nome: "São Paulo/SP",      lat: -23.5505, lng: -46.6333, bairros: ["Pinheiros","Vila Mariana","Moema","Tatuapé","Santana","Itaim Bibi","Centro"] },
@@ -305,9 +234,7 @@ app.get('/api/geo/closest-city', (req, res) => {
   return res.json({ ok:true, cidade: best.nome, distKm: Math.round(bestD*10)/10 });
 });
 
-// ----------------------------------------------------------------------------
 // HTML helpers
-// ----------------------------------------------------------------------------
 const htmlMsg = (title, text, backHref="/") =>
 `<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="/css/app.css">
 <div class="wrap"><div class="card"><h1>${escapeHTML(title)}</h1><p class="meta">${escapeHTML(text||"")}</p><a class="btn" href="${escapeHTML(backHref)}">Voltar</a></div></div>`;
@@ -316,9 +243,8 @@ const htmlErrors = (title, list, backHref="/") =>
 `<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="/css/app.css">
 <div class="wrap"><div class="card"><h1>${escapeHTML(title)}</h1><ul>${(list||[]).map(e=>`<li>${escapeHTML(e)}</li>`).join("")}</ul><a class="btn" href="${escapeHTML(backHref)}">Voltar</a></div></div>`;
 
-// ----------------------------------------------------------------------------
+// Health/diagnóstico
 app.get("/healthz", (_req,res)=> res.type("text").send("ok"));
-
 app.get("/admin/check", (req,res)=>{
   const info = {
     session: !!(req.session && req.session.isAdmin),
@@ -337,9 +263,7 @@ app.get("/admin/check", (req,res)=>{
   <a class="btn" href="/">Início</a></div></div>`);
 });
 
-// ----------------------------------------------------------------------------
-// Páginas estáticas e redirects
-// ----------------------------------------------------------------------------
+// Páginas estáticas & redirects
 app.get("/",                 (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "index.html")));
 app.get("/clientes.html",    (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "clientes.html")));
 app.get("/cadastro.html",    (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "cadastro.html")));
@@ -350,7 +274,7 @@ app.get("/top10.html",       (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "to
 app.get("/planos.html",      (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "planos.html")));
 app.get("/checkout.html",    (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "checkout.html")));
 app.get("/painel_login.html",(_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "painel_login.html")));
-app.get("/perfil.html",      (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "perfil.html"))); // mantém perfil HTML
+app.get("/perfil.html",      (_req,res)=> res.sendFile(path.join(PUBLIC_DIR, "perfil.html")));
 
 // Redirects legados/canônicos
 app.get(["/perfil.html","/perfil"], (req,res)=>{
@@ -360,90 +284,11 @@ app.get(["/perfil.html","/perfil"], (req,res)=>{
 });
 app.get("/clientes", (_req,res)=> res.redirect(301, "/clientes.html"));
 app.get("/cadastro", (_req,res)=> res.redirect(301, "/cadastro.html"));
-// manter compat, mas agora /admin redireciona para /admin.html (protegido)
-app.get("/admin.html", (req,_res,next)=> next()); // placeholder pra não conflitar com redirect abaixo
-// --- Admin: guardião + login + dashboard -----------------------------------
 
-// 1) Acessar /admin → manda para /admin/login
-// --- ROTAS/MIDDLEWARES DE ADMIN (antes do static) ---
-
-// 2.1) Se pedirem /admin, manda para /admin/login
-app.get("/admin", (req, res) => res.redirect(302, "/admin/login"));
-
-// 2.2) Bloqueia acesso direto ao arquivo /admin.html quando não logado.
-//     Este middleware precisa vir ANTES do express.static para interceptar.
-app.use((req, res, next) => {
-  if (req.path === "/admin.html" && !(req.session && req.session.isAdmin)) {
-    return res.redirect("/admin/login");
-  }
-  next();
-});
-
-// 2.3) Página de login do Admin (usa o layout novo em public/admin-login.html)
-app.get("/admin/login", (_req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, "admin-login.html"));
-});
-
-// 2.4) POST do login (mantém como você já tem hoje):
-//     - compara user/senha com ADMIN_USER / ADMIN_PASS ou ADMIN_PASS_HASH
-//     - quando OK: res.redirect("/admin.html")
-
-// 2) Página de login do admin (usa o layout novo em public/admin-login.html)
-//    ATENÇÃO: o arquivo no disco é "admin-login.html" (com HÍFEN)
-app.get("/admin/login", (req, res) => {
-  // Se já estiver logado, pula direto para o dashboard
-  if (req.session?.isAdmin) return res.redirect("/admin.html");
-  return res.sendFile(path.join(PUBLIC_DIR, "admin-login.html"));
-});
-
-// 3) POST de login: usuário/senha fixos (ou .env)
-//    Usuário: ADMIN_USER  (default: "admin")
-//    Senha:   ADMIN_PASS  (default: "admin123")
-//    Se ADMIN_PASS_HASH (bcrypt) existir, ele tem prioridade.
-app.post("/admin/login", loginLimiter, (req, res) => {
-  const user = (req.body?.user || "").toString().trim();
-  const pass = (req.body?.password || "").toString();
-
-  const userOk = user === ADMIN_USER;
-  let passOk = false;
-  if (ADMIN_PASS_HASH) {
-    try { passOk = bcrypt.compareSync(pass, ADMIN_PASS_HASH); } catch { passOk = false; }
-  } else {
-    passOk = pass === ADMIN_PASS;
-  }
-
-  if (!userOk || !passOk) {
-    return res.status(401).send(htmlMsg("Login inválido", "Usuário/senha incorretos.", "/admin/login"));
-  }
-
-  req.session.isAdmin = true;
-  req.session.adminAt = Date.now();
-  return res.redirect("/admin.html"); // destino final
-});
-
-// 4) Página do dashboard: só logado pode ver
-app.get("/admin.html", (req, res) => {
-  if (!(req.session?.isAdmin)) return res.redirect("/admin/login");
-  // Se você tem um admin.html pronto em /public, sirva ele:
-  return res.sendFile(path.join(PUBLIC_DIR, "admin.html")); 
-  // (Se você gera HTML via string/SSR, pode manter sua versão anterior)
-});
-
-// 5) Logout
-app.post("/admin/logout", (req, res) => {
-  if (req.session) req.session.isAdmin = false;
-  res.redirect("/admin/login");
-});
-
-// ----------------------------------------------------------------------------
 // Banco (JSON) + migração/normalização
-// ----------------------------------------------------------------------------
 const readDB  = ()=> readJSON(DB_FILE, []);
 const writeDB = (data)=> writeJSON(DB_FILE, data);
-
-function computeVerified(p){
-  return !!(p?.foto && isWhatsappValid(p.whatsapp) && p.cidade && p.bairro);
-}
+function computeVerified(p){ return !!(p?.foto && isWhatsappValid(p.whatsapp) && p.cidade && p.bairro); }
 
 (function fixDB(){
   const db = readDB();
@@ -471,12 +316,7 @@ function computeVerified(p){
     if(!p.plano) p.plano = "free";
     if(typeof p.raioKm!=="number") p.raioKm = 0;
     if(!Array.isArray(p.cidadesExtras)) p.cidadesExtras=[];
-    if(typeof p.uber!=="object" || p.uber==null){
-      p.uber = { on:false, until:null, lastOnAt:null, monthlyUsed:0, monthRef: monthRefOf() }; changed=true;
-    }
-    if(!p.radar){
-      p.radar = { on:false, until:null, lastOnAt:null, monthlyUsed:0, monthRef: monthRefOf() }; changed=true;
-    }
+    if(!p.radar){ p.radar = { on:false, until:null, lastOnAt:null, monthlyUsed:0, monthRef: monthRefOf() }; changed=true; }
     if(!p.lastPos) p.lastPos = { lat:null, lng:null, at:null };
     if(typeof p.receiveViaApp!=="boolean") p.receiveViaApp=false;
   }
@@ -484,9 +324,7 @@ function computeVerified(p){
   console.log("✔ Base OK (ids/logs/planos/radar).");
 })();
 
-// ----------------------------------------------------------------------------
 // Upload (multer)
-// ----------------------------------------------------------------------------
 const storage = multer.diskStorage({
   destination: (_, __, cb) => cb(null, UPLOAD_DIR),
   filename:    (_, file, cb) => cb(null, `${Date.now()}-${Math.round(Math.random()*1e9)}${path.extname(file.originalname)}`)
@@ -497,9 +335,7 @@ const upload = multer({
   fileFilter: (_, file, cb) => file.mimetype?.startsWith("image/") ? cb(null,true) : cb(new Error("Apenas imagens (JPG/PNG)."))
 });
 
-// ----------------------------------------------------------------------------
-// GEO utils + APIs (dinâmicos com arquivos)
-// ----------------------------------------------------------------------------
+// GEO utils + arquivos
 function loadGeoMaps(){
   const bairrosMap = readJSON(BAIRROS_FILE, {}) || {};
   let cidades = readJSON(CIDADES_FILE, []);
@@ -530,25 +366,15 @@ function normalizeCidadeUF(input){
   return hit || input;
 }
 
-// ----------------------------------------------------------------------------
-// Config de UI (frases/flags para o front)
-// ----------------------------------------------------------------------------
+// UI config
 const WHATSAPP_DEFAULT_MSG =
   "Olá! Vi seu perfil na Autônoma.app e gostaria de contratar seu serviço. Podemos conversar?";
 
 app.get("/api/ui-config", (_req, res) => {
-  res.json({
-    ok: true,
-    evaluateCTA: true,                 // para mostrar botão Avaliar no perfil
-    whatsappTemplate: WHATSAPP_DEFAULT_MSG
-  });
+  res.json({ ok: true, evaluateCTA: true, whatsappTemplate: WHATSAPP_DEFAULT_MSG });
 });
 
-// ----------------------------------------------------------------------------
-// Cadastro (com upload obrigatório de foto)
-// ----------------------------------------------------------------------------
-const CATS = ["Beleza","Construção","Manutenção","Tecnologia","Educação","Saúde","Pets","Eventos","Transporte","Outros"];
-
+// Cadastro (com upload obrigatório)
 function validateCadastro(body){
   const e=[];
   const nome = trim(body.nome);
@@ -616,7 +442,6 @@ app.post("/cadastrar",
         suspenso: false, suspensoMotivo: "", suspensoEm: null,
         excluido: false, excluidoEm: null,
         plano: "free", raioKm: 0, cidadesExtras: [],
-        uber: { on:false, until:null, lastOnAt:null, monthlyUsed:0, monthRef:monthRefOf() },
         radar:{ on:false, until:null, lastOnAt:null, monthlyUsed:0, monthRef:monthRefOf() },
         lastPos:{ lat:null, lng:null, at:null },
         receiveViaApp:false
@@ -631,15 +456,12 @@ app.post("/cadastrar",
   }
 );
 
-// ----------------------------------------------------------------------------
 // Busca pública de profissionais
-// ----------------------------------------------------------------------------
 function isRecent(iso, mins=15){ if (!iso) return false; const t=new Date(iso).getTime(); if (!Number.isFinite(t)) return false; return (Date.now()-t) <= (mins*60*1000); }
 
 app.get("/api/profissionais", (req, res) => {
   try{
     const db = readDB().filter(p => !p.excluido && !p.suspenso);
-    // Filtros
     const cidade    = trim(req.query.cidade || "");
     const bairro    = trim(req.query.bairro || "");
     const servicoQ  = trim(req.query.servico || "");
@@ -651,9 +473,7 @@ app.get("/api/profissionais", (req, res) => {
     const hasUserPos = Number.isFinite(userLat) && Number.isFinite(userLng);
 
     let items = db;
-    if (featured) {
-      items = items.filter(p => p.verificado || (p.plano && p.plano !== 'free'));
-    }
+    if (featured) items = items.filter(p => p.verificado || (p.plano && p.plano !== 'free'));
     if (cidade) {
       const alvo = normalizeCidadeUF(cidade);
       const N = norm(alvo);
@@ -665,10 +485,7 @@ app.get("/api/profissionais", (req, res) => {
     }
     if (servicoQ) {
       const NS = norm(servicoQ);
-      items = items.filter(p => {
-        const s = norm(p.servico || p.profissao || "");
-        return s.includes(NS);
-      });
+      items = items.filter(p => norm(p.servico || p.profissao || "").includes(NS));
     }
     if (minRating) {
       items = items.filter(p => {
@@ -677,11 +494,8 @@ app.get("/api/profissionais", (req, res) => {
         return rating >= minRating;
       });
     }
-    if (photoOnly) {
-      items = items.filter(p => !!p.foto);
-    }
+    if (photoOnly) items = items.filter(p => !!p.foto);
 
-    // Distância, rating e score
     for (const p of items) {
       const notas = (p.avaliacoes||[]).map(a=>Number(a.nota)).filter(n=>n>=1&&n<=5);
       p._rating = notas.length ? notas.reduce((a,b)=>a+b,0)/notas.length : 0;
@@ -692,19 +506,15 @@ app.get("/api/profissionais", (req, res) => {
         } else { plat = null; plng = null; }
       }
       let dist = null;
-      if (hasUserPos && Number.isFinite(plat) && Number.isFinite(plng)) {
-        dist = haversineKm(userLat, userLng, plat, plng);
-      }
+      if (hasUserPos && Number.isFinite(plat) && Number.isFinite(plng)) dist = haversineKm(userLat, userLng, plat, plng);
       p._distKm = dist;
 
-      // Score: plano > rating > proximidade > verificado
       const planoW = (p.plano === "premium") ? 3 : (p.plano === "pro") ? 2 : 1;
       const distW  = (dist==null) ? 0 : (dist < 2 ? 1.2 : dist < 5 ? 1.0 : 0.8);
       const verifW = p.verificado ? 0.4 : 0;
       p._score = (planoW * 2.5) + (p._rating * 1.5) + (distW) + verifW;
     }
 
-    // Ordenação
     const sort = String(req.query.sort || "score");
     const dir  = String(req.query.dir || "desc").toLowerCase() === "asc" ? 1 : -1;
     items.sort((a,b)=>{
@@ -716,7 +526,6 @@ app.get("/api/profissionais", (req, res) => {
       return ((a._score||0) - (b._score||0)) * dir;
     });
 
-    // Paginação
     const page  = Math.max(1, Number(req.query.page||1));
     const limit = Math.max(1, Math.min(50, Number(req.query.limit||20)));
     const total = items.length;
@@ -778,9 +587,7 @@ app.get("/api/profissionais/:id", (req, res) => {
     badge: p.plano==="premium"?"PREMIUM":(p.plano==="pro"?"PRO":""),
     distanceKm: (typeof p.distanceKm === "number") ? p.distanceKm : null
   });
-});
-
-// Compat (antigo)
+});// Compat
 app.get("/api/profissional/:id", (req, res) => {
   const id = Number(req.params.id || "0");
   if (!Number.isFinite(id) || id <= 0) { return res.status(400).json({ ok: false, error: "id inválido" }); }
@@ -941,16 +748,14 @@ app.get("/avaliar/:id", (req,res)=>{
   </div>`);
 });
 
-// SSR leve /profissional/:id  -> redireciona para perfil.html
+// SSR leve /profissional/:id
 app.get("/profissional/:id", (req,res)=>{
   const idNum = Number(req.params.id || "0");
   if (!Number.isFinite(idNum) || idNum <= 0) return res.redirect("/clientes.html");
   return res.redirect(`/perfil.html?id=${idNum}`);
 });
 
-// ----------------------------------------------------------------------------
-// Métricas/Tracking (visita, call, QR) — alimenta gráficos
-// ----------------------------------------------------------------------------
+// ---------------- Métricas/Tracking ----------------
 function appendMetric(key, payload){
   const metr = readJSON(METRICS_FILE, {});
   const day = (new Date()).toISOString().slice(0,10);
@@ -959,7 +764,6 @@ function appendMetric(key, payload){
   metr[key][day].push(payload);
   writeJSON(METRICS_FILE, metr);
 }
-
 app.post("/api/track/visit/:id", (req,res)=>{
   const id = Number(req.params.id||"0");
   const db = readDB();
@@ -996,9 +800,7 @@ app.post("/api/track/qr/:id", (req,res)=>{
   res.json({ ok:true });
 });
 
-// ----------------------------------------------------------------------------
-// QR CODE (WhatsApp ou texto)
-// ----------------------------------------------------------------------------
+// ---------------- QR CODE ----------------
 app.get("/api/qr", async (req, res) => {
   try{
     let text = "";
@@ -1019,9 +821,7 @@ app.get("/api/qr", async (req, res) => {
   }
 });
 
-// ----------------------------------------------------------------------------
-// Top 10 semanal (API)
-// ----------------------------------------------------------------------------
+// ---------------- Top 10 semanal ----------------
 function weekKeyFor(d){
   const dt = new Date(d);
   const y = dt.getFullYear();
@@ -1061,18 +861,14 @@ app.get("/api/top10", (req,res)=>{
   res.json({ ok:true, week: weekKey(), items:list });
 });
 
-// ----------------------------------------------------------------------------
-// Painel do Profissional — login por token (whatsapp) e preferências
-// ----------------------------------------------------------------------------
+// ---------------- Painel do Profissional ----------------
 app.get("/api/painel/me", (req, res) => {
   try {
     const db = readDB();
     let pro = null;
-    // sessão
     if (req.session?.painel?.ok) {
       pro = db.find(p => Number(p.id) === Number(req.session.painel.proId) && !p.excluido);
     }
-    // Authorization: Bearer <token> (whatsapp normalizado)
     if (!pro) {
       const auth = String(req.headers.authorization || "");
       if (auth.startsWith("Bearer ")) {
@@ -1111,7 +907,7 @@ app.get("/api/painel/me", (req, res) => {
   }
 });
 
-// Painel HTML com ?token= opcional -> cria sessão e limpa query
+// Painel HTML com ?token= opcional
 app.get("/painel.html", (req, res) => {
   const tokenRaw = req.query.token || "";
   if (tokenRaw) {
@@ -1149,7 +945,7 @@ app.get("/api/painel/state", (req,res)=>{
     pro:{
       id:p.id, nome:p.nome, plano:p.plano,
       raioKm:p.raioKm, cidadesExtras:p.cidadesExtras||[],
-      radar:p.radar||p.uber||{},
+      radar:p.radar||{},
       receiveViaApp: !!p.receiveViaApp
     }
   });
@@ -1188,6 +984,7 @@ app.post("/api/painel/radar", (req,res)=>{
   writeDB(db);
   res.json({ ok:true, radar:p.radar });
 });
+
 app.post("/api/painel/radar/toggle", (req,res)=>{
   const s = req.session?.painel; if (!s?.ok) return res.status(401).json({ ok:false });
   const db = readDB(); const p = db.find(x=> Number(x.id)===s.proId); if (!p) return res.status(404).json({ ok:false });
@@ -1196,6 +993,7 @@ app.post("/api/painel/radar/toggle", (req,res)=>{
   req.body = { on: want, durationHours: durHrs };
   return app._router.handle(req,res, ()=>{}, "/api/painel/radar");
 });
+
 app.post("/api/painel/radar/autooff", (req,res)=>{
   const s = req.session?.painel; if (!s?.ok) return res.status(401).json({ ok:false });
   const db = readDB(); const p = db.find(x=> Number(x.id)===s.proId); if (!p) return res.status(404).json({ ok:false });
@@ -1205,6 +1003,7 @@ app.post("/api/painel/radar/autooff", (req,res)=>{
   writeDB(db);
   res.json({ ok:true, radar:p.radar });
 });
+
 app.post("/api/painel/raio", (req,res)=>{
   const s = req.session?.painel; if (!s?.ok) return res.status(401).json({ ok:false });
   const db = readDB(); const p = db.find(x=> Number(x.id)===s.proId); if (!p) return res.status(404).json({ ok:false });
@@ -1214,6 +1013,7 @@ app.post("/api/painel/raio", (req,res)=>{
   writeDB(db);
   res.json({ ok:true, raioKm:p.raioKm });
 });
+
 app.post("/api/painel/cidades", (req,res)=>{
   const s = req.session?.painel; if (!s?.ok) return res.status(401).json({ ok:false });
   const db = readDB(); const p = db.find(x=> Number(x.id)===s.proId); if (!p) return res.status(404).json({ ok:false });
@@ -1230,6 +1030,7 @@ app.post("/api/painel/cidades", (req,res)=>{
   writeDB(db);
   res.json({ ok:true, cidadesExtras:p.cidadesExtras });
 });
+
 app.post("/api/painel/payment-prefs", (req,res)=>{
   const s = req.session?.painel; if (!s?.ok) return res.status(401).json({ ok:false });
   const db = readDB(); const p = db.find(x=> Number(x.id)===s.proId); if (!p) return res.status(404).json({ ok:false });
@@ -1237,6 +1038,7 @@ app.post("/api/painel/payment-prefs", (req,res)=>{
   p.receiveViaApp = receiveViaApp; writeDB(db);
   res.json({ ok:true, receiveViaApp });
 });
+
 app.post("/api/painel/update",
   (req,res,next)=> upload.single("foto")(req,res,(err)=> { if (err) return res.status(400).json({ ok:false, error:err.message }); next(); }),
   (req,res)=>{
@@ -1275,11 +1077,8 @@ app.get("/api/painel/export.csv", (req,res)=>{
   res.send(csv);
 });
 
-// ----------------------------------------------------------------------------
-// Pagamentos (stub simples)
-// ----------------------------------------------------------------------------
+// ---------------- Pagamentos (stub) ----------------
 function newPaymentId(){ return crypto.randomBytes(10).toString("hex"); }
-
 app.get("/api/checkout/options", (_req,res)=>{
   res.json({ ok:true, pix: PIX_ENABLED, card: CARD_ENABLED, fees: { cardPercent:FEE_CARD_PERCENT, pixPercent:FEE_PIX_PERCENT } });
 });
@@ -1331,9 +1130,7 @@ app.get("/api/checkout/pro/:id", (req,res)=>{
   });
 });
 
-// ----------------------------------------------------------------------------
-// Denúncias
-// ----------------------------------------------------------------------------
+// ---------------- Denúncias ----------------
 app.post("/api/denuncias", (req,res)=>{
   try{
     const body = req.body||{};
@@ -1356,9 +1153,7 @@ app.post("/api/denuncias", (req,res)=>{
   }
 });
 
-// ----------------------------------------------------------------------------
-// Favoritos (por cookie anônimo FAV_UID)
-// ----------------------------------------------------------------------------
+// ---------------- Favoritos (cookie anônimo) ----------------
 const FAV_FILE = path.join(DATA_DIR, "favorites.json");
 if (!fs.existsSync(FAV_FILE)) writeJSON(FAV_FILE, {});
 const readFavMap  = ()=> readJSON(FAV_FILE, {});
@@ -1452,35 +1247,47 @@ app.delete("/api/favoritos/:id", (req,res)=>{
   }catch(e){ res.status(500).json({ ok:false, error:String(e) }); }
 });
 
-// ----------------------------------------------------------------------------
-// Admin — login novo (layout estático) + proteção/redirects
-// ----------------------------------------------------------------------------
+// ---------------- Admin — login, dashboard e APIs ----------------
+function requireAdmin(req,res,next){ if (req.session?.isAdmin) return next(); return res.status(401).json({ ok:false }); }
 
-// Se não logado e tentar /admin  -> vai para /admin/login
+// 1) /admin -> redireciona para /admin/login
 app.get("/admin", (req,res)=>{
   if (!(req.session && req.session.isAdmin)) return res.redirect("/admin/login");
-  // Se logado, ir para a versão estática do dashboard
+  // logado? manda para /admin.html
   return res.redirect("/admin.html");
 });
 
-// Página de login Admin com o layout novo (arquivo estático)
+// 2) GET /admin/login -> serve layout novo do public/admin-login.html
 app.get("/admin/login", (_req,res)=>{
-  return res.sendFile(path.join(PUBLIC_DIR, "admin_login.html"));
+  const file = path.join(PUBLIC_DIR, "admin-login.html");
+  if (fs.existsSync(file)) return res.sendFile(file);
+  // fallback simples
+  return res.send(`<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="/css/app.css">
+  <div class="wrap"><div class="card" style="max-width:420px;margin:auto">
+    <h1>Admin • Entrar</h1>
+    <form method="POST" action="/admin/login" style="margin-top:8px">
+      <label for="user">Usuário</label>
+      <input id="user" name="user" type="text" required placeholder="admin" />
+      <label for="password">Senha</label>
+      <input id="password" type="password" name="password" required placeholder="admin123" />
+      <div class="row" style="margin-top:10px;gap:8px">
+        <button class="btn" type="submit">Entrar</button>
+        <a class="btn ghost" href="/">Início</a>
+      </div>
+    </form>
+  </div></div>`);
 });
 
-// POST login (usuário/senha via .env; padrão admin/admin123)
-// redireciona para /admin.html
+// 3) POST /admin/login -> autentica usuário/senha
 app.post("/admin/login", loginLimiter, (req,res)=>{
-  const user = trim(req.body?.user || req.body?.email || ""); // aceita "user" ou "email"
-  const pass = String(req.body?.password || req.body?.pass || "");
-  const userOk = user === (process.env.ADMIN_USER || "admin");
+  const user = trim(req.body?.user||"");
+  const pass = String(req.body?.password||"");
+  const userOk = user === ADMIN_USER;
   let passOk = false;
-  const ENV_HASH = process.env.ADMIN_PASS_HASH || "";
-  if (ENV_HASH){
-    try{ passOk = bcrypt.compareSync(pass, ENV_HASH); } catch{ passOk=false; }
+  if (ADMIN_PASS_HASH){
+    try{ passOk = bcrypt.compareSync(pass, ADMIN_PASS_HASH); } catch{ passOk=false; }
   }else{
-    const envPass = (process.env.ADMIN_PASS || process.env.ADMIN_PASSWORD || "admin123");
-    passOk = pass === envPass;
+    passOk = pass === ADMIN_PASS;
   }
   if (userOk && passOk){
     req.session.isAdmin = true;
@@ -1490,18 +1297,16 @@ app.post("/admin/login", loginLimiter, (req,res)=>{
   return res.status(401).send(htmlMsg("Login inválido","Usuário/senha incorretos.","/admin/login"));
 });
 
-// Logout
+// 4) Logout
 app.post("/admin/logout", (req,res)=>{ if (req.session) req.session.isAdmin = false; res.redirect("/admin/login"); });
 
-// Guard leve para a página estática consultar (opcional pelo front)
-app.get("/admin/guard", (req,res)=>{
-  if (req.session?.isAdmin) return res.json({ ok:true });
-  return res.status(401).json({ ok:false });
+// 5) /admin.html protegido
+app.get("/admin.html", (req,res)=>{
+  if (!(req.session && req.session.isAdmin)) return res.redirect("/admin/login");
+  return res.sendFile(path.join(PUBLIC_DIR, "admin.html"));
 });
 
-// Endpoints de métricas/exports que seu admin.html consome (respondem 401 se não logado)
-function requireAdmin(req,res,next){ if (req.session?.isAdmin) return next(); return res.status(401).json({ ok:false }); }
-
+// Helpers de stats p/ admin
 function adminBuildStats(){
   const db = readDB().filter(p=>!p.excluido);
   const metr = readJSON(METRICS_FILE, {});
@@ -1522,14 +1327,10 @@ function adminBuildStats(){
     const d = new Date(Date.now()-i*24*3600e3).toISOString().slice(0,10);
     const v = (metr.visit?.[d]||[]).length||0;
     const c = (metr.call?.[d]||[]).length||0;
-    const q = (metr.qr  ?.[d]||[]).length||0;
+    const q = (metr.qr  ?. [d]||[]).length||0;
     days.push({ day:d, visits:v, calls:c, qrs:q });
   }
-  return {
-    ok:true,
-    counters:{ total, ativos, suspensos, excluidos, verificados, mediaRating },
-    last30: days
-  };
+  return { ok:true, counters:{ total, ativos, suspensos, excluidos, verificados, mediaRating }, last30: days };
 }
 function adminBuildList(query){
   const db = readDB().filter(p=>!p.excluido);
@@ -1559,112 +1360,29 @@ function adminBuildList(query){
     cidade:p.cidade||"", bairro:p.bairro||"",
     visitas:p.visitas||0, chamadas:p.chamadas||0,
     rating: (p.avaliacoes||[]).length ? (p.avaliacoes.reduce((a,c)=>a+Number(c.nota||0),0)/(p.avaliacoes.length)) : 0,
-    plano:p.plano||"free", verificado:!!p.verificado,
-    suspenso: !!p.suspenso, excluido: !!p.excluido,
-    avalCount: Array.isArray(p.avaliacoes)? p.avaliacoes.length : 0,
-    foto: p.foto || ""
+    plano:p.plano||"free", verificado:!!p.verificado
   }));
 }
 
-app.get("/api/admin/metrics", requireAdmin, (_req,res)=>{
-  const s = adminBuildStats();
-  // Formato que o admin.html novo espera
-  const verified = { yes: s.counters.verificados, no: Math.max(0, s.counters.total - s.counters.verificados) };
-  const dias = s.last30.map(d=>({ date:d.day, visitas:d.visits, chamadas:d.calls, cad: d.qrs })); // "cad" usando qrs como 3a série
-  res.json({
-    ativos: s.counters.ativos,
-    suspended: s.counters.suspensos,
-    excluidos: s.counters.excluidos,
-    visitas: s.last30.reduce((a,b)=>a+b.visits,0),
-    chamadas: s.last30.reduce((a,b)=>a+b.calls,0),
-    mediaGeral: s.counters.mediaRating,
-    verified,
-    timeseries: { days: dias },
-    top: { servicos: [] } // pode ser alimentado depois
-  });
-});
-app.get("/api/admin/profissionais", requireAdmin, (req,res)=>{
-  const page  = Math.max(1, Number(req.query.page||1));
-  const limit = Math.max(1, Math.min(50, Number(req.query.limit||20)));
-  const all = adminBuildList(req.query||{});
-  const total = all.length;
-  const start = (page-1)*limit;
-  const end   = start + limit;
-  res.json({ ok:true, total, page, pages: Math.max(1, Math.ceil(total/limit)), items: all.slice(start,end) });
-});
-app.post("/api/admin/recompute", requireAdmin, (_req,res)=>{
-  const db = readDB();
-  let changed = 0;
-  for(const p of db){
-    const v = computeVerified(p);
-    if (p.verificado !== v){ p.verificado = v; changed++; }
-  }
-  writeDB(db);
-  res.json({ ok:true, changed });
-});
-app.post("/api/admin/profissionais/:id/suspender", requireAdmin, (req,res)=>{
-  const id = Number(req.params.id||"0"); const motivo = trim(req.body?.motivo||"");
-  const db = readDB(); const p = db.find(x=> Number(x.id)===id); if (!p) return res.status(404).json({ ok:false });
-  p.suspenso = true; p.suspensoEm = nowISO(); p.suspensoMotivo = motivo;
-  writeDB(db); res.json({ ok:true });
-});
-app.post("/api/admin/profissionais/:id/ativar", requireAdmin, (req,res)=>{
-  const id = Number(req.params.id||"0");
-  const db = readDB(); const p = db.find(x=> Number(x.id)===id); if (!p) return res.status(404).json({ ok:false });
-  p.suspenso = false; p.suspensoMotivo = ""; p.suspensoEm = null;
-  writeDB(db); res.json({ ok:true });
-});
-app.delete("/api/admin/profissionais/:id", requireAdmin, (req,res)=>{
-  const id = Number(req.params.id||"0");
-  const db = readDB(); const p = db.find(x=> Number(x.id)===id); if (!p) return res.status(404).json({ ok:false });
-  p.excluido = true; p.excluidoEm = nowISO();
-  writeDB(db); res.json({ ok:true });
-});
-app.post("/api/admin/profissionais/:id/restaurar", requireAdmin, (req,res)=>{
-  const id = Number(req.params.id||"0");
-  const db = readDB(); const p = db.find(x=> Number(x.id)===id); if (!p) return res.status(404).json({ ok:false });
-  p.excluido = false; p.excluidoEm = null;
-  writeDB(db); res.json({ ok:true });
-});
-
-// Exportações diversas
-app.get("/api/admin/export/csv", requireAdmin, (req,res)=>{
-  const q = req.query || {};
-  const list = adminBuildList(q);
-  const header = ["id","nome","cidade","bairro","servico","plano","verificado","suspenso","excluido","rating","visitas","chamadas","avaliacoes"].join(",");
-  const rows = list.map(p=>{
-    const vals = [
-      p.id, p.nome, p.cidade, p.bairro, p.servico, p.plano, p.verificado, p.suspenso, p.excluido,
-      Number(p.rating||0).toFixed(2), p.visitas||0, p.chamadas||0, p.avalCount||0
-    ];
+// APIs admin
+app.get("/api/admin/stats", requireAdmin, (_req,res)=> res.json(adminBuildStats()));
+app.get("/api/admin/list",  requireAdmin, (req,res)=> res.json({ ok:true, items: adminBuildList(req.query||{}) }));
+app.get("/api/admin/export.csv", requireAdmin, (_req,res)=>{
+  const db = readDB().filter(p=>!p.excluido);
+  const header = ["id","nome","whatsapp","cidade","bairro","servico","plano","raioKm","visitas","chamadas","rating"].join(",");
+  const rows = db.map(p=>{
+    const rating = (p.avaliacoes||[]).length ? (p.avaliacoes.reduce((a,c)=>a+Number(c.nota||0),0)/(p.avaliacoes.length)) : 0;
+    const vals = [p.id,p.nome,p.whatsapp,p.cidade,p.bairro,(p.servico||p.profissao||""),p.plano,(p.raioKm||0),(p.visitas||0),(p.chamadas||0),rating.toFixed(2)];
     return vals.map(v=> `"${String(v).replace(/"/g,'""')}"`).join(",");
   });
   const csv = [header, ...rows].join("\n");
   res.setHeader("Content-Type","text/csv; charset=utf-8");
-  res.setHeader("Content-Disposition","attachment; filename=profissionais.csv");
+  res.setHeader("Content-Disposition","attachment; filename=base_profissionais.csv");
   res.send(csv);
 });
-app.get("/api/admin/export", requireAdmin, (req,res)=>{
-  const what = String(req.query.what||"all");
-  if (what==="metrics"){
-    const metr = readJSON(METRICS_FILE, {});
-    res.setHeader("Content-Type","application/json; charset=utf-8");
-    return res.send(JSON.stringify(metr,null,2));
-  }
-  if (what==="profissionais"){
-    const db = readDB();
-    const header = ["id","nome","whatsapp","cidade","bairro","servico","plano","raioKm","visitas","chamadas","rating"].join(",");
-    const rows = db.filter(p=>!p.excluido).map(p=>{
-      const rating = (p.avaliacoes||[]).length ? (p.avaliacoes.reduce((a,c)=>a+Number(c.nota||0),0)/(p.avaliacoes.length)) : 0;
-      const vals = [p.id,p.nome,p.whatsapp,p.cidade,p.bairro,(p.servico||p.profissao||""),p.plano,(p.raioKm||0),(p.visitas||0),(p.chamadas||0),rating.toFixed(2)];
-      return vals.map(v=> `"${String(v).replace(/"/g,'""')}"`).join(",");
-    });
-    const csv = [header, ...rows].join("\n");
-    res.setHeader("Content-Type","text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition","attachment; filename=base_profissionais.csv");
-    return res.send(csv);
-  }
-  // default: tudo cru
+
+// -------------- Util: Dump (somente admin) --------------
+app.get("/api/admin/_dump_all", requireAdmin, (_req,res)=>{
   const dump = {
     profissionais: readDB(),
     denuncias: readJSON(DENUNCIAS_FILE, []),
@@ -1682,9 +1400,8 @@ app.get("/api/admin/payments", requireAdmin, (req,res)=>{
   res.json(list);
 });
 
-// ----------------------------------------------------------------------------
-// --- Inicialização do servidor (deixe só este) ---
-const port = Number(process.env.PORT || 3000);
-app.listen(port, "0.0.0.0", () => {
+// ---------------- Inicialização ----------------
+const port = BASE_PORT;
+app.listen(port, HOST, ()=>{
   console.log(`Autônoma.app rodando em http://localhost:${port}`);
 });
