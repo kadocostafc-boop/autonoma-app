@@ -1257,25 +1257,30 @@ app.get("/admin", (req,res)=>{
   return res.redirect("/admin.html");
 });
 
-// 2) GET /admin/login -> serve layout novo do public/admin-login.html
+// GET /admin/login -> serve layout novo do public/admin-login.html
 app.get("/admin/login", (_req,res)=>{
   const file = path.join(PUBLIC_DIR, "admin-login.html");
   if (fs.existsSync(file)) return res.sendFile(file);
-  // fallback simples
-  return res.send(`<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="/css/app.css">
-  <div class="wrap"><div class="card" style="max-width:420px;margin:auto">
-    <h1>Admin • Entrar</h1>
-    <form method="POST" action="/admin/login" style="margin-top:8px">
-      <label for="user">Usuário</label>
-      <input id="user" name="user" type="text" required placeholder="admin" />
-      <label for="password">Senha</label>
-      <input id="password" type="password" name="password" required placeholder="admin123" />
-      <div class="row" style="margin-top:10px;gap:8px">
-        <button class="btn" type="submit">Entrar</button>
-        <a class="btn ghost" href="/">Início</a>
-      </div>
-    </form>
-  </div></div>`);
+
+  // fallback simples (HTML direto)
+  return res.send(`<!doctype html>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="/css/app.css">
+  <div class="wrap">
+    <div class="card" style="max-width:420px;margin:auto">
+      <h1>Admin • Entrar</h1>
+      <form method="POST" action="/admin/login" style="margin-top:8px">
+        <label for="usuario">Usuário</label>
+        <input id="usuario" name="usuario" type="text" required placeholder="admin" />
+        <label for="senha">Senha</label>
+        <input id="senha" name="senha" type="password" required placeholder="admin123" />
+        <div class="row" style="margin-top:10px;gap:8px">
+          <button class="btn" type="submit">Entrar</button>
+          <a class="btn ghost" href="/">Início</a>
+        </div>
+      </form>
+    </div>
+  </div>`);
 });
 
 // 3) POST /admin/login -> autentica usuário/senha
