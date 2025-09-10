@@ -362,6 +362,60 @@ app.get("/clientes", (_req,res)=> res.redirect(301, "/clientes.html"));
 app.get("/cadastro", (_req,res)=> res.redirect(301, "/cadastro.html"));
 // manter compat, mas agora /admin redireciona para /admin.html (protegido)
 app.get("/admin.html", (req,_res,next)=> next()); // placeholder pra não conflitar com redirect abaixo
+// --- Admin: guardião + login + dashboard -----------------------------------
+
+// 1) Acessar /admin → manda para /admin/login
+app.get("/admin", (req, res) => {
+  if (req.session?.isAdmin) return res.redirect("/admin.html");
+  return res.redirect(302, "/admin/login");
+});
+
+// 2) Página de login do admin (usa o layout novo em public/admin-login.html)
+//    ATENÇÃO: o arquivo no disco é "admin-login.html" (com HÍFEN)
+app.get("/admin/login", (req, res) => {
+  // Se já estiver logado, pula direto para o dashboard
+  if (req.session?.isAdmin) return res.redirect("/admin.html");
+  return res.sendFile(path.join(PUBLIC_DIR, "admin-login.html"));
+});
+
+// 3) POST de login: usuário/senha fixos (ou .env)
+//    Usuário: ADMIN_USER  (default: "admin")
+//    Senha:   ADMIN_PASS  (default: "admin123")
+//    Se ADMIN_PASS_HASH (bcrypt) existir, ele tem prioridade.
+app.post("/admin/login", loginLimiter, (req, res) => {
+  const user = (req.body?.user || "").toString().trim();
+  const pass = (req.body?.password || "").toString();
+
+  const userOk = user === ADMIN_USER;
+  let passOk = false;
+  if (ADMIN_PASS_HASH) {
+    try { passOk = bcrypt.compareSync(pass, ADMIN_PASS_HASH); } catch { passOk = false; }
+  } else {
+    passOk = pass === ADMIN_PASS;
+  }
+
+  if (!userOk || !passOk) {
+    return res.status(401).send(htmlMsg("Login inválido", "Usuário/senha incorretos.", "/admin/login"));
+  }
+
+  req.session.isAdmin = true;
+  req.session.adminAt = Date.now();
+  return res.redirect("/admin.html"); // destino final
+});
+
+// 4) Página do dashboard: só logado pode ver
+app.get("/admin.html", (req, res) => {
+  if (!(req.session?.isAdmin)) return res.redirect("/admin/login");
+  // Se você tem um admin.html pronto em /public, sirva ele:
+  return res.sendFile(path.join(PUBLIC_DIR, "admin.html")); 
+  // (Se você gera HTML via string/SSR, pode manter sua versão anterior)
+});
+
+// 5) Logout
+app.post("/admin/logout", (req, res) => {
+  if (req.session) req.session.isAdmin = false;
+  res.redirect("/admin/login");
+});
 
 // ----------------------------------------------------------------------------
 // Banco (JSON) + migração/normalização
