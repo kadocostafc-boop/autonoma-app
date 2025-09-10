@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Admin • Autônoma.app</title>
   <meta name="theme-color" content="#2d6cdf">
-  <link rel="stylesheet" href="/css/app.css?v=admin-2025-09-10">
-
+  <link rel="stylesheet" href="/css/app.css?v=admin-2025-09-10c">
   <style>
     /* ===== Layout base ===== */
     .header { display:flex; align-items:center; gap:12px; padding:12px 16px; }
@@ -19,7 +18,6 @@
     .kpi{ background:#fff; border:1px solid #e5e7eb; border-radius:16px; padding:14px; }
     .kpi strong{ font-size:20px }
     .kpi .meta{ color:#64748b }
-
     .panel{ background:#fff; border:1px solid #e5e7eb; border-radius:16px; padding:14px; }
     .grid2{ display:grid; grid-template-columns:1fr; gap:16px; }
     @media (min-width:920px){ .grid2{ grid-template-columns: 2fr 1fr; } }
@@ -41,7 +39,6 @@
 
     .avatar { width:38px; height:38px; border-radius:999px; object-fit:cover; object-position:center; border:1px solid #e5e7eb; background:#f1f5f9; }
     .namecell{ display:flex; align-items:center; gap:8px; min-width:220px }
-
     .rating-low{ color:#b91c1c; font-weight:700 }
     tr.low-row td { background:#fff7f7 }
     .status-pill{ font-size:12px; padding:2px 6px; border-radius:999px; border:1px solid #fecaca; background:#fee2e2; color:#991b1b }
@@ -49,7 +46,6 @@
     /* Canvas responsivo */
     .chart-canvas{ width:100%; height:280px; display:block; }
     @media (min-width:920px){ #chartPie, #chartBars { height:240px; } }
-
     a:focus, button:focus, select:focus, input:focus { outline:3px solid #a5b4fc; outline-offset:2px; }
 
     /* ===== Denúncias ===== */
@@ -219,7 +215,6 @@
             <input id="d_q" class="input" placeholder="Buscar por motivo/descrição/ID prof.">
             <button id="d_go" class="btn">Filtrar</button>
           </div>
-
           <div style="overflow:auto; max-height:420px">
             <table class="table" id="tabDen">
               <thead>
@@ -235,7 +230,6 @@
               <tbody id="tbodyDen"></tbody>
             </table>
           </div>
-
           <div class="row" style="justify-content:space-between; margin-top:10px">
             <div class="meta" id="denInfo">—</div>
             <div class="row">
@@ -246,7 +240,6 @@
           </div>
           <p id="errDen" class="meta warn" style="display:none">Erro ao carregar denúncias.</p>
         </div>
-
         <div>
           <div class="den-card">
             <h3 style="margin:0 0 6px">Resumo</h3>
@@ -286,10 +279,8 @@
     const f_q=$('f_q'), f_cidade=$('f_cidade'), f_serv=$('f_serv'),
           f_verif=$('f_verif'), f_status=$('f_status'),
           f_sort=$('f_sort'), f_dir=$('f_dir'), f_go=$('f_go');
-
     const tbody=$('tbody'), listInfo=$('listInfo'),
           prev=$('prev'), next=$('next'), pageInfo=$('pageInfo');
-
     const dlCidades=$('lista-cidades');
     let PAGE=1, PAGES=1;
 
@@ -302,20 +293,38 @@
 
     let metricsCache=null;
 
+    // ---- fetch helpers (com sessão + redireciona se 401) ----
     async function apiJSON(url, opt){
-      const r = await fetch(url, { cache:'no-store', ...(opt||{}) });
+      const r = await fetch(url, { cache:'no-store', credentials:'same-origin', ...(opt||{}) });
+      if (r.status === 401) {
+        const next = encodeURIComponent('/admin.html');
+        location.href = '/admin/login?next=' + next;
+        throw new Error('401');
+      }
       if(!r.ok) throw new Error('HTTP '+r.status);
       return r.json();
     }
+    async function postJSON(url, body){
+      const r = await fetch(url, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'same-origin',
+        body: JSON.stringify(body||{})
+      });
+      if (r.status === 401) {
+        const next = encodeURIComponent('/admin.html');
+        location.href = '/admin/login?next=' + next;
+        throw new Error('401');
+      }
+      if (!r.ok) throw new Error('HTTP '+r.status);
+      return r.json();
+    }
+
     function escapeHtml(s){
       return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
         .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
     }
-    async function postJSON(url, body){
-      const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{}) });
-      if (!r.ok) throw new Error('HTTP '+r.status);
-      return r.json();
-    }
+
     function deviceScaleCanvas(canvas){
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
@@ -332,16 +341,13 @@
       const ctx = deviceScaleCanvas(cv); if (!ctx) return;
       const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
       ctx.clearRect(0,0,W,H);
-
       // axes
       ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo(40,10); ctx.lineTo(40,H-30); ctx.lineTo(W-10,H-30); ctx.stroke();
-
       const max = Math.max(1, ...series.flat());
       const scaleY = (H-40)/max;
       const stepX = (W-60)/Math.max(1, labels.length-1);
       const colors = ['#2563eb','#16a34a','#f97316']; // visitas, chamadas, cadastros
-
       // grid Y
       ctx.strokeStyle='#f1f5f9';
       for(let t=1;t<=5;t++){
@@ -349,7 +355,6 @@
         const y = (H-30) - v*scaleY;
         ctx.beginPath(); ctx.moveTo(40,y); ctx.lineTo(W-10,y); ctx.stroke();
       }
-
       series.forEach((data,si)=>{
         const grad = ctx.createLinearGradient(0,10,0,H-30);
         grad.addColorStop(0, colors[si] + 'cc');
@@ -361,19 +366,16 @@
           if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
         });
         ctx.strokeStyle=colors[si]; ctx.lineWidth=2; ctx.stroke();
-
         const lastX=40 + (data.length-1)*stepX;
         ctx.lineTo(lastX, H-30);
         ctx.lineTo(40, H-30);
         ctx.closePath();
         ctx.fillStyle=grad; ctx.fill();
       });
-
       // labels X
       ctx.fillStyle='#64748b'; ctx.font='12px system-ui';
       const every = Math.ceil(labels.length/8);
       labels.forEach((lb,i)=>{ if (i%every===0){ const x=40 + i*stepX; ctx.fillText(lb, x-10, H-10); } });
-
       // legend
       const legends = ['Visitas','#2563eb','Chamadas','#16a34a','Cadastros','#f97316'];
       ctx.font='12px system-ui'; ctx.textBaseline='middle';
@@ -413,13 +415,10 @@
       const axisL = 40, axisB = 30;
       const bw = Math.max(16, (W-axisL-20)/Math.max(1, labels.length) - 10);
       const scaleY = (H- axisB - 14)/max;
-
       ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo(axisL,10); ctx.lineTo(axisL,H-axisB); ctx.lineTo(W-10,H-axisB); ctx.stroke();
-
       ctx.strokeStyle='#f1f5f9';
       for(let t=1;t<=5;t++){ const y = (H-axisB) - (max*t/5)*scaleY; ctx.beginPath(); ctx.moveTo(axisL,y); ctx.lineTo(W-10,y); ctx.stroke(); }
-
       let x = axisL + 8;
       values.forEach((v,i)=>{
         const h = v*scaleY;
@@ -427,7 +426,6 @@
         grad.addColorStop(0,'#2563eb'); grad.addColorStop(1,'#93c5fd');
         ctx.fillStyle=grad;
         ctx.fillRect(x, (H-axisB)-h, bw, h);
-
         // labels
         ctx.save();
         ctx.translate(x + bw/2, H-10);
@@ -436,7 +434,6 @@
         const lab = labels[i] || '';
         ctx.fillText(lab.length>16 ? lab.slice(0,16)+'…' : lab, 0, 0);
         ctx.restore();
-
         x += bw + 10;
       });
     }
@@ -455,6 +452,7 @@
       const cad = d.cadastros ?? d.signups ?? d.registros ?? 0;
       return { date, visitas, chamadas, cad };
     }
+
     function paintCharts(m){
       const daysRaw = (m.timeseries?.days || m.dias || m.series || []);
       const days = daysRaw.map(mapDay);
@@ -592,9 +590,8 @@
                            : (p.suspenso ? '<span class="status-pill" style="border-color:#fde68a;background:#fef3c7;color:#92400e">Suspenso</span>' : '');
         const plano = String(p.plano||'free').toLowerCase();
         const badgePlano = (plano==='premium') ? '<span class="plan-badge PREMIUM">PREMIUM</span>'
-                          : (plano==='pro' ? '<span class="plan-badge PRO">PRO</span>' : '');
+                           : (plano==='pro' ? '<span class="plan-badge PRO">PRO</span>' : '');
         const rowClass = isLow ? ' class="low-row"' : '';
-
         return `<tr${rowClass}>
           <td>${p.id}</td>
           <td>
@@ -626,11 +623,9 @@
           </td>
         </tr>`;
       }).join('');
-
       listInfo.textContent = `Total: ${data.total} • Página ${data.page}/${data.pages}`;
       PAGES = data.pages;
       pageInfo.textContent = `${data.page}/${data.pages}`;
-
       tbody.querySelectorAll('button[data-act]').forEach(btn=>{
         btn.addEventListener('click', async ()=>{
           const id = btn.getAttribute('data-id');
@@ -643,7 +638,7 @@
               await postJSON(`/api/admin/profissionais/${id}/ativar`, {});
             } else if (act==='excluir'){
               if (!confirm('Tem certeza que deseja excluir?')) return;
-              const r = await fetch(`/api/admin/profissionais/${id}`, { method:'DELETE' });
+              const r = await fetch(`/api/admin/profissionais/${id}`, { method:'DELETE', credentials:'same-origin' });
               if(!r.ok) throw new Error('HTTP '+r.status);
             } else if (act==='restaurar'){
               await postJSON(`/api/admin/profissionais/${id}/restaurar`, {});
@@ -700,11 +695,9 @@
           </td>
         </tr>`;
       }).join('');
-
       denInfo.textContent = `Total: ${data.total} • Página ${data.page}/${data.pages}`;
       D_PAGES = data.pages;
       d_pageInfo.textContent = `${data.page}/${data.pages}`;
-
       tbodyDen.querySelectorAll('button[data-s]').forEach(btn=>{
         btn.addEventListener('click', async ()=>{
           const id = btn.getAttribute('data-id');
@@ -715,14 +708,15 @@
           loadDenuncias(D_PAGE);
         });
       });
-
       // resumo lateral
       const counts = { aberta:0, em_analise:0, resolvida:0, descartada:0 };
-      (data.items||[]).forEach(d=>{ counts[String(d.status||'aberta')] = (counts[String(d.status||'aberta')]||0)+1; });
+      (data.items||[]).forEach(d=>{
+        const k = String(d.status||'aberta');
+        counts[k] = (counts[k]||0)+1;
+      });
       $('denResumo').textContent =
         `Abertas: ${counts.aberta||0} • Em análise: ${counts.em_analise||0} • Resolvidas: ${counts.resolvida||0} • Descartadas: ${counts.descartada||0}`;
     }
-
     d_prev.addEventListener('click', ()=>{ if (D_PAGE>1) loadDenuncias(D_PAGE-1); });
     d_next.addEventListener('click', ()=>{ if (D_PAGE<D_PAGES) loadDenuncias(D_PAGE+1); });
     d_go.addEventListener('click', ()=> loadDenuncias(1));
