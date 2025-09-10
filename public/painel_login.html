@@ -1,161 +1,241 @@
-<!doctype html><html lang="pt-BR"><head>
+<!doctype html>
+<html lang="pt-BR">
+<head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Entrar no Painel • Autônoma.app</title>
-  <meta name="theme-color" content="#2d6cdf">
+  <meta name="theme-color" content="#0b1f63">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/app.css?v=login-2025-09-09"/>
+
   <style>
-    .wrap{max-width:560px;margin:8vh auto;padding:16px}
-    .card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:18px;box-shadow:0 8px 20px rgba(0,0,0,.06)}
-    .row{display:flex;gap:10px;flex-wrap:wrap}
-    .col{flex:1 1 240px}
-    label{display:block;font-weight:700;margin:10px 0 6px}
-    input,button{font:inherit}
-    input{ width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;outline:none }
-    input:focus{border-color:#2d6cdf;box-shadow:0 0 0 4px rgba(45,108,223,.25)}
-    .btn{appearance:none;border:none;border-radius:10px;padding:10px 12px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block}
-    .btn-primary{background:#2d6cdf;color:#fff}
-    .btn-ghost{background:#f3f4f6;color:#111827}
-    .muted{color:#6b7280}
-    #hint{margin-top:8px;font-size:.95rem}
-    #hint.ok{color:#065f46}   /* verde */
-    #hint.warn{color:#92400e} /* âmbar */
-    #hint.err{color:#991b1b}  /* vermelho */
-    #qrBox{display:flex;align-items:center;justify-content:center;min-height:220px;background:#f9fafb;border:1px dashed #e5e7eb;border-radius:12px}
-    .help{display:none;margin-top:8px}
-    .help.show{display:block}
-    .small{font-size:.9rem}
-    .badge{font-size:.75rem;background:#eef2ff;color:#3730a3;border-radius:999px;padding:2px 8px;margin-left:6px}
+    :root{
+      --azul-escuro:#0b1f63;
+      --azul:#2D81FF;
+      --azul-2:#1E6EF2;
+      --cinza:#0f172a;
+      --borda:#e5e7eb;
+      --bg:#f1f5f9;
+    }
+
+    /* ===== Base / Layout ===== */
+    html, body { height:100%; margin:0; background:var(--azul-escuro); }
+    body{ display:flex; overflow-x:hidden; color:#111827; }
+    .page{ min-height:100vh; display:flex; flex-direction:column; width:100%; }
+    @supports (min-height:100svh){ .page{ min-height:100svh; } }
+    img{ max-width:100%; display:block; }
+
+    /* Header simples, igual ao Index */
+    .header{
+      background:var(--azul-escuro); color:#fff;
+      display:flex; align-items:center; gap:12px; padding:12px 16px;
+    }
+    .header .spacer{ flex:1 }
+    .btn-enter{
+      appearance:none; border:1px solid #ffffff44;
+      background:transparent; color:#fff; font-weight:800;
+      padding:8px 12px; border-radius:10px; text-decoration:none;
+      font-size:14px; line-height:1;
+    }
+    .btn-enter:hover{ background:#ffffff18; }
+
+    /* ===== Cartão de Login ===== */
+    .wrap{
+      width:100%; max-width:1120px; margin:0 auto;
+      padding: clamp(16px, 4vw, 24px);
+      display:flex; align-items:center; justify-content:center;
+      flex:1;
+    }
+    .card{
+      width:min(100%, 560px);
+      background:#fff; border:1px solid var(--borda);
+      border-radius:18px; padding:clamp(16px, 5vw, 24px);
+      box-shadow:0 6px 24px rgba(11,31,99,.08);
+    }
+    .title{
+      margin:0 0 6px; font-size: clamp(20px, 4.5vw, 26px);
+      color:#0b1f63; line-height:1.2;
+    }
+    .subtitle{ margin:0; color:#64748b; font-size:14px }
+
+    /* ===== Form ===== */
+    .form{ margin-top:14px; display:grid; gap:12px }
+    label{ font-weight:600; font-size:14px; color:#111827 }
+    .input{
+      width:100%; box-sizing:border-box;
+      background:#fff; border:1px solid var(--borda); color:#111827;
+      border-radius:12px; padding:12px 12px; font-size:15px;
+    }
+    .input:focus{ outline:3px solid #a5b4fc; outline-offset:2px; }
+    .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
+    .between{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap }
+
+    .btn{
+      border:none; cursor:pointer; text-decoration:none;
+      display:inline-flex; align-items:center; justify-content:center;
+      border-radius:12px; font-weight:800; line-height:1;
+      white-space:nowrap; padding:12px 14px;
+      background:#2D81FF; color:#fff;
+      transition:transform .05s ease, filter .12s ease;
+    }
+    .btn:hover{ filter:brightness(.98) }
+    .btn:active{ transform:scale(.98) }
+    .btn.ghost{ background:#f1f5f9; color:#111827; border:1px solid var(--borda) }
+    .btn.link{ background:transparent; color:#2D81FF; padding:0; border:none; font-weight:700 }
+
+    .helper{ color:#64748b; font-size:13px }
+    .err{ color:#b91c1c; background:#fef2f2; border:1px solid #fecaca; padding:10px 12px; border-radius:12px; font-size:14px }
+    .ok { color:#166534; background:#ecfdf5; border:1px solid #a7f3d0; padding:10px 12px; border-radius:12px; font-size:14px }
+
+    /* Mostrar/ocultar senha */
+    .pwd-wrap{ position:relative }
+    .toggle-pwd{
+      position:absolute; right:8px; top:50%; transform:translateY(-50%);
+      border:1px solid var(--borda); background:#f8fafc; color:#111827;
+      padding:8px 10px; border-radius:10px; font-size:12px; cursor:pointer;
+    }
+
+    /* ===== Footer ===== */
+    footer{
+      background:var(--azul-escuro); color:#cde1ff;
+      padding:12px 8px; margin-top:auto;
+    }
+    .foot-links{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+    .foot-links a{ color:#cde1ff; font-size:13px; text-decoration:none; }
+    .foot-links a:hover{ text-decoration:underline; }
+    .copy{ text-align:center; font-size:11.5px; color:#b8cffc; margin-top:4px; }
+
+    /* ===== Mobile refinements ===== */
+    @media (max-width:420px){
+      .card{ border-radius:16px; }
+      .btn{ width:100% }           /* botões empilham bem */
+      .between{ gap:8px }
+    }
   </style>
-</head><body>
-<header class="header">
-  <img src="/icons/icon-192.png" alt="Autônoma.app" class="logo"/>
-  <div class="brand">
-    <strong>Autônoma<span class="dot">.app</span></strong>
-    <span class="tag">Painel do Profissional</span>
+</head>
+<body>
+  <div class="page">
+    <!-- Header -->
+    <header class="header" role="banner" aria-label="Cabeçalho">
+      <a href="/" aria-label="Início" style="display:inline-flex;align-items:center;gap:10px;color:#fff;text-decoration:none">
+        <img src="/img/logo.png" alt="Autônoma.app" style="height:32px;width:auto" onerror="this.style.display='none'">
+        <strong>Autônoma</strong>
+      </a>
+      <div class="spacer"></div>
+      <a class="btn-enter" href="/clientes.html">Cliente</a>
+    </header>
+
+    <!-- Conteúdo -->
+    <main class="wrap">
+      <section class="card" role="main" aria-labelledby="ttl">
+        <h1 id="ttl" class="title">Entrar no painel</h1>
+        <p class="subtitle">Acesse o dashboard administrativo.</p>
+
+        <!-- Mensagem (preenchida via querystring ?ok=... / ?err=...) -->
+        <div id="flash" style="display:none; margin-top:10px"></div>
+
+        <!-- Formulário (progressive enhancement: funciona sem JS) -->
+        <form class="form" action="/admin/login" method="post" novalidate>
+          <div>
+            <label for="email">E-mail</label>
+            <input id="email" name="email" type="email" class="input" inputmode="email" autocomplete="username" required placeholder="seu@email.com">
+          </div>
+
+          <div class="pwd-wrap">
+            <label for="senha">Senha</label>
+            <input id="senha" name="senha" type="password" class="input" autocomplete="current-password" required placeholder="********">
+            <button type="button" class="toggle-pwd" aria-controls="senha" aria-label="Mostrar/ocultar senha">Mostrar</button>
+          </div>
+
+          <div class="between">
+            <label class="row" style="user-select:none">
+              <input type="checkbox" name="remember" value="1" style="width:16px;height:16px">
+              <span class="helper">Manter conectado</span>
+            </label>
+            <a href="/admin/recuperar" class="btn link">Esqueci a senha</a>
+          </div>
+
+          <div class="row" style="margin-top:6px">
+            <button type="submit" class="btn" id="btnLogin">Entrar</button>
+            <a class="btn ghost" href="/">Voltar</a>
+          </div>
+
+          <p class="helper" style="margin:6px 0 0">
+            Dica: se você é um profissional e ainda não tem acesso, entre em contato com o suporte.
+          </p>
+        </form>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer role="contentinfo">
+      <nav class="foot-links" aria-label="Links do rodapé">
+        <a href="/termos.html">Termos</a>
+        <a href="/privacidade.html">Privacidade</a>
+        <a href="/top10.html">Top 10</a>
+        <a href="/planos.html">Planos</a>
+        <a href="/politica-de-seguranca.html">Segurança</a>
+        <a href="/favoritos.html">Favoritos</a>
+      </nav>
+      <div class="copy">© 2025 Autônoma.app — Todos os direitos reservados.</div>
+    </footer>
   </div>
-</header>
 
-<main class="wrap">
-  <div class="card">
-    <h1 class="mt-0">Entrar no painel <span class="badge">acesso por token</span></h1>
-    <p class="muted small">Informe seu WhatsApp (com DDD) para gerar o link/QR de acesso rápido. O servidor aceita com ou sem <code>55</code>.</p>
-
-    <div class="row" style="margin-top:8px">
-      <div class="col">
-        <label for="whats">WhatsApp (somente números)</label>
-        <input id="whats" inputmode="numeric" autocomplete="tel" placeholder="11988887777" />
-      </div>
-      <div class="col" style="align-self:flex-end;display:flex;gap:8px">
-        <button id="btnLink" class="btn btn-primary" type="button">Gerar link & QR</button>
-        <button id="btnEntrar" class="btn btn-ghost" type="button" title="Abrir o painel agora com o token">Entrar agora</button>
-      </div>
-    </div>
-
-    <div id="hint" class="muted"></div>
-    <div id="loopHelp" class="help small">
-      Dica: se você já tentou antes e ficou em loop, abra o link gerado em aba anônima ou limpe cookies.
-    </div>
-
-    <div style="margin-top:14px" class="row">
-      <div class="col">
-        <div id="qrBox">O QR aparecerá aqui após gerar o link.</div>
-      </div>
-      <div class="col">
-        <p class="muted small">
-          Como funciona:<br/>
-          1) Geramos um link para <code>/painel.html?token=SEU_WHATSAPP</code>.<br/>
-          2) Você pode <b>copiar o link</b> (clipboard) ou <b>escanear o QR</b> com o celular onde vai usar o painel.<br/>
-          3) Ao abrir o link, a sessão é criada e você é redirecionado para <code>/painel.html</code>.
-        </p>
-        <p class="muted small">Problemas? Fale com o suporte.</p>
-      </div>
-    </div>
-  </div>
-</main>
-
-<footer class="footer"><p>© 2025 Autônoma.app</p></footer>
-
-<script>
-(function(){
-  const $ = sel => document.querySelector(sel);
-  const whatsEl = $('#whats');
-  const hintEl  = $('#hint');
-  function hint(msg, tone){
-    hintEl.textContent = msg;
-    hintEl.className = 'muted';
-    if (tone) hintEl.classList.add(tone);
-  }
-  function onlyDigits(s){ return String(s||'').replace(/\D/g,''); }
-  function buildLink(tokenDigits){
-    const base = location.origin || (location.protocol + '//' + location.host);
-    return base + '/painel.html?token=' + encodeURIComponent(tokenDigits);
-  }
-
-  async function gerarLinkEQR(){
-    const raw = onlyDigits(whatsEl.value);
-    if (!raw){
-      hint('Informe seu WhatsApp com DDD.', 'warn');
-      whatsEl.focus();
-      return;
-    }
-    const link = buildLink(raw);
-
-    try{
-      await navigator.clipboard.writeText(link);
-      hint('Link copiado. Escaneie o QR ao lado.', 'ok');
-    }catch{
-      hint('Link: ' + link, 'warn');
+  <script>
+    /* ===== Service Worker com auto-reload quando atualizar ===== */
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        // use a mesma versão do seu sw.js atual
+        navigator.serviceWorker.register('/sw.js?v=login-2025-09-09').catch(()=>{});
+      });
+      let reloaded=false;
+      navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+        if(!reloaded){ reloaded=true; location.reload(); }
+      });
     }
 
-    const img = new Image();
-    img.width = 200; img.height = 200; img.alt = 'QR de acesso';
-    img.onload = ()=>{ $('#qrBox').innerHTML=''; $('#qrBox').appendChild(img); };
-    img.onerror = ()=>{ $('#qrBox').textContent='QR indisponível'; };
-    // cache-buster
-    img.src = '/api/qr?text=' + encodeURIComponent(link) + '&v=' + Date.now();
+    /* ===== Mostrar/ocultar senha ===== */
+    (function(){
+      const btn = document.querySelector('.toggle-pwd');
+      const input = document.getElementById('senha');
+      btn?.addEventListener('click', ()=>{
+        const vis = input.type === 'text';
+        input.type = vis ? 'password' : 'text';
+        btn.textContent = vis ? 'Mostrar' : 'Ocultar';
+        btn.setAttribute('aria-label', vis ? 'Mostrar senha' : 'Ocultar senha');
+        input.focus();
+      });
+    })();
 
-    try{ localStorage.setItem('aut_last_token', raw); }catch{}
-  }
+    /* ===== Flash messages via querystring (?err=... / ?ok=...) ===== */
+    (function(){
+      const params = new URLSearchParams(location.search);
+      const ok = params.get('ok');
+      const err = params.get('err');
+      const box = document.getElementById('flash');
+      if (ok){
+        box.className = 'ok';
+        box.textContent = decodeURIComponent(ok);
+        box.style.display='';
+      } else if (err){
+        box.className = 'err';
+        box.textContent = decodeURIComponent(err);
+        box.style.display='';
+      }
+    })();
 
-  function entrarAgora(){
-    const raw = onlyDigits(whatsEl.value);
-    if (!raw){
-      hint('Informe seu WhatsApp com DDD.', 'warn');
-      whatsEl.focus();
-      return;
-    }
-    hint('Abrindo o painel…', 'ok');
-    try{ localStorage.setItem('aut_last_token', raw); }catch{}
-    // abre: backend cria sessão a partir do token
-    try{
-      location.href = buildLink(raw);
-    }catch{
-      hint('Não foi possível abrir o painel neste navegador.', 'err');
-    }
-  }
-
-  $('#btnLink').addEventListener('click', gerarLinkEQR);
-  $('#btnEntrar').addEventListener('click', entrarAgora);
-
-  try{
-    if(localStorage.getItem('aut_last_token')) $('#loopHelp').classList.add('show');
-  }catch{}
-
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch(()=>{});
-    });
-  }
-
-  // compat: ?ok=1 => redireciona
-  const params = new URLSearchParams(location.search);
-  if (params.get('ok') === '1') {
-    location.replace('/painel');
-  }
-})();
-</script>
-</body></html>
+    /* ===== UX: desabilitar botão enquanto envia, suporte a Enter ===== */
+    (function(){
+      const form = document.querySelector('form.form');
+      const btn = document.getElementById('btnLogin');
+      form?.addEventListener('submit', ()=>{
+        btn.disabled = true;
+        btn.textContent = 'Entrando...';
+        setTimeout(()=>{ btn.disabled=false; btn.textContent='Entrar'; }, 8000); // safety fallback
+      });
+    })();
+  </script>
+</body>
+</html>

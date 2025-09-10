@@ -1,33 +1,36 @@
-// sw.js — Autônoma.app (v36)
-// Estrat.: 
-//  - APIs:       network-only (sem cache)
-//  - HTML:       network-first com fallback offline
-//  - CSS/JS/ICONS: stale-while-revalidate
-//  - IMAGENS:    cache-first com LRU (limite) + fallback
-//  - APK:        sempre rede (no-store)
-// Obs.: não intercepta métodos ≠ GET
+// sw.js — Autônoma.app (v37)
+// Estratégias:
+//  - APIs:           network-only (sem cache)
+//  - HTML:           network-first com fallback offline
+//  - CSS/JS/ICONS:   stale-while-revalidate
+//  - IMAGENS:        cache-first com LRU (limite) + fallback
+//  - APK:            sempre rede (no-store)
+// Observação: não intercepta métodos ≠ GET
 
-const VERSION = 'v36';
+const VERSION      = 'v37';
 const CACHE_STATIC = `autonoma-static-${VERSION}`;
 const CACHE_HTML   = `autonoma-html-${VERSION}`;
 const CACHE_IMG    = `autonoma-img-${VERSION}`;
 const ALL_CACHES   = [CACHE_STATIC, CACHE_HTML, CACHE_IMG];
 
+// Shell básico para navegação rápida (mantenha leve)
 const CORE = [
   '/', '/index.html',
   '/css/app.css',
-  '/img/logo.png',
-  '/favicon.ico',
-  '/clientes.html', '/cadastro.html', '/favoritos.html',
-  '/cadastro_sucesso.html', '/denunciar.html',
+  '/img/logo.png', '/favicon.ico',
   '/manifest.webmanifest',
-  '/icons/icon-192.png', '/icons/icon-512.png'
+  '/icons/icon-192.png', '/icons/icon-512.png',
+  // Páginas principais do app
+  '/clientes.html', '/perfil.html', '/avaliar.html',
+  '/favoritos.html', '/top10.html', '/planos.html',
+  '/termos.html', '/privacidade.html', '/politica-de-seguranca.html',
+  '/admin.html'
 ];
 
 const OFFLINE_HTML =
-  `<!doctype html><meta charset="utf-8"><title>Autônoma.app</title>` +
-  `<body style="font-family:system-ui,Arial,sans-serif;padding:20px">` +
-  `<h1>Você está offline</h1><p>Tente novamente quando sua conexão voltar.</p></body>`;
+  '<!doctype html><meta charset="utf-8"><title>Autônoma.app</title>' +
+  '<body style="font-family:system-ui,Arial,sans-serif;padding:20px">' +
+  '<h1>Você está offline</h1><p>Tente novamente quando sua conexão voltar.</p></body>';
 
 const IMG_FALLBACK = '/icons/icon-192.png';
 
@@ -36,18 +39,19 @@ function isAPI(url) {
   return url.pathname.startsWith('/api/');
 }
 function isAPK(url) {
-  return url.pathname.endsWith('.apk') || url.pathname.startsWith('/app/') && url.pathname.endsWith('.apk');
+  return url.pathname.endsWith('.apk') ||
+         (url.pathname.startsWith('/app/') && url.pathname.endsWith('.apk'));
 }
 function isHTML(req, url) {
-  // Treat navigations and .html as HTML
+  // Trata navegações e .html como HTML
   return req.mode === 'navigate' ||
          url.pathname.endsWith('.html') ||
          (req.headers.get('accept') || '').includes('text/html');
 }
 function isStaticAsset(url) {
-  // CSS/JS/ico/png/svg/json/manifest etc (não inclui /uploads/)
+  // CSS/JS/ico/png/svg/webp/jpg/json/manifest, etc (exceto /uploads/)
   if (url.pathname.startsWith('/uploads/')) return false;
-  return /\.(css|js|ico|png|svg|webp|jpg|jpeg|gif|json|webmanifest)$/i.test(url.pathname);
+  return /\.(css|js|mjs|ico|png|svg|webp|jpg|jpeg|gif|json|webmanifest|txt|map)$/i.test(url.pathname);
 }
 function isImage(url) {
   return /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(url.pathname) || url.pathname.startsWith('/uploads/');
@@ -67,12 +71,11 @@ async function cleanOldCaches() {
   }));
 }
 
-async function limitCacheSize(cacheName, maxEntries = 80) {
+async function limitCacheSize(cacheName, maxEntries = 120) {
   try {
     const cache = await caches.open(cacheName);
     const keys = await cache.keys();
     if (keys.length <= maxEntries) return;
-    // Remove os mais antigos
     const remove = keys.length - maxEntries;
     for (let i = 0; i < remove; i++) {
       await cache.delete(keys[i]);
@@ -80,13 +83,11 @@ async function limitCacheSize(cacheName, maxEntries = 80) {
   } catch {}
 }
 
-// Broadcast para todos os clients (p/ avisar update)
+// Broadcast para todos os clients (informar atualização de versão)
 async function broadcast(type, data) {
   try {
-    const clients = await self.clients.matchAll({ includeUncontrolled: true });
-    for (const client of clients) {
-      client.postMessage({ type, ...data });
-    }
+    const clis = await self.clients.matchAll({ includeUncontrolled: true });
+    for (const cli of clis) cli.postMessage({ type, ...data });
   } catch {}
 }
 
@@ -97,7 +98,7 @@ self.addEventListener('install', (event) => {
       const cache = await caches.open(CACHE_STATIC);
       await cache.addAll(CORE);
     } catch {}
-    // Navigation Preload ajuda muito em mobile
+    // Navigation Preload ajuda bastante em mobile
     if ('navigationPreload' in self.registration) {
       try { await self.registration.navigationPreload.enable(); } catch {}
     }
@@ -114,18 +115,20 @@ self.addEventListener('activate', (event) => {
   })());
 });
 
-// ------------------------------ Fetch Strategy ------------------------------
+// ------------------------------ Fetch Strategies ------------------------------
 async function networkOnly(req) {
   // Usado p/ APIs e APK (sem cache)
   return fetch(req);
 }
 
-async function networkFirstHTML(req) {
-  // Tenta rede primeiro; se falhar, usa cache e se nada, offline-fallback
+async function networkFirstHTML(event, req) {
+  // Tenta rede primeiro; se falhar, usa cache; se nada, offline-fallback
   try {
-    const preload = 'preloadResponse' in event ? await event.preloadResponse : null; // eslint-disable-line no-undef
+    // Usa navigation preload quando disponível
+    const preload = ('preloadResponse' in event) ? await event.preloadResponse : null;
     const net = preload || await fetch(req, { cache: 'no-store' });
-    // Cacheia respostas 200/opaques de navegação
+
+    // Cacheia 200/opaqueredirect de navegação
     if (net && (net.ok || net.type === 'opaqueredirect')) {
       await putCache(CACHE_HTML, req, net.clone());
     }
@@ -146,6 +149,7 @@ async function staleWhileRevalidateStatic(req) {
       if (net && net.ok) await cache.put(req, net.clone());
     } catch {}
   })();
+  // entrega cache imediato; se não tiver, tenta rede
   return cached || fetchPromise.then(() => caches.match(req)) || fetch(req);
 }
 
@@ -157,33 +161,39 @@ async function cacheFirstImage(req) {
     const net = await fetch(req, { cache: 'no-store' });
     if (net && net.ok) {
       await cache.put(req, net.clone());
-      await limitCacheSize(CACHE_IMG, 120); // limite para imagens
+      await limitCacheSize(CACHE_IMG, 120);
     }
     return net;
   } catch {
-    // Fallback simples
-    return caches.match(IMG_FALLBACK) || new Response('', { status: 504, statusText: 'Gateway Timeout' });
+    return (await caches.match(IMG_FALLBACK)) ||
+           new Response('', { status: 504, statusText: 'Gateway Timeout' });
   }
 }
 
-async function handleFetch(event) {
+// Roteamento principal
+self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return; // não intercepta POST/PUT/etc
+
   const url = new URL(req.url);
 
   // APIs => network-only
   if (isAPI(url)) {
-    event.respondWith(networkOnly(req).catch(() => new Response('', { status: 504, statusText: 'Gateway Timeout' })));
+    event.respondWith(networkOnly(req).catch(
+      () => new Response('', { status: 504, statusText: 'Gateway Timeout' })
+    ));
     return;
   }
 
-  // APK => sempre rede (sem cache)
+  // APK => sempre rede (no-store)
   if (isAPK(url)) {
-    event.respondWith(fetch(req, { cache: 'no-store' }).catch(() => new Response('', { status: 504, statusText: 'Gateway Timeout' })));
+    event.respondWith(fetch(req, { cache: 'no-store' }).catch(
+      () => new Response('', { status: 504, statusText: 'Gateway Timeout' })
+    ));
     return;
   }
 
-  // CROSS-ORIGIN (ex.: CDN de imagem) => imagem? cache-first; senão, tenta rede e cai p/ cache
+  // CROSS-ORIGIN (ex.: CDN de imagem)
   if (url.origin !== self.location.origin) {
     if (isImage(url)) {
       event.respondWith(cacheFirstImage(req));
@@ -200,9 +210,9 @@ async function handleFetch(event) {
     return;
   }
 
-  // HTML (navegações/páginas)
+  // HTML (navegação/páginas)
   if (isHTML(req, url)) {
-    event.respondWith(networkFirstHTML(req));
+    event.respondWith(networkFirstHTML(event, req));
     return;
   }
 
@@ -221,21 +231,12 @@ async function handleFetch(event) {
   // Default: tenta rede, cai no cache se existir
   event.respondWith((async () => {
     try {
-      const net = await fetch(req);
-      return net;
+      return await fetch(req);
     } catch {
       const cached = await caches.match(req);
       return cached || new Response('', { status: 504, statusText: 'Gateway Timeout' });
     }
   })());
-}
-
-self.addEventListener('fetch', (event) => {
-  // Torna preloadResponse acessível dentro do handler HTML
-  // (hack leve apenas para o networkFirstHTML usar 'event')
-  // eslint-disable-next-line no-undef
-  self.event = event;
-  handleFetch(event);
 });
 
 // ------------------------------ Mensagens ------------------------------

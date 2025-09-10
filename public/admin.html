@@ -7,38 +7,50 @@
   <meta name="theme-color" content="#2d6cdf">
   <link rel="stylesheet" href="/css/app.css?v=admin-2025-09-09">
   <style>
+    /* ===== Layout base ===== */
     .header { display:flex; align-items:center; gap:12px; padding:12px 16px; }
     .header .logo { height:32px; width:auto; display:block; }
     .header .home { margin-left:auto }
     .wrap-max{ max-width:1120px; margin:0 auto; padding:16px; }
-    .cards{ display:grid; grid-template-columns:1fr; gap:12px; }
-    @media (min-width:920px){ .cards{ grid-template-columns: repeat(3, 1fr); } }
+
+    /* KPIs – agora fluído no mobile */
+    .cards{ display:grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap:12px; }
     .kpi{ background:#fff; border:1px solid #e5e7eb; border-radius:16px; padding:14px; }
     .kpi strong{ font-size:20px }
     .kpi .meta{ color:#64748b }
+
     .panel{ background:#fff; border:1px solid #e5e7eb; border-radius:16px; padding:14px; }
     .grid2{ display:grid; grid-template-columns:1fr; gap:16px; }
     @media (min-width:920px){ .grid2{ grid-template-columns: 2fr 1fr; } }
+
     .charts-col { display:grid; gap:16px; grid-template-rows: 1fr 1fr; }
     .chart-box{ background:#fafafa; border:1px solid #e5e7eb; border-radius:14px; padding:10px; }
     .chart-title{ margin:0 0 6px; font-size:14px; color:#334155; font-weight:600 }
+
     .toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px }
+    .toolbar .input, .toolbar .btn { min-height:40px }
+
     .table{ width:100%; border-collapse: collapse; }
     .table th, .table td{ border-bottom:1px solid #e5e7eb; padding:8px; text-align:left; font-size:14px; vertical-align:middle }
     .table th{ background:#f8fafc; position:sticky; top:0; z-index:1 }
+
     .badge{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid #e5e7eb; background:#f1f5f9 }
     .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap }
     .meta{ color:#64748b }
     .warn{ color:#b91c1c }
-    .ok{ color:#166534 }
     .avatar { width:38px; height:38px; border-radius:999px; object-fit:cover; object-position:center; border:1px solid #e5e7eb; background:#f1f5f9; }
     .namecell{ display:flex; align-items:center; gap:8px; min-width:220px }
     .rating-low{ color:#b91c1c; font-weight:700 }
     tr.low-row td { background:#fff7f7 }
     .status-pill{ font-size:12px; padding:2px 6px; border-radius:999px; border:1px solid #fecaca; background:#fee2e2; color:#991b1b }
+
+    /* Canvas responsivo com alta definição */
     .chart-canvas{ width:100%; height:280px; display:block; }
     @media (min-width:920px){ #chartPie, #chartBars { height:240px; } }
+
     a:focus, button:focus, select:focus, input:focus { outline:3px solid #a5b4fc; outline-offset:2px; }
+
+    /* ===== Denúncias ===== */
     .den-grid { display:grid; grid-template-columns: 1fr; gap:12px; }
     @media (min-width:980px){ .den-grid { grid-template-columns: 2fr 1fr; } }
     .chip { font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid #e5e7eb; background:#f8fafc }
@@ -48,11 +60,26 @@
     .chip.descartada{ border-color:#fecaca; background:#fee2e2; color:#991b1b }
     .den-actions .btn{ padding:6px 8px; }
     .den-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px; }
+
+    /* ===== Badges de plano ===== */
     .plan-badge{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid #e5e7eb; background:#f1f5f9; font-weight:800; margin-left:6px }
     .plan-badge.PRO{ background:#eef2ff; border-color:#6366f1 }
     .plan-badge.PREMIUM{ background:#fffbeb; border-color:#fbbf24 }
-    /* Banner de alerta */
-    .alert-box{ display:none; align-items:center; gap:8px; padding:10px 12px; border-radius:12px; border:1px solid #fecaca; background:#fff1f2; color:#991b1b; margin:12px 0; }
+
+    /* ===== Melhorias mobile extras ===== */
+    @media (max-width:640px){
+      .wrap-max{ padding:12px; }
+      .panel{ padding:12px; border-radius:14px; }
+      .chart-canvas{ height:220px; }
+      .namecell{ min-width:auto }
+      .table th, .table td{ padding:8px 6px; font-size:13.5px }
+    }
+    /* Ações da tabela quebram bonito no mobile */
+    td.row { gap:6px; }
+    td.row .btn{ padding:6px 8px; font-size:12.5px; }
+    @media (max-width:640px){
+      td.row { flex-wrap:wrap; }
+    }
   </style>
 </head>
 <body>
@@ -102,20 +129,14 @@
       <div class="row" style="margin-top:10px">
         <button id="btnRecompute" class="btn outline">Recalcular verificações</button>
         <a id="btnCSV" class="btn" href="/api/admin/export/csv" target="_blank" rel="noopener">Exportar CSV</a>
+        <!-- Atalhos de export -->
         <a class="btn ghost" href="/api/admin/export?what=profissionais" target="_blank" rel="noopener">Profissionais CSV</a>
         <a class="btn ghost" href="/api/admin/export?what=metrics" target="_blank" rel="noopener">Métricas CSV</a>
         <button id="btnDiag" class="btn outline" title="Executa checagem rápida das rotas de métricas e lista">🧪 Diagnóstico</button>
       </div>
     </div>
 
-    <!-- ALERTA: baixa avaliação -->
-    <div id="lowAlert" class="alert-box" role="alert" aria-live="polite">
-      <span>⚠️</span>
-      <span id="lowAlertText">Profissionais com avaliação baixa detectados.</span>
-      <button id="lowAlertFilter" class="btn ghost" style="margin-left:auto">Filtrar rating &lt; 3.0</button>
-    </div>
-
-    <!-- Lista de profissionais -->
+    <!-- Filtros + Lista -->
     <div class="panel" style="margin-top:12px">
       <div class="toolbar">
         <input id="f_q" class="input" placeholder="Buscar (nome, serviço, bairro…)" style="min-width:220px">
@@ -150,7 +171,9 @@
         </select>
         <button id="f_go" class="btn">Filtrar</button>
       </div>
-      <div style="overflow:auto; max-height:540px">
+
+      <!-- Tabela com rolagem adaptável ao mobile -->
+      <div style="overflow:auto; max-height:60vh; min-height:220px">
         <table class="table" id="tab">
           <thead>
             <tr>
@@ -170,6 +193,7 @@
           <tbody id="tbody"></tbody>
         </table>
       </div>
+
       <div class="row" style="justify-content:space-between; margin-top:10px">
         <div class="meta" id="listInfo">—</div>
         <div class="row">
@@ -248,20 +272,16 @@
   (function(){
     const $ = (id)=> document.getElementById(id);
 
-    // ===== KPIs =====
+    // ======= KPIs =======
     const kAtivos=$('k_ativos'), kSusp=$('k_susp'), kExc=$('k_exc'),
           kVis=$('k_vis'), kCalls=$('k_calls'), kAvg=$('k_avg');
 
-    // ===== Charts =====
+    // ======= Charts =======
     const cLines=$('chartLines'), cPie=$('chartPie'), cBars=$('chartBars');
     const errMet=$('errMet');
     const btnRecompute=$('btnRecompute'), btnCSV=$('btnCSV'), btnDiag=$('btnDiag');
 
-    // ===== Low rating alert =====
-    const lowAlert = $('lowAlert'), lowAlertText = $('lowAlertText'), lowAlertFilter = $('lowAlertFilter');
-    const LOW_THRESHOLD = 3.0;
-
-    // ===== Lista =====
+    // ======= Lista profissionais =======
     const f_q=$('f_q'), f_cidade=$('f_cidade'), f_serv=$('f_serv'),
           f_verif=$('f_verif'), f_status=$('f_status'),
           f_sort=$('f_sort'), f_dir=$('f_dir'), f_go=$('f_go');
@@ -270,7 +290,7 @@
     const dlCidades=$('lista-cidades');
     let PAGE=1, PAGES=1;
 
-    // ===== Denúncias =====
+    // ======= Denúncias =======
     const d_status=$('d_status'), d_q=$('d_q'), d_go=$('d_go');
     const tbodyDen=$('tbodyDen'), denInfo=$('denInfo'),
           d_prev=$('d_prev'), d_next=$('d_next'), d_pageInfo=$('d_pageInfo');
@@ -279,7 +299,6 @@
 
     let metricsCache=null;
 
-    // ===== Utils =====
     async function apiJSON(url, opt){
       const r = await fetch(url, { cache:'no-store', ...(opt||{}) });
       if(!r.ok) throw new Error('HTTP '+r.status);
@@ -305,31 +324,25 @@
       return ctx;
     }
 
-    // ===== Gráficos (vanilla) =====
+    // ===== Charts (vanilla) =====
     function drawLineChart(cv, series, labels){
       const ctx = deviceScaleCanvas(cv); if (!ctx) return;
       const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
       ctx.clearRect(0,0,W,H);
-
-      // eixos
+      // axes
       ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo(40,10); ctx.lineTo(40,H-30); ctx.lineTo(W-10,H-30); ctx.stroke();
-
-      const flat = series.flat();
-      const max = Math.max(1, ...flat, 0);
+      const max = Math.max(1, ...series.flat());
       const scaleY = (H-40)/max;
       const stepX = (W-60)/Math.max(1, labels.length-1);
-      const colors = ['#2563eb','#16a34a','#f97316'];
-
-      // grid
+      const colors = ['#2563eb','#16a34a','#f97316']; // visitas, chamadas, cadastros
+      // grid Y
       ctx.strokeStyle='#f1f5f9';
       for(let t=1;t<=5;t++){
         const v = Math.round(max*t/5);
         const y = (H-30) - v*scaleY;
         ctx.beginPath(); ctx.moveTo(40,y); ctx.lineTo(W-10,y); ctx.stroke();
       }
-
-      // séries
       series.forEach((data,si)=>{
         const grad = ctx.createLinearGradient(0,10,0,H-30);
         grad.addColorStop(0, colors[si] + 'cc');
@@ -342,22 +355,22 @@
         });
         ctx.strokeStyle=colors[si]; ctx.lineWidth=2; ctx.stroke();
         const lastX=40 + (data.length-1)*stepX;
-        ctx.lineTo(lastX, H-30); ctx.lineTo(40, H-30); ctx.closePath();
+        ctx.lineTo(lastX, H-30);
+        ctx.lineTo(40, H-30);
+        ctx.closePath();
         ctx.fillStyle=grad; ctx.fill();
       });
-
       // labels X
       ctx.fillStyle='#64748b'; ctx.font='12px system-ui';
       const every = Math.ceil(labels.length/8);
       labels.forEach((lb,i)=>{ if (i%every===0){ const x=40 + i*stepX; ctx.fillText(lb, x-10, H-10); } });
-
-      // legenda
+      // legend
       const legends = ['Visitas','#2563eb','Chamadas','#16a34a','Cadastros','#f97316'];
       ctx.font='12px system-ui'; ctx.textBaseline='middle';
-      let off=46;
+      const baseY=16; let off=46;
       for(let i=0;i<legends.length;i+=2){
-        ctx.fillStyle=legends[i+1]; ctx.fillRect(off-16, 11, 10,10);
-        ctx.fillStyle='#111827'; ctx.fillText(legends[i], off, 16);
+        ctx.fillStyle=legends[i+1]; ctx.fillRect(off-16, baseY-5, 10,10);
+        ctx.fillStyle='#111827'; ctx.fillText(legends[i], off, baseY);
         off += ctx.measureText(legends[i]).width + 54;
       }
     }
@@ -386,20 +399,14 @@
       const ctx = deviceScaleCanvas(cv); if (!ctx) return;
       const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
       ctx.clearRect(0,0,W,H);
-      const max = Math.max(1, ...values, 0);
+      const max = Math.max(1, ...values);
       const axisL = 40, axisB = 30;
       const bw = Math.max(16, (W-axisL-20)/Math.max(1, labels.length) - 10);
       const scaleY = (H- axisB - 14)/max;
-
-      // eixos
       ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1;
       ctx.beginPath(); ctx.moveTo(axisL,10); ctx.lineTo(axisL,H-axisB); ctx.lineTo(W-10,H-axisB); ctx.stroke();
-
-      // grid
       ctx.strokeStyle='#f1f5f9';
       for(let t=1;t<=5;t++){ const y = (H-axisB) - (max*t/5)*scaleY; ctx.beginPath(); ctx.moveTo(axisL,y); ctx.lineTo(W-10,y); ctx.stroke(); }
-
-      // barras
       let x = axisL + 8;
       values.forEach((v,i)=>{
         const h = v*scaleY;
@@ -407,8 +414,7 @@
         grad.addColorStop(0,'#2563eb'); grad.addColorStop(1,'#93c5fd');
         ctx.fillStyle=grad;
         ctx.fillRect(x, (H-axisB)-h, bw, h);
-
-        // labels (rotacionadas)
+        // labels
         ctx.save();
         ctx.translate(x + bw/2, H-10);
         ctx.rotate(-Math.PI/4);
@@ -426,7 +432,7 @@
       resizeTimer = setTimeout(()=>{ if(metricsCache) paintCharts(metricsCache); }, 120);
     });
 
-    // Normalização de chaves vindas da API
+    // ====== Mapeamento flexível dos dados de métricas ======
     function mapDay(d){
       const date = d.date || d.data || d.dia || d.day || d.d;
       const visitas = d.visitas ?? d.visits ?? 0;
@@ -434,7 +440,6 @@
       const cad = d.cadastros ?? d.signups ?? d.registros ?? 0;
       return { date, visitas, chamadas, cad };
     }
-
     function paintCharts(m){
       const daysRaw = (m.timeseries?.days || m.dias || m.series || []);
       const days = daysRaw.map(mapDay);
@@ -453,12 +458,6 @@
       const labs = top.map(x=> String(x.name || x.servico || x.titulo || ''));
       const vals = top.map(x=> Number(x.value ?? x.total ?? x.count ?? 0));
       if(labs.length){ drawBars(cBars, labs, vals); }
-
-      // alerta (se a API trouxer pronto)
-      const lowCountAPI = Number(m.alerts?.lowRating ?? m.baixaAvaliacao ?? 0);
-      if(!Number.isNaN(lowCountAPI) && lowCountAPI > 0){
-        showLowAlert(lowCountAPI);
-      }
     }
 
     async function loadMetrics(){
@@ -488,7 +487,7 @@
       finally{ btnRecompute.disabled=false; }
     });
 
-    // Diagnóstico rápido
+    // ====== Diagnóstico rápido ======
     btnDiag.addEventListener('click', async ()=>{
       try{
         const [met, sample] = await Promise.allSettled([
@@ -513,7 +512,7 @@
       }catch(_){ alert('Diagnóstico não pôde ser concluído.'); }
     });
 
-    // ===== Lista =====
+    // ====== Lista de profissionais ======
     async function loadCidades(){
       try{
         const list = await apiJSON('/api/geo/cidades');
@@ -554,15 +553,6 @@
       try{
         const data = await apiJSON('/api/admin/profissionais?'+qs.toString());
         renderList(data);
-
-        // alerta de baixa avaliação (se a API do /metrics não trouxe, calcula com o payload atual / paginação)
-        if(!metricsCache || !(metricsCache.alerts?.lowRating > 0)){
-          const pageLow = (data.items||[]).filter(p => typeof p.rating === 'number' && p.rating < LOW_THRESHOLD).length;
-          if(pageLow > 0){
-            showLowAlert(pageLow, true);
-          }
-        }
-
         $('errList').style.display='none';
       }catch{
         $('errList').style.display='';
@@ -570,46 +560,31 @@
       updateCSVLink();
     }
 
-    function showLowAlert(count, partial=false){
-      lowAlertText.textContent = partial
-        ? `Há pelo menos ${count} profissional(is) com avaliação abaixo de ${LOW_THRESHOLD.toFixed(1)} nesta página.`
-        : `Há ${count} profissional(is) com avaliação abaixo de ${LOW_THRESHOLD.toFixed(1)} no sistema.`;
-      lowAlert.style.display = 'flex';
-    }
-
-    lowAlertFilter.addEventListener('click', ()=>{
-      // aplica filtro por rating baixo rapidamente via sort + dir (quando suportado pelo backend)
-      f_sort.value = 'rating';
-      f_dir.value = 'asc';
-      f_status.value = 'ativos';
-      loadList(1);
-    });
-
     function renderList(data){
       const items = data.items||[];
       tbody.innerHTML = items.map(p=>{
         const foto = p.foto || '/icons/icon-192.png';
         const svc  = (p.servico||p.profissao||'');
         const ver  = p.verificado ? '✅' : '—';
-        const ratingVal = (typeof p.rating === 'number') ? p.rating : null;
+        const ratingVal = (p.rating!=null) ? Number(p.rating) : null;
         const ratingStr = (ratingVal!=null) ? ratingVal.toFixed(2) : '—';
-        const isLow = ratingVal!=null && ratingVal < LOW_THRESHOLD;
+        const isLow = ratingVal!=null && ratingVal<3;
         const ratingCell = isLow
           ? `<span class="rating-low" title="Rating baixo — atenção">⚠️ ${ratingStr}</span>`
           : ratingStr;
         const statusChip = p.excluido ? '<span class="status-pill">Excluído</span>'
-                            : (p.suspenso ? '<span class="status-pill" style="border-color:#fde68a;background:#fef3c7;color:#92400e">Suspenso</span>' : '');
+                           : (p.suspenso ? '<span class="status-pill" style="border-color:#fde68a;background:#fef3c7;color:#92400e">Suspenso</span>' : '');
         const plano = String(p.plano||'free').toLowerCase();
         const badgePlano = plano==='premium' ? '<span class="plan-badge PREMIUM">PREMIUM</span>'
-                          : (plano==='pro' ? '<span class="plan-badge PRO">PRO</span>' : '');
+                           : (plano==='pro' ? '<span class="plan-badge PRO">PRO</span>' : '');
         const rowClass = isLow ? ' class="low-row"' : '';
         return `<tr${rowClass}>
-          <td>${escapeHtml(String(p.id))}</td>
+          <td>${p.id}</td>
           <td>
             <div class="namecell">
-              <img class="avatar" src="${foto}" alt="Foto de ${escapeHtml(p.nome||'Profissional')}" onerror="this.src='/icons/icon-192.png'">
+              <img class="avatar" src="${foto}" alt="Foto de ${escapeHtml(p.nome)}" onerror="this.src='/icons/icon-192.png'">
               <div>
-                <div style="font-weight:600">${escapeHtml(p.nome||'—')} ${badgePlano}</div>
+                <div style="font-weight:600">${escapeHtml(p.nome)} ${badgePlano}</div>
                 ${statusChip}
               </div>
             </div>
@@ -624,20 +599,19 @@
           <td>${p.chamadas||0}</td>
           <td class="row">
             ${p.excluido ? `
-              <button class="btn outline" data-act="restaurar" data-id="${escapeHtml(String(p.id))}">Restaurar</button>
+              <button class="btn outline" data-act="restaurar" data-id="${p.id}">Restaurar</button>
             ` : `
-              ${p.suspenso ? `<button class="btn outline" data-act="ativar" data-id="${escapeHtml(String(p.id))}">Ativar</button>`
-                            : `<button class="btn outline" data-act="suspender" data-id="${escapeHtml(String(p.id))}">Suspender</button>`}
-              <button class="btn ghost" data-act="excluir" data-id="${escapeHtml(String(p.id))}">Excluir</button>
+              ${p.suspenso ? `<button class="btn outline" data-act="ativar" data-id="${p.id}">Ativar</button>`
+                            : `<button class="btn outline" data-act="suspender" data-id="${p.id}">Suspender</button>`}
+              <button class="btn ghost" data-act="excluir" data-id="${p.id}">Excluir</button>
             `}
-            <a class="btn" href="/profissional/${encodeURIComponent(String(p.id))}" target="_blank" rel="noopener">Abrir</a>
+            <a class="btn" href="/profissional/${p.id}" target="_blank" rel="noopener">Abrir</a>
           </td>
         </tr>`;
       }).join('');
       listInfo.textContent = `Total: ${data.total} • Página ${data.page}/${data.pages}`;
       PAGES = data.pages;
       pageInfo.textContent = `${data.page}/${data.pages}`;
-
       tbody.querySelectorAll('button[data-act]').forEach(btn=>{
         btn.addEventListener('click', async ()=>{
           const id = btn.getAttribute('data-id');
@@ -645,15 +619,15 @@
           try{
             if (act==='suspender'){
               const motivo = prompt('Motivo da suspensão (opcional):','');
-              await postJSON(`/api/admin/profissionais/${encodeURIComponent(id)}/suspender`, { motivo });
+              await postJSON(`/api/admin/profissionais/${id}/suspender`, { motivo });
             } else if (act==='ativar'){
-              await postJSON(`/api/admin/profissionais/${encodeURIComponent(id)}/ativar`, {});
+              await postJSON(`/api/admin/profissionais/${id}/ativar`, {});
             } else if (act==='excluir'){
               if (!confirm('Tem certeza que deseja excluir?')) return;
-              const r = await fetch(`/api/admin/profissionais/${encodeURIComponent(id)}`, { method:'DELETE' });
+              const r = await fetch(`/api/admin/profissionais/${id}`, { method:'DELETE' });
               if(!r.ok) throw new Error('HTTP '+r.status);
             } else if (act==='restaurar'){
-              await postJSON(`/api/admin/profissionais/${encodeURIComponent(id)}/restaurar`, {});
+              await postJSON(`/api/admin/profissionais/${id}/restaurar`, {});
             }
           }catch(_){ alert('Ação não concluída.'); }
           loadList(PAGE);
@@ -665,7 +639,7 @@
     next.addEventListener('click', ()=>{ if (PAGE<PAGES) loadList(PAGE+1); });
     f_go.addEventListener('click', ()=> loadList(1));
 
-    // ===== Denúncias =====
+    // ===== Denúncias (admin) =====
     async function loadDenuncias(page=1){
       D_PAGE = page;
       const qs = new URLSearchParams({
@@ -692,7 +666,7 @@
         const chip = `<span class="chip ${status}">${escapeHtml(status.replace('_',' '))}</span>`;
         const profIdText = (prof.id!=null) ? ('#'+ String(prof.id)) : '';
         return `<tr>
-          <td>${escapeHtml(String(d.id))}</td>
+          <td>${d.id}</td>
           <td><span class="meta">${escapeHtml(when)}</span></td>
           <td>
             <div>${profIdText} ${prof.nome ? escapeHtml(prof.nome) : ''}</div>
@@ -701,22 +675,21 @@
           <td>${escapeHtml(d.motivo||'—')}</td>
           <td>${chip}</td>
           <td class="den-actions row">
-            <button class="btn outline" data-s="em_analise" data-id="${escapeHtml(String(d.id))}">Em análise</button>
-            <button class="btn outline" data-s="resolvida" data-id="${escapeHtml(String(d.id))}">Resolvida</button>
-            <button class="btn ghost" data-s="descartada" data-id="${escapeHtml(String(d.id))}">Descartar</button>
+            <button class="btn outline" data-s="em_analise" data-id="${d.id}">Em análise</button>
+            <button class="btn outline" data-s="resolvida" data-id="${d.id}">Resolvida</button>
+            <button class="btn ghost" data-s="descartada" data-id="${d.id}">Descartar</button>
           </td>
         </tr>`;
       }).join('');
       denInfo.textContent = `Total: ${data.total} • Página ${data.page}/${data.pages}`;
       D_PAGES = data.pages;
       d_pageInfo.textContent = `${data.page}/${data.pages}`;
-
       tbodyDen.querySelectorAll('button[data-s]').forEach(btn=>{
         btn.addEventListener('click', async ()=>{
           const id = btn.getAttribute('data-id');
           const status = btn.getAttribute('data-s');
           try{
-            await postJSON(`/api/admin/denuncias/${encodeURIComponent(id)}/status`, { status });
+            await postJSON(`/api/admin/denuncias/${id}/status`, { status });
           }catch(_){ alert('Falha ao atualizar status.'); }
           loadDenuncias(D_PAGE);
         });
@@ -724,10 +697,10 @@
     }
 
     d_prev.addEventListener('click', ()=>{ if (D_PAGE>1) loadDenuncias(D_PAGE-1); });
-    d_next.addEventListener('click', ()=>{ if (D_PAGES && D_PAGE<D_PAGES) loadDenuncias(D_PAGE+1); });
+    d_next.addEventListener('click', ()=>{ if (D_PAGE<D_PAGES) loadDenuncias(D_PAGE+1); });
     d_go.addEventListener('click', ()=> loadDenuncias(1));
 
-    // ===== Pagamentos =====
+    // ===== Pagamentos (últimos) =====
     function moneyBR(v){
       const n = Number(v||0);
       return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -736,7 +709,7 @@
       const id   = escapeHtml(String(p.id||'—'));
       const pro  = escapeHtml(String(p.proId||'—'));
       const meth = escapeHtml(String(p.method||'').toUpperCase());   // PIX|CARD
-      const st   = escapeHtml(String(p.status||'—'));                 // paid|pending|...
+      const st   = escapeHtml(String(p.status||'—'));                // paid|pending|...
       const gross= moneyBR(p.amount);
       const fees = moneyBR(p.fees);
       const net  = moneyBR(p.net);
@@ -767,7 +740,6 @@
         $('pay_list').innerHTML = '<div class="warn">Falha ao carregar pagamentos.</div>';
       }
     }
-
     $('pay_reload').addEventListener('click', loadPayments);
 
     // ===== Boot =====
