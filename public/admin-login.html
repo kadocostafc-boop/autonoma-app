@@ -8,15 +8,13 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/css/app.css?v=admin-login-2025-09-09u"/>
+  <link rel="stylesheet" href="/css/app.css?v=admin-login-2025-09-11"/>
   <style>
-    :root{
-      --azul-escuro:#0b1f63; --azul:#2D81FF;
-      --bd:#e5e7eb; --txt:#111827; --mut:#64748b;
-      --ok:#16a34a; --warn:#92400e; --err:#991b1b;
-    }
+    :root{ --azul-escuro:#0b1f63; --azul:#2D81FF; --bd:#e5e7eb; --txt:#111827; --mut:#64748b; --ok:#16a34a; --warn:#92400e; --err:#991b1b; }
     html,body{height:100%;margin:0;background:var(--azul-escuro);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
     .page{min-height:100vh;display:flex;flex-direction:column}
+    header{display:flex;align-items:center;gap:8px;padding:12px 16px}
+    .logo{height:32px}
     main{flex:1;display:flex;align-items:center;justify-content:center;padding:18px}
     .wrap{width:100%;max-width:480px}
     .card{background:#fff;border:1px solid var(--bd);border-radius:22px;padding:20px;box-shadow:0 8px 24px rgba(0,0,0,.06)}
@@ -27,7 +25,6 @@
     .input:focus{border-color:var(--azul);box-shadow:0 0 0 4px rgba(45,108,223,.2);outline:0}
     .btn{appearance:none;border:none;border-radius:12px;padding:12px 14px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
     .btn-primary{background:var(--azul);color:#fff;width:100%;margin-top:12px}
-    .btn-ghost{background:#f1f5f9;border:1px solid var(--bd);color:#111827}
     .msg{font-size:14px;margin-top:8px}
     .msg.ok{color:var(--ok)} .msg.err{color:var(--err)} .msg.warn{color:var(--warn)}
     footer{background:var(--azul-escuro);color:#cde1ff;padding:10px 8px;border-top:1px solid #0a1a55}
@@ -39,9 +36,9 @@
 </head>
 <body>
   <div class="page">
-    <header class="header" role="banner">
+    <header role="banner">
       <a href="/" aria-label="Início">
-        <img src="/img/logo.png" alt="Autônoma.app" class="logo" style="height:32px">
+        <img src="/img/logo.png" alt="Autônoma.app" class="logo">
       </a>
     </header>
 
@@ -49,9 +46,11 @@
       <div class="card">
         <h1 class="title">Entrar • Admin</h1>
         <p class="subtitle">Use as credenciais de administrador para acessar.</p>
-        <form id="f" novalidate>
+
+        <!-- IMPORTANTE: envia para o backend -->
+        <form id="f" method="POST" action="/admin/login" novalidate>
           <label for="user">Usuário</label>
-          <input id="user" name="user" class="input" placeholder="admin" autocomplete="username" required>
+          <input id="user" name="user" class="input" placeholder="seu usuário" autocomplete="username" required>
 
           <label for="pass">Senha</label>
           <input id="pass" name="password" type="password" class="input" placeholder="••••••••" autocomplete="current-password" required>
@@ -77,34 +76,58 @@
 
   <script>
   (function(){
-    const f = document.getElementById('f');
-    const u = document.getElementById('user');
-    const p = document.getElementById('pass');
-    const btn = document.getElementById('btn');
-    const status = document.getElementById('status');
+    const form = document.getElementById('f');
+    const statusEl = document.getElementById('status');
+    function setStatus(msg, kind){ statusEl.textContent = msg||''; statusEl.className = 'msg ' + (kind||''); }
 
-    function setStatus(msg, kind){
-      status.textContent = msg || '';
-      status.className = 'msg ' + (kind || '');
-    }
-
-    f.addEventListener('submit', (ev)=>{
+    form.addEventListener('submit', async (ev)=>{
       ev.preventDefault();
-      const userVal = String(u.value||'').trim();
-      const passVal = String(p.value||'').trim();
-      if(userVal==='admin' && passVal==='admin123'){
-        setStatus('✔ Acesso autorizado. Redirecionando...', 'ok');
-        setTimeout(()=>{ window.location.href = '/admin.html'; }, 400);
-      }else{
-        setStatus('Usuário ou senha incorretos.', 'err');
+      setStatus('Autenticando…', 'warn');
+
+      const fd = new FormData(form);
+      // Envia para o backend (usa ADMIN_USER/ADMIN_PASS do .env no servidor)
+      try{
+        const resp = await fetch(form.action, {
+          method: 'POST',
+          body: new URLSearchParams({
+            user: String(fd.get('user')||'').trim(),
+            password: String(fd.get('password')||'')
+          }),
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          redirect: 'manual',          // não seguir 302 pelo fetch
+          credentials: 'include'       // pegar cookie de sessão
+        });
+
+        // O servidor responde 302 Redirect em sucesso. Trate como sucesso:
+        if (resp.status === 302 || resp.type === 'opaqueredirect') {
+          setStatus('✔ Acesso autorizado. Redirecionando…', 'ok');
+          window.location.href = '/admin.html';
+          return;
+        }
+
+        // Alguns hosts podem devolver 200 com o HTML de erro. Tente ler texto:
+        const text = await resp.text();
+        if (resp.ok) {
+          // Se por algum motivo vier 200 ok (ex.: proxy), vamos ao painel:
+          window.location.href = '/admin.html';
+          return;
+        }
+
+        // Erro conhecido (401 com página HTML simples do server.js)
+        if (resp.status === 401 || /Login inválido/i.test(text)) {
+          setStatus('Usuário ou senha incorretos.', 'err');
+          return;
+        }
+
+        setStatus('Falha ao autenticar. Tente novamente.', 'err');
+      }catch(e){
+        setStatus('Erro de rede. Verifique sua conexão e tente novamente.', 'err');
       }
     });
 
-    // SW igual ao resto do app
+    // Service Worker (opcional)
     if ('serviceWorker' in navigator){
-      window.addEventListener('load', ()=>{
-        navigator.serviceWorker.register('/sw.js?v=admin-login-2025-09-09u').catch(()=>{});
-      });
+      window.addEventListener('load', ()=>{ navigator.serviceWorker.register('/sw.js?v=admin-login-2025-09-11').catch(()=>{}); });
     }
   })();
   </script>
