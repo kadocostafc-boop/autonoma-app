@@ -746,43 +746,149 @@ app.post("/profissional/:id/avaliar", (req,res)=>{
   }
 });
 
-// Página de avaliação (HTML simples) -> /avaliar/:id
+// Página de avaliação (HTML responsivo com layout estilo admin)
 app.get("/avaliar/:id", (req,res)=>{
   const id = Number(req.params.id||"0");
   const db = readDB();
   const p = db.find(x => Number(x.id)===id && !x.excluido);
-  if (!p) return res.status(404).send(htmlMsg("Não encontrado","Profissional não localizado.","/clientes.html"));
+  if (!p) {
+    return res.status(404).send(htmlMsg("Não encontrado","Profissional não localizado.","/clientes.html"));
+  }
+
   const avals = (p.avaliacoes||[]).slice().reverse().slice(0,30);
   const stars = (n)=>"★".repeat(n)+"☆".repeat(5-n);
-  const itens = avals.map(a=>`<li><b>${escapeHTML(a.autor||"Cliente")}</b> • ${stars(Math.max(1,Math.min(5,Number(a.nota)||0)))}<br><span class="meta">${escapeHTML(new Date(a.at).toLocaleString())}</span><div>${escapeHTML(a.comentario||"")}</div></li>`).join("");
-  res.send(`<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="/css/app.css">
+
+  const itens = avals.map(a=>{
+    const nota = Math.max(1, Math.min(5, Number(a.nota)||0));
+    const when = a.at ? new Date(a.at).toLocaleString() : "";
+    return `
+      <li class="cmt">
+        <div class="cmt-head">
+          <strong>${escapeHTML(a.autor||"Cliente")}</strong>
+          <span class="stars" aria-label="nota ${nota} de 5">${stars(nota)}</span>
+        </div>
+        <div class="cmt-body">${escapeHTML(a.comentario||"")}</div>
+        <div class="cmt-meta">${escapeHTML(when)}</div>
+      </li>`;
+  }).join("");
+
+  res.send(`<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <title>Avaliar ${escapeHTML(p.nome)} • Autônoma.app</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <link rel="stylesheet" href="/css/app.css" />
+  <style>
+    :root{
+      --bg1:#0e3a8a; /* azul escuro */
+      --bg2:#1d4ed8; /* azul médio */
+      --card:#ffffff;
+      --txt:#0b1220;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --brand:#1d4ed8;
+      --brand-2:#2563eb;
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      color:var(--txt);background:linear-gradient(135deg,var(--bg1),var(--bg2));}
+    .wrap{min-height:100svh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{background:var(--card);border-radius:var(--radius);box-shadow:0 10px 30px rgba(0,0,0,.15);max-width:980px;width:100%;overflow:hidden}
+    .card-head{padding:24px 24px 0;color:#fff;background:linear-gradient(135deg,rgba(255,255,255,.08),rgba(255,255,255,.02))}
+    .title{font-size:22px;font-weight:700;margin:0 0 8px}
+    .subtitle{margin:0 0 16px;color:#e5e7eb}
+    .pro{display:flex;gap:12px;align-items:center}
+    .pro img{width:56px;height:56px;border-radius:14px;object-fit:cover;border:2px solid rgba(255,255,255,.35)}
+    .badge{font-size:12px;border:1px solid rgba(255,255,255,.4);color:#fff;padding:4px 8px;border-radius:999px}
+    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:0;border-top:1px solid var(--line);background:#fff}
+    .col{padding:22px}
+    .col+.col{border-left:1px solid var(--line)}
+    h2{font-size:18px;margin:0 0 14px}
+    label{display:block;font-weight:600;margin:12px 0 6px}
+    input[type="text"],select,textarea{
+      width:100%;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font:inherit;outline:none;
+    }
+    textarea{min-height:120px;resize:vertical}
+    .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    .btn{appearance:none;border:none;background:var(--brand);color:#fff;padding:12px 16px;border-radius:12px;
+      font-weight:700;cursor:pointer}
+    .btn:hover{background:var(--brand-2)}
+    .btn.ghost{background:#fff;color:var(--brand);border:1px solid var(--brand)}
+    .meta{color:var(--muted);font-size:13px}
+    ul.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+    .cmt{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#fff}
+    .cmt-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+    .stars{color:#f59e0b;letter-spacing:2px}
+    .cmt-body{line-height:1.45}
+    .cmt-meta{margin-top:6px;color:var(--muted);font-size:12px}
+    .foot{padding:18px 22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;background:#fafafa}
+    .foot a{color:var(--brand);text-decoration:none;font-weight:600}
+    @media (max-width: 900px){
+      .grid{grid-template-columns:1fr}
+      .col+.col{border-left:none;border-top:1px solid var(--line)}
+    }
+  </style>
+</head>
+<body>
   <div class="wrap">
     <div class="card">
-      <h1>Avaliar ${escapeHTML(p.nome)}</h1>
-      <form method="POST" action="/profissional/${p.id}/avaliar">
-        <label>Seu nome</label>
-        <input name="autor" placeholder="Opcional" />
-        <label>Nota</label>
-        <select name="nota" required>
-          <option value="5">5 - Excelente</option>
-          <option value="4">4 - Muito bom</option>
-          <option value="3">3 - Bom</option>
-          <option value="2">2 - Regular</option>
-          <option value="1">1 - Ruim</option>
-        </select>
-        <label>Comentário</label>
-        <textarea name="comentario" required minlength="5" placeholder="Conte como foi sua experiência"></textarea>
-        <div class="row" style="gap:8px;margin-top:10px">
-          <button class="btn" type="submit">Enviar avaliação</button>
-          <a class="btn ghost" href="/perfil.html?id=${p.id}">Voltar ao perfil</a>
+
+      <div class="card-head" style="background:linear-gradient(135deg,var(--bg1),var(--bg2));">
+        <div class="pro">
+          <img alt="Foto de ${escapeHTML(p.nome)}" src="${escapeHTML(p.foto||"/img/placeholder.png")}" />
+          <div>
+            <h1 class="title">Avaliar ${escapeHTML(p.nome)}</h1>
+            <p class="subtitle">${escapeHTML(p.servico||p.profissao||"")} • ${escapeHTML(p.bairro||"")} — ${escapeHTML(p.cidade||"")}</p>
+            ${p.verificado ? `<span class="badge">VERIFICADO</span>` : ``}
+          </div>
         </div>
-      </form>
+      </div>
+
+      <div class="grid">
+        <div class="col">
+          <h2>Deixe sua avaliação</h2>
+          <form method="POST" action="/profissional/${p.id}/avaliar" novalidate>
+            <label for="autor">Seu nome</label>
+            <input id="autor" name="autor" type="text" placeholder="Opcional" />
+
+            <label for="nota">Nota</label>
+            <select id="nota" name="nota" required>
+              <option value="5">5 - Excelente</option>
+              <option value="4">4 - Muito bom</option>
+              <option value="3">3 - Bom</option>
+              <option value="2">2 - Regular</option>
+              <option value="1">1 - Ruim</option>
+            </select>
+
+            <label for="comentario">Comentário</label>
+            <textarea id="comentario" name="comentario" minlength="5" required placeholder="Conte como foi sua experiência"></textarea>
+
+            <div class="row">
+              <button class="btn" type="submit">Enviar avaliação</button>
+              <a class="btn ghost" href="/perfil.html?id=${p.id}">Voltar ao perfil</a>
+            </div>
+            <p class="meta">Ao enviar, você concorda com os Termos de Uso.</p>
+          </form>
+        </div>
+
+        <div class="col">
+          <h2>Comentários recentes</h2>
+          <ul class="list">
+            ${itens || `<li class="meta" style="padding:6px 0">Sem comentários ainda.</li>`}
+          </ul>
+        </div>
+      </div>
+
+      <div class="foot">
+        <a href="/clientes.html">← Voltar para a busca</a>
+        <span class="meta">Autônoma.app</span>
+      </div>
     </div>
-    <div class="card">
-      <h2>Comentários recentes</h2>
-      <ul class="list">${itens || "<li class='meta'>Sem comentários ainda.</li>"}</ul>
-    </div>
-  </div>`);
+  </div>
+</body>
+</html>`);
 });
 
 // SSR leve /profissional/:id
