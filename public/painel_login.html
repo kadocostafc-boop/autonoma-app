@@ -8,8 +8,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/css/app.css?v=painel-login-2025-09-11-pin"/>
-
+  <link rel="stylesheet" href="/css/app.css?v=painel-login-2025-09-11-pin2"/>
   <style>
     :root{
       --azul-escuro:#0b1f63; --azul:#2D81FF;
@@ -42,6 +41,7 @@
     label{display:block;font-weight:700;margin:10px 0 6px}
     .input{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:12px;background:#fff;font-size:15px}
     .input:focus{border-color:var(--azul);box-shadow:0 0 0 4px rgba(45,108,223,.2);outline:0}
+
     .row{display:flex;gap:10px;flex-wrap:wrap}
     .right{display:flex;gap:8px;align-items:flex-end}
 
@@ -71,7 +71,6 @@
     a:focus, button:focus, input:focus{outline:3px solid #a5b4fc;outline-offset:2px}
   </style>
 </head>
-
 <body>
 <div class="page">
   <!-- Header -->
@@ -98,16 +97,25 @@
           <div class="row">
             <div style="flex:1 1 260px">
               <label for="whats">WhatsApp (somente números — com ou sem 55)</label>
-              <input id="whats" class="input" inputmode="numeric" autocomplete="tel" placeholder="21987654321"/>
+              <input id="whats" class="input" inputmode="numeric" autocomplete="off" placeholder="21987654321"/>
               <div id="pretty" class="preview"></div>
 
               <label for="pin">PIN (6 dígitos)</label>
               <div class="row" style="gap:8px">
                 <input id="pin" name="pin" class="input" style="flex:1 1 220px"
                        type="password" inputmode="numeric" pattern="\d{6}"
-                       minlength="6" maxlength="6" placeholder="******" required />
-                <button id="togglePin" class="btn btn-ghost" type="button" aria-controls="pin" aria-label="Mostrar/ocultar PIN">Mostrar PIN</button>
+                       minlength="6" maxlength="6" placeholder="******"
+                       autocomplete="new-password" required />
+                <button id="togglePin" class="btn btn-ghost" type="button"
+                        aria-controls="pin" aria-label="Mostrar/ocultar PIN">Mostrar PIN</button>
               </div>
+
+              <!-- INSTRUÇÕES sob o PIN (pedido) -->
+              <p class="muted small" style="margin-top:6px">
+                ➤ <b>Primeiro acesso:</b> digite um PIN de 6 dígitos — ele será cadastrado como sua senha.<br>
+                ➤ <b>Próximos logins:</b> use o mesmo PIN cadastrado.<br>
+                ➤ <b>Esqueceu o PIN?</b> peça a redefinição ao suporte do Autônoma.app.
+              </p>
             </div>
 
             <div class="right">
@@ -207,7 +215,7 @@
       body: JSON.stringify({ phone, pin })
     });
 
-    // 1º acesso: servidor exige criação do PIN
+    // 1º acesso: servidor exige criação do PIN (status 409)
     if (r.status === 409) {
       const s = await apiJSON('/api/painel/set-pin', {
         method:'POST',
@@ -233,6 +241,7 @@
       return;
     }
 
+    // login ok
     location.href = '/painel.html';
   });
 
@@ -246,7 +255,7 @@
   // PWA
   if ('serviceWorker' in navigator){
     window.addEventListener('load', ()=>{
-      navigator.serviceWorker.register('/sw.js?v=painel-login-2025-09-11-pin').catch(()=>{});
+      navigator.serviceWorker.register('/sw.js?v=painel-login-2025-09-11-pin2').catch(()=>{});
     });
     let reloaded=false;
     navigator.serviceWorker.addEventListener('controllerchange', ()=>{
@@ -255,6 +264,8 @@
   }
 
   // start
+  $('whats').setAttribute('autocomplete','off');     // evita autofill com "admin"
+  $('pin').setAttribute('autocomplete','new-password'); // evita senha antiga
   $('whats').focus({preventScroll:true});
   updatePretty();
   $('whats').addEventListener('input', updatePretty);
