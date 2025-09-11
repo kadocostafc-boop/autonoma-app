@@ -1735,17 +1735,30 @@ app.post("/api/admin/denuncias/:id/status", requireAdmin, (req,res)=>{
   }
 });
 
-// NOVO: métricas para gráficos do admin (corrige 404 do /api/admin/metrics)
+// NOVO: métricas para gráficos do admin + contadores do dia
 app.get("/api/admin/metrics", requireAdmin, (_req,res)=>{
   try{
     const stats = adminBuildStats(); // counters + last30
-    // Formato amigável para gráficos (linhas)
+    const metr  = readJSON(METRICS_FILE, {});
+    const today = new Date().toISOString().slice(0,10);
+    const todayVisits = (metr.visit?.[today]||[]).length || 0;
+    const todayCalls  = (metr.call ?. [today]||[]).length || 0;
+    const todayQrs    = (metr.qr   ?. [today]||[]).length || 0;
+
+    // Formato para os mini-gráficos
     const series = {
       visits: stats.last30.map(d => ({ x:d.day, y:d.visits })),
       calls:  stats.last30.map(d => ({ x:d.day, y:d.calls  })),
       qrs:    stats.last30.map(d => ({ x:d.day, y:d.qrs    }))
     };
-    res.json({ ok:true, counters: stats.counters, last30: stats.last30, series });
+
+    res.json({
+      ok:true,
+      counters: stats.counters,   // total/ativos/suspensos/excluidos/verificados/mediaRating
+      last30: stats.last30,       // [{day, visits, calls, qrs}]
+      series,                      // {visits[], calls[], qrs[]}
+      today: { visits: todayVisits, calls: todayCalls, qrs: todayQrs }
+    });
   }catch(e){
     res.status(500).json({ ok:false, error:String(e) });
   }
