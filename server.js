@@ -334,6 +334,9 @@ function computeVerified(p){
     if(!p.radar){ p.radar = { on:false, until:null, lastOnAt:null, monthlyUsed:0, monthRef: monthRefOf() }; changed=true; }
     if(!p.lastPos) p.lastPos = { lat:null, lng:null, at:null };
     if(typeof p.receiveViaApp!=="boolean") p.receiveViaApp=false;
+    // PIN (login do profissional)
+if (!p.pinHash) p.pinHash = null;                 // hash do PIN (bcrypt)
+if (typeof p.mustSetPin !== "boolean") p.mustSetPin = false; // força definir PIN no 1º login
   }
   if (changed) writeDB(db);
   console.log("✔ Base OK (ids/logs/planos/radar/verificado).");
@@ -1019,20 +1022,27 @@ app.get("/api/painel/me", (req, res) => {
     return res.json({
       ok: true,
       id: pro.id,
-      nome: pro.nome, foto: pro.foto || "",
+      nome: pro.nome,
+      foto: pro.foto || "",
       servico: pro.servico || pro.profissao || "",
-      cidade: pro.cidade || "", bairro: pro.bairro || "",
+      cidade: pro.cidade || "",
+      bairro: pro.bairro || "",
       descricao: pro.descricao || "",
-      whatsapp: pro.whatsapp || "", site: pro.site || "",
+      whatsapp: pro.whatsapp || "",
+      site: pro.site || "",
       atendimentos: pro.atendimentos || 0,
       avaliacoes: pro.avaliacoes || [],
-      visitas: pro.visitas || 0, chamadas: pro.chamadas || 0,
-      rating, verificado: !!pro.verificado, suspenso: !!pro.suspenso,
+      visitas: pro.visitas || 0,
+      chamadas: pro.chamadas || 0,
+      rating,
+      verificado: !!pro.verificado,
+      suspenso: !!pro.suspenso,
       plano: pro.plano || "free",
       raioKm: Number(pro.raioKm||0),
-      cidadesExtras: Array.isArray(pro.cidadesExtras)? pro.cidadesExtras : [],
+      cidadesExtras: Array.isArray(pro.cidadesExtras) ? pro.cidadesExtras : [],
       radar: pro.radar || { on:false, until:null, lastOnAt:null },
       receiveViaApp: !!pro.receiveViaApp,
+      needPinSetup: !!pro.mustSetPin || !pro.pinHash,
       fees
     });
   } catch (e) {
@@ -1056,13 +1066,58 @@ app.get("/painel.html", (req, res) => {
   return res.sendFile(path.join(PUBLIC_DIR, "painel.html"));
 });
 
-app.post("/api/painel/login", (req,res)=>{
-  const token = ensureBR(onlyDigits(req.body?.token||""));
-  if (!token) return res.status(400).json({ ok:false, error:"token" });
+// === Login do Painel: requer WhatsApp + PIN de 6 dígitos ===
+app.post("/api/painel/login", loginLimiter, (req, res) => {
+  try {
+    const phone = ensureBR(onlyDigits(req.body?.phone || req.body?.token || ""));
+    const pin   = String(req.body?.pin || "").trim();
+    if (!phone) return res.status(400).json({ ok:false, error:"phone_required" });
+
+    const db  = readDB();
+    const pro = db.find(p => ensureBR(onlyDigits(p.whatsapp)) === phone && !p.excluido);
+    if (!pro)  return res.status(401).json({ ok:false, error:"not_found" });
+
+    // se não tem PIN cadastrado ainda -> exigir configuração
+    if (!pro.pinHash) {
+      pro.mustSetPin = true;
+      writeDB(db);
+      return res.status(403).json({ ok:false, error:"pin_not_set", needPinSetup:true });
+    }
+
+    // formato do PIN
+    if (!/^\d{4,6}$/.test(pin)) {
+      return res.status(400).json({ ok:false, error:"pin_invalid_format" });
+    }
+
+    // valida PIN
+    const ok = bcrypt.compareSync(pin, pro.pinHash);
+    if (!ok) return res.status(401).json({ ok:false, error:"pin_incorrect" });
+
+    // sucesso -> cria sessão do painel
+    req.session.painel = { ok:true, proId: pro.id, when: Date.now() };
+    return res.json({ ok:true });
+  } catch (e) {
+    return res.status(500).json({ ok:false, error:String(e) });
+  }
+});
+// Definir ou trocar PIN (somente logado)
+// Regras: PIN = 6 dígitos, guarda hash com bcrypt
+app.post("/api/painel/set-pin", (req, res) => {
+  const s = req.session?.painel;
+  if (!s?.ok || !s.proId) return res.status(401).json({ ok:false });
+
+  const pin = String(req.body?.pin || "").trim();
+  if (!/^\d{6}$/.test(pin)) return res.status(400).json({ ok:false, error:"pin_format" });
+
   const db = readDB();
-  const pro = db.find(p => ensureBR(onlyDigits(p.whatsapp)) === token && !p.excluido);
-  if (!pro) return res.status(401).json({ ok:false });
-  req.session.painel = { ok:true, proId: pro.id, when: Date.now() };
+  const p = db.find(x => Number(x.id) === Number(s.proId));
+  if (!p) return res.status(404).json({ ok:false });
+
+  const salt = bcrypt.genSaltSync(10);
+  p.pinHash = bcrypt.hashSync(pin, salt);
+  p.mustSetPin = false;
+
+  writeDB(db);
   res.json({ ok:true });
 });
 app.post("/api/painel/logout", (req,res)=>{ if (req.session) req.session.painel=null; res.json({ ok:true }); });
@@ -1089,6 +1144,7 @@ function proLimits(p){
   if (p.plano==="pro")     return { maxRaio:30, maxCidades:3,  uberUnlimited:false, maxUberActivations:5 };
   return { maxRaio:0, maxCidades:0, uberUnlimited:false, maxUberActivations:0 };
 }
+
 
 app.post("/api/painel/radar", (req,res)=>{
   const s = req.session?.painel;
