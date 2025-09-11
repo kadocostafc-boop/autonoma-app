@@ -8,7 +8,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/css/app.css?v=admin-2025-09-12"/>
+  <link rel="stylesheet" href="/css/app.css?v=admin-2025-09-11b"/>
   <style>
     :root{
       --azul-escuro:#0b1f63; --azul:#2D81FF;
@@ -22,27 +22,23 @@
     header .brand{display:flex;gap:10px;align-items:center}
     header .brand img{height:32px}
     header .actions{display:flex;gap:8px}
-    .btn{appearance:none;border:none;border-radius:12px;padding:9px 11px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:13px}
+    .btn{appearance:none;border:none;border-radius:12px;padding:8px 10px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:13px}
     .btn-ghost{background:#f1f5f9;border:1px solid var(--bd);color:#111827}
     .btn-danger{background:#fee2e2;border:1px solid #fecaca;color:#991b1b}
     .btn-primary{background:var(--azul);color:#fff}
-    .btn-small{padding:6px 8px;border-radius:10px;font-weight:800;font-size:12px}
-    .btn-soft{background:#eef2ff;border:1px solid #e0e7ff;color:#3730a3}
-    .btn-soft.green{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
-    .btn-soft.orange{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
-    .btn-soft.gray{background:#f3f4f6;border-color:#e5e7eb;color:#374151}
+    .btn-mini{padding:6px 8px;border-radius:10px;font-weight:800}
+    .btn-outline{background:#fff;border:1px solid var(--bd);color:#111827}
     main{flex:1;padding:18px}
     .container{max-width:1150px;margin:0 auto}
     .grid{display:grid;gap:14px}
-    .grid.cards{grid-template-columns:repeat(6,1fr)}
+    .grid.cards{grid-template-columns:repeat(4,1fr)}
     .grid.columns-2{grid-template-columns:2fr 1fr}
-    @media (max-width: 1150px){ .grid.cards{grid-template-columns:repeat(3,1fr)} }
-    @media (max-width: 740px){ .grid.cards{grid-template-columns:repeat(2,1fr)} .grid.columns-2{grid-template-columns:1fr} }
-    @media (max-width: 520px){ .grid.cards{grid-template-columns:1fr} }
+    @media (max-width: 980px){ .grid.cards{grid-template-columns:repeat(2,1fr)} .grid.columns-2{grid-template-columns:1fr} }
+    @media (max-width: 560px){ .grid.cards{grid-template-columns:1fr} }
     .card{background:var(--card-bg);border:1px solid var(--bd);border-radius:22px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.06)}
     .card h2{margin:0 0 10px;font-size:18px;font-weight:900;color:var(--azul-escuro)}
     .kpi{display:flex;align-items:flex-end;justify-content:space-between}
-    .kpi .val{font-size:26px;font-weight:900}
+    .kpi .val{font-size:28px;font-weight:900}
     .kpi .mut{color:var(--mut);font-size:12px}
     .mut{color:var(--mut)}
     .chip{display:inline-flex;align-items:center;gap:6px;background:var(--chip);border:1px solid var(--bd);border-radius:999px;padding:6px 10px;font-size:12px}
@@ -60,17 +56,17 @@
     .table{width:100%;border-collapse:collapse}
     .table th,.table td{padding:8px;border-bottom:1px solid #eef2f7;text-align:left;font-size:14px;vertical-align:middle}
     .table th{color:var(--mut);font-weight:800}
+    .table .low{background:#fff7ed} /* alerta baixa avaliação */
     .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px}
-    .actions-cell{display:flex;gap:6px;flex-wrap:wrap}
-    .badge-low{display:inline-flex;align-items:center;gap:6px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800}
-    .mini-charts{display:flex;gap:10px;align-items:stretch}
-    .mini-charts .mini{flex:1;border:1px solid var(--bd);border-radius:16px;padding:10px}
-    .mini-charts h3{margin:0 0 6px;font-size:13px;color:#334155}
-    .mini-charts canvas{width:100%;height:110px}
-    .pie-wrap{display:flex;gap:12px;align-items:center}
-    .pie-wrap canvas{max-height:160px;max-width:160px}
-    .table-wrap{overflow:auto}
+    .pay-card{border:1px solid var(--bd);border-radius:14px;padding:10px;margin-bottom:10px}
+
+    /* Mini charts horizontais */
+    .mini-charts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .mini{border:1px solid var(--bd);border-radius:14px;padding:8px}
+    .mini h3{margin:0 0 6px;font-size:13px;color:var(--mut);font-weight:900}
+    .mini canvas{width:100%;height:110px !important} /* baixinho */
   </style>
+
   <!-- Chart.js -->
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
@@ -92,7 +88,7 @@
     <main>
       <div class="container">
 
-        <!-- Filtros rápidos -->
+        <!-- Filtros -->
         <div class="card">
           <div class="toolbar">
             <input id="q" class="input" placeholder="Buscar por nome/serviço…">
@@ -109,42 +105,47 @@
           <div class="card"><h2>Suspensos</h2><div class="kpi"><div class="val" id="kpi-suspensos">—</div><div class="mut">em revisão</div></div></div>
           <div class="card"><h2>Excluídos</h2><div class="kpi"><div class="val" id="kpi-excluidos">—</div><div class="mut">na base</div></div></div>
           <div class="card"><h2>Média Geral</h2><div class="kpi"><div class="val" id="kpi-media">—</div><div class="mut">⭐ avaliações</div></div></div>
-          <div class="card"><h2>Acessos hoje</h2><div class="kpi"><div class="val" id="kpi-today-visits">—</div><div class="mut">visitas</div></div></div>
-          <div class="card"><h2>WhatsApp hoje</h2><div class="kpi"><div class="val" id="kpi-today-calls">—</div><div class="mut">chamadas</div></div></div>
         </div>
 
         <div class="grid columns-2" style="margin-top:14px">
-          <!-- 3 mini gráficos horizontais -->
+          <!-- Mini charts (3 lado a lado) -->
           <div class="card">
             <h2>Últimos 30 dias (mini)</h2>
-            <div id="mini-loading" class="loading">Carregando…</div>
-            <div class="mini-charts" id="mini-wrap" style="display:none">
+            <div class="mini-charts">
               <div class="mini">
                 <h3>Visitas</h3>
-                <canvas id="mini-visits"></canvas>
+                <div id="mini-v-loading" class="loading">Carregando…</div>
+                <canvas id="mini-visitas" style="display:none"></canvas>
               </div>
               <div class="mini">
                 <h3>Chamadas</h3>
-                <canvas id="mini-calls"></canvas>
+                <div id="mini-c-loading" class="loading">Carregando…</div>
+                <canvas id="mini-chamadas" style="display:none"></canvas>
               </div>
               <div class="mini">
                 <h3>QRs</h3>
-                <canvas id="mini-qrs"></canvas>
+                <div id="mini-q-loading" class="loading">Carregando…</div>
+                <canvas id="mini-qrs" style="display:none"></canvas>
               </div>
             </div>
-            <p id="mini-error" class="error" style="display:none">Falha ao carregar séries.</p>
+            <div class="row" style="margin-top:8px">
+              <span class="chip">Hoje: <strong id="today-vis">0</strong> visitas</span>
+              <span class="chip">Hoje: <strong id="today-call">0</strong> chamadas</span>
+              <span class="chip">Hoje: <strong id="today-qr">0</strong> QRs</span>
+            </div>
           </div>
 
           <!-- Verificados + Top serviços -->
           <div class="card">
             <h2>Verificados</h2>
-            <div class="pie-wrap">
-              <canvas id="chart-verif"></canvas>
+            <div class="row" style="align-items:center">
+              <canvas id="chart-verif" style="max-height:180px;flex:1 1 180px"></canvas>
               <div>
                 <div class="chip"><span id="v-yes">—</span> verificados</div><br/>
                 <div class="chip"><span id="v-no">—</span> pendentes</div>
               </div>
             </div>
+
             <h2 style="margin-top:14px">Top Serviços</h2>
             <ul id="top-serv" class="list">
               <li><span class="meta">Carregando…</span><span>—</span></li>
@@ -156,13 +157,13 @@
         <div class="card" style="margin-top:14px">
           <h2>Profissionais</h2>
           <div class="meta" id="list_meta">—</div>
-          <div class="table-wrap">
+          <div class="table-wrap" style="overflow:auto">
             <table class="table" id="list_tbl">
               <thead>
-              <tr>
-                <th>ID</th><th>Nome</th><th>Serviço</th><th>Cidade</th><th>Bairro</th>
-                <th>Plano</th><th>Verif.</th><th>⭐</th><th>Ações</th>
-              </tr>
+                <tr>
+                  <th>ID</th><th>Nome</th><th>Serviço</th><th>Cidade</th><th>Bairro</th>
+                  <th>Plano</th><th>Verif.</th><th>⭐</th><th>Ações</th>
+                </tr>
               </thead>
               <tbody id="list_body"><tr><td colspan="9" class="meta">Carregando…</td></tr></tbody>
             </table>
@@ -193,11 +194,8 @@
             <h2>Pagamentos recentes</h2>
             <button id="pay_reload" class="btn btn-ghost">Recarregar</button>
           </div>
-          <div id="pay_list">
-            <div class="meta">Carregando…</div>
-          </div>
+          <div id="pay_list"><div class="meta">Carregando…</div></div>
         </div>
-
       </div>
     </main>
 
@@ -207,96 +205,81 @@
   <script>
   (function(){
     const $ = (id)=> document.getElementById(id);
-
-    // ----- Helpers -----
-    function fmt(n){ return (n??0).toLocaleString('pt-BR'); }
-    function money(n){ return (n??0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+    // Helpers
+    const fmt = (n)=> (n??0).toLocaleString('pt-BR');
+    const money = (n)=> (n??0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
     async function apiJSON(url, opts){
       const r = await fetch(url, { credentials:'same-origin', ...opts });
       if (!r.ok) throw new Error('HTTP '+r.status);
       const ct = r.headers.get('content-type')||'';
-      if (ct.includes('application/json')) return r.json();
-      return r.text();
+      return ct.includes('application/json') ? r.json() : r.text();
     }
-    const esc = (s)=> String(s||'').replace(/[<>&"]/g, m=>({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[m]));
 
-    // ----- Controles -----
-    const elQ = $('q'), elCity = $('city'), elSvc = $('svc');
+    // Controles
+    const elQ=$('q'), elCity=$('city'), elSvc=$('svc');
     $('search_btn').addEventListener('click', ()=> { loadList(1); updateCSVLink(); });
-    $('clear_btn').addEventListener('click', ()=>{
-      elQ.value=''; elCity.value=''; elSvc.value='';
-      updateCSVLink();
-      loadList(1);
-    });
+    $('clear_btn').addEventListener('click', ()=>{ elQ.value=''; elCity.value=''; elSvc.value=''; updateCSVLink(); loadList(1); });
 
-    // ----- KPIs / Métricas -----
+    // KPIs/Charts
     const elAtivos=$('kpi-ativos'), elSuspensos=$('kpi-suspensos'), elExcluidos=$('kpi-excluidos'), elMedia=$('kpi-media');
     const elVYes=$('v-yes'), elVNo=$('v-no');
-    const elMiniLoading=$('mini-loading'), elMiniWrap=$('mini-wrap'), elMiniError=$('mini-error');
-    const elTodayVisits = $('kpi-today-visits');
-    const elTodayCalls  = $('kpi-today-calls');
-    let chartVerif=null, miniV=null, miniC=null, miniQ=null;
 
-    function tinyLine(canvas, label, points){
-      const ctx = canvas.getContext('2d');
-      return new Chart(ctx, {
+    let chartVerif=null, cMiniV=null, cMiniC=null, cMiniQ=null;
+
+    function tinyLine(canvas, labels, data){
+      return new Chart(canvas, {
         type:'line',
-        data:{ labels: points.map(p=>p.x.slice(5)), datasets:[{ label, data: points.map(p=>p.y), tension:.35, fill:false }]},
+        data:{ labels, datasets:[{ label:'', data, tension:.35, pointRadius:0, borderWidth:2, fill:false }]},
         options:{
-          responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
-          scales:{ x:{ display:false }, y:{ display:false, beginAtZero:true } },
-          elements:{ point:{ radius:0 } }
+          responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{ display:false }, tooltip:{ intersect:false, mode:'index' } },
+          scales:{ x:{ display:false }, y:{ display:false, beginAtZero:true } }
         }
       });
     }
 
     async function loadMetrics(){
       try{
-        const j = await apiJSON('/api/admin/metrics');
-        if (j.ok !== true) throw new Error('payload');
+        const r = await apiJSON('/api/admin/metrics');
+        // server.js envia: { ok, counters, last30:[{day,visits,calls,qrs}], series:{visits[],calls[],qrs[]} }
+        const ctr = r.counters||{};
+        elAtivos.textContent    = fmt(ctr.ativos||0);
+        elSuspensos.textContent = fmt(ctr.suspensos||0);
+        elExcluidos.textContent = fmt(ctr.excluidos||0);
+        elMedia.textContent     = Number(ctr.mediaRating||0).toFixed(2);
 
-        // KPIs principais
-        elAtivos.textContent   = fmt(j.counters?.ativos ?? 0);
-        elSuspensos.textContent= fmt(j.counters?.suspensos ?? 0);
-        elExcluidos.textContent= fmt(j.counters?.excluidos ?? 0);
-        elMedia.textContent    = Number(j.counters?.mediaRating ?? 0).toFixed(2);
-
-        // Hoje
-        elTodayVisits.textContent = fmt(j.today?.visits ?? 0);
-        elTodayCalls.textContent  = fmt(j.today?.calls ?? 0);
-
-        // Verificados
-        const vy = Number(j.counters?.verificados || 0);
-        const total = Number(j.counters?.total || 0);
-        const vn = Math.max(total - vy, 0);
+        // verificados
+        const vy = Number(ctr.verificados||0);
+        const total = Number(ctr.total||0);
+        const vn = Math.max(0, total - vy);
         elVYes.textContent = fmt(vy); elVNo.textContent = fmt(vn);
         renderVerifChart(vy, vn);
 
-        // Mini charts
-        const s = j.series || {};
-        elMiniLoading.style.display='none';
-        elMiniWrap.style.display='flex';
-        if (miniV) miniV.destroy(); if (miniC) miniC.destroy(); if (miniQ) miniQ.destroy();
-        miniV = tinyLine($('mini-visits'), 'Visitas', s.visits||[]);
-        miniC = tinyLine($('mini-calls'),  'Chamadas', s.calls||[]);
-        miniQ = tinyLine($('mini-qrs'),    'QRs', s.qrs||[]);
+        const days = (r.last30||[]);
+        const labels = days.map(d=> (d.day||'').slice(5));
+        // minis
+        $('mini-v-loading').style.display='none';
+        $('mini-c-loading').style.display='none';
+        $('mini-q-loading').style.display='none';
+        $('mini-visitas').style.display='block';
+        $('mini-chamadas').style.display='block';
+        $('mini-qrs').style.display='block';
 
-        // Top serviços (simples: contar por nome a partir da lista admin/profissionais primeira página)
-        try{
-          const top = await apiJSON('/api/admin/profissionais?page=1&limit=200&sort=servico');
-          const cnt = {};
-          (top.items||[]).forEach(p=>{
-            const k = (p.servico||'').trim(); if (!k) return;
-            cnt[k] = (cnt[k]||0)+1;
-          });
-          const arr = Object.entries(cnt).map(([name,value])=>({name,value})).sort((a,b)=> b.value-a.value).slice(0,8);
-          renderTopServ(arr);
-        }catch{ renderTopServ([]); }
+        if (cMiniV) cMiniV.destroy();
+        if (cMiniC) cMiniC.destroy();
+        if (cMiniQ) cMiniQ.destroy();
+        cMiniV = tinyLine($('mini-visitas'), labels, days.map(d=>d.visits||0));
+        cMiniC = tinyLine($('mini-chamadas'), labels, days.map(d=>d.calls||0));
+        cMiniQ = tinyLine($('mini-qrs'),     labels, days.map(d=>d.qrs||0));
 
+        // métricas do dia
+        const today = days[days.length-1] || { visits:0, calls:0, qrs:0 };
+        $('today-vis').textContent = fmt(today.visits||0);
+        $('today-call').textContent = fmt(today.calls||0);
+        $('today-qr').textContent = fmt(today.qrs||0);
+        // top serviços (simples a partir da base admin/list)
+        loadTopServ();
       }catch(e){
-        elMiniLoading.style.display='none';
-        elMiniWrap.style.display='none';
-        elMiniError.style.display='block';
         console.error('metrics error', e);
       }
     }
@@ -313,31 +296,37 @@
       }catch(e){ console.error('verif chart error', e); }
     }
 
-    function renderTopServ(list){
-      const el = $('top-serv');
-      el.innerHTML='';
-      if (!list.length){ el.innerHTML = '<li><span class="meta">Sem dados</span><span>—</span></li>'; return; }
-      list.forEach(it=>{
-        const li=document.createElement('li');
-        li.innerHTML = `<strong>${esc(it.name)||'—'}</strong><span>${fmt(it.value||0)}</span>`;
-        el.appendChild(li);
-      });
+    async function loadTopServ(){
+      try{
+        // usa /api/admin/profissionais só para pegar primeira página ampla e contar serviços
+        const j = await apiJSON(`/api/admin/profissionais?page=1&limit=500`);
+        const map = {};
+        (j.items||[]).forEach(p=>{
+          const s = (p.servico||'').trim();
+          if (!s) return;
+          map[s] = (map[s]||0)+1;
+        });
+        const arr = Object.entries(map).map(([name,value])=>({name,value})).sort((a,b)=>b.value-a.value).slice(0,8);
+        const el = $('top-serv');
+        el.innerHTML = arr.length ? arr.map(it=>`<li><strong>${it.name}</strong><span>${fmt(it.value)}</span></li>`).join('') :
+                                    '<li><span class="meta">Sem dados</span><span>—</span></li>';
+      }catch(_){}
     }
 
-    // ----- Cidades / Serviços -----
+    // Cidades/Serviços
     async function loadCidades(){
       try{
         const arr = await apiJSON('/api/geo/cidades');
-        elCity.innerHTML = '<option value="">Todas as cidades</option>' + (arr||[]).map(c=>`<option>${esc(c)}</option>`).join('');
+        elCity.innerHTML = '<option value="">Todas as cidades</option>' + (arr||[]).map(c=>`<option>${c}</option>`).join('');
         const arrS = await apiJSON('/api/geo/servicos');
-        elSvc.innerHTML = '<option value="">Todos os serviços</option>' + (arrS||[]).map(s=>`<option>${esc(s)}</option>`).join('');
+        elSvc.innerHTML = '<option value="">Todos os serviços</option>' + (arrS||[]).map(s=>`<option>${s}</option>`).join('');
       }catch(_){
         elCity.innerHTML='<option value="">Cidades</option>';
         elSvc.innerHTML='<option value="">Serviços</option>';
       }
     }
 
-    // ----- Export CSV link -----
+    // CSV link
     function updateCSVLink(){
       const q = encodeURIComponent(elQ.value||'');
       const c = encodeURIComponent(elCity.value||'');
@@ -350,16 +339,7 @@
       elSvc.addEventListener(ev, updateCSVLink);
     });
 
-    // ----- Ações Admin (suspender/ativar/excluir/restaurar) -----
-    async function act(url, method, body){
-      const opts = { method, credentials:'same-origin', headers:{ 'Content-Type':'application/json' } };
-      if (body) opts.body = JSON.stringify(body);
-      const r = await fetch(url, opts);
-      if (!r.ok) throw new Error('HTTP '+r.status);
-      return r.json().catch(()=> ({}));
-    }
-
-    // ----- Lista de profissionais (usa /api/admin/profissionais para ter status) -----
+    // Lista de profissionais (via /api/admin/profissionais)
     let listPage=1, listTotal=0, listLimit=20;
     async function loadList(page){
       try{
@@ -370,76 +350,91 @@
         const s = encodeURIComponent(elSvc.value||'');
         const url = `/api/admin/profissionais?page=${listPage}&limit=${listLimit}&q=${q}&cidade=${c}&servico=${s}&sort=recent`;
         const j = await apiJSON(url);
-        if (j.ok!==true){ throw new Error('payload'); }
+        if (j.ok!==true) throw new Error('payload');
         listTotal = j.total||0;
-        $('list_meta').textContent = `${fmt(Math.min((listPage-1)*listLimit+1,listTotal))}–${fmt(Math.min(listPage*listLimit,listTotal))} de ${fmt(listTotal)}`;
+
+        $('list_meta').textContent =
+          `${fmt(Math.min((listPage-1)*listLimit+1,listTotal))}–${fmt(Math.min(listPage*listLimit,listTotal))} de ${fmt(listTotal)}`;
+
+        const rows = (j.items||[]).map(p=>{
+          const low = Number(p.rating||0) < 3 ? 'low' : '';
+          const warn = Number(p.rating||0) < 3 ? ` <span class="chip" title="Alerta: baixa avaliação">⚠️ baixa</span>` : '';
+          const acts = renderActions(p);
+          return `<tr class="${low}">
+              <td>${p.id}</td>
+              <td><a href="/profissional/${p.id}" target="_blank" rel="noopener">${escapeHTML(p.nome||'—')}</a></td>
+              <td>${escapeHTML(p.servico||'—')}</td>
+              <td>${escapeHTML(p.cidade||'—')}</td>
+              <td>${escapeHTML(p.bairro||'—')}</td>
+              <td>${escapeHTML(p.plano||'free')}</td>
+              <td>${p.verificado?'✔':'—'}</td>
+              <td>${Number(p.rating||0).toFixed(2)}${warn}</td>
+              <td>${acts}</td>
+            </tr>`;
+        }).join('');
+        $('list_body').innerHTML = rows || `<tr><td colspan="9" class="meta">Nenhum resultado.</td></tr>`;
         $('list_page').textContent = String(listPage);
 
-        $('list_body').innerHTML = (j.items||[]).map(p=>{
-          const low = Number(p.rating||0) < 3;
-          const badge = low ? ` <span class="badge-low">⚠️ Baixa avaliação</span>` : '';
-          const ver = p.verificado ? '✔' : '—';
-          const actions = [];
-          if (!p.excluido){
-            if (p.suspenso){
-              actions.push(`<button class="btn btn-small btn-soft green" data-action="ativar" data-id="${p.id}">Ativar</button>`);
-            }else{
-              actions.push(`<button class="btn btn-small btn-soft orange" data-action="suspender" data-id="${p.id}">Suspender</button>`);
-            }
-            actions.push(`<button class="btn btn-small btn-soft gray" data-action="excluir" data-id="${p.id}">Excluir</button>`);
-          }else{
-            actions.push(`<button class="btn btn-small btn-soft" data-action="restaurar" data-id="${p.id}">Restaurar</button>`);
-          }
-          return `
-            <tr>
-              <td>${p.id}</td>
-              <td><a href="/profissional/${p.id}" target="_blank" rel="noopener">${esc(p.nome)||'—'}</a>${badge}</td>
-              <td>${esc(p.servico)||'—'}</td>
-              <td>${esc(p.cidade)||'—'}</td>
-              <td>${esc(p.bairro)||'—'}</td>
-              <td>${esc(p.plano||'free')}</td>
-              <td>${ver}</td>
-              <td>${Number(p.rating||0).toFixed(2)}</td>
-              <td class="actions-cell">${actions.join(' ')}</td>
-            </tr>`;
-        }).join('') || `<tr><td colspan="9" class="meta">Nenhum resultado.</td></tr>`;
-
-        // Bind dos botões
-        $('list_body').querySelectorAll('button[data-action]').forEach(btn=>{
-          btn.addEventListener('click', async ()=>{
-            const id = btn.getAttribute('data-id');
-            const action = btn.getAttribute('data-action');
-            try{
-              if (action==='suspender'){
-                const motivo = prompt('Motivo da suspensão (opcional):') || '';
-                await act(`/api/admin/profissionais/${id}/suspender`, 'POST', { motivo });
-              } else if (action==='ativar'){
-                await act(`/api/admin/profissionais/${id}/ativar`, 'POST', {});
-              } else if (action==='excluir'){
-                if (!confirm('Tem certeza que deseja excluir este profissional?')) return;
-                await act(`/api/admin/profissionais/${id}`, 'DELETE');
-              } else if (action==='restaurar'){
-                await act(`/api/admin/profissionais/${id}/restaurar`, 'POST', {});
-              }
-              await loadList(listPage);
-            }catch(e){
-              alert('Falha na ação: '+e.message);
-            }
-          });
-        });
-
+        // bind dos botões
+        bindActionButtons();
       }catch(e){
         $('list_body').innerHTML = `<tr><td colspan="9" class="error">Falha ao carregar lista.</td></tr>`;
         console.error('list error', e);
       }
     }
+
+    function escapeHTML(s){ return String(s||'').replace(/[&<>"]/g,(m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m])); }
+
+    function renderActions(p){
+      const btn = (id, label, kind, action)=> `<button class="btn btn-mini ${kind}" data-act="${action}" data-id="${id}">${label}</button>`;
+      const buttons = [];
+      if (!p.excluido){
+        if (p.suspenso) buttons.push(btn(p.id,'Ativar','btn-outline','ativar'));
+        else            buttons.push(btn(p.id,'Suspender','btn-ghost','suspender'));
+        buttons.push(btn(p.id,'Excluir','btn-danger','excluir'));
+      } else {
+        buttons.push(btn(p.id,'Restaurar','btn-primary','restaurar'));
+      }
+      return buttons.join(' ');
+    }
+
+    function bindActionButtons(){
+      document.querySelectorAll('[data-act]').forEach(el=>{
+        el.addEventListener('click', async ()=>{
+          const id = el.getAttribute('data-id');
+          const act = el.getAttribute('data-act');
+          try{
+            if (act==='suspender'){
+              const motivo = prompt('Motivo da suspensão (opcional):','');
+              await apiJSON(`/api/admin/profissionais/${id}/suspender`, {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ motivo })
+              });
+            }else if (act==='ativar'){
+              await apiJSON(`/api/admin/profissionais/${id}/ativar`, { method:'POST' });
+            }else if (act==='excluir'){
+              if (!confirm('Confirmar exclusão deste profissional?')) return;
+              await apiJSON(`/api/admin/profissionais/${id}`, { method:'DELETE' });
+            }else if (act==='restaurar'){
+              await apiJSON(`/api/admin/profissionais/${id}/restaurar`, { method:'POST' });
+            }
+            // reload página atual
+            await loadList(listPage);
+          }catch(e){
+            alert('Falha ao executar ação: ' + (e?.message||e));
+          }
+        });
+      });
+    }
+
     $('list_prev').addEventListener('click', ()=> { if (listPage>1) loadList(listPage-1); });
     $('list_next').addEventListener('click', ()=> {
       const maxPage = Math.max(1, Math.ceil(listTotal/listLimit));
       if (listPage < maxPage) loadList(listPage+1);
     });
 
-    // ----- Denúncias -----
+    // Denúncias
     let denPage=1, denTotal=0, denLimit=10;
     async function loadDenuncias(page){
       try{
@@ -450,11 +445,10 @@
         $('den_page').textContent = String(denPage);
         const list = (j.items||[]).map(d=>{
           const when = new Date(d.createdAt||Date.now()).toLocaleString('pt-BR');
-          const motivo = esc(d.motivo||'—');
-          const pro   = d.profissional?.id ? `<a href="/profissional/${d.profissional.id}" target="_blank" rel="noopener">${esc(d.profissional.nome||('Prof '+d.profissional.id))}</a>` : '—';
+          const prof = d.profissional?.id ? `<a href="/profissional/${d.profissional.id}" target="_blank" rel="noopener">${escapeHTML(d.profissional.nome||('Prof '+d.profissional.id))}</a>` : '—';
           return `<li>
-            <span class="meta">#${d.id} • ${when} • ${esc(d.status||'aberta')}</span>
-            <span>${pro} • ${motivo}</span>
+            <span class="meta">#${d.id} • ${when} • ${escapeHTML(d.status||'aberta')}</span>
+            <span>${prof} • ${escapeHTML(d.motivo||'—')}</span>
           </li>`;
         }).join('');
         $('den_list').innerHTML = list || `<li><span class="meta">Sem denúncias.</span><span>—</span></li>`;
@@ -469,19 +463,21 @@
       if (denPage < maxPage) loadDenuncias(denPage+1);
     });
 
-    // ----- Pagamentos -----
+    // Pagamentos
     function renderPayment(p){
       const when = new Date(p.createdAt||Date.now()).toLocaleString('pt-BR');
-      const gross = money(p.amount||p.gross||0),
-            fees  = money(p.appFee||p.fees||0),
-            net   = money(p.toPro||p.net||0);
-      const via  = (p.method||'').toUpperCase() || '—';
-      const name = p.proName || `Prof #${p.proId||'—'}`;
+      const gross = money(p.amount||p.gross||0);
+      const fees = money(p.appFee||p.fees||0);
+      const net = money(p.toPro||p.net||0);
+      const via = (p.method||'').toUpperCase() || '—';
+      const name = p.name || `Prof #${p.proId||'—'}`;
       return `
-        <div class="row" style="justify-content:space-between;border:1px solid var(--bd);border-radius:14px;padding:10px;margin-bottom:10px">
-          <div><strong>${esc(name)}</strong> • <span class="meta">${when}</span></div>
-          <div class="chip">${via}</div>
-          <div class="row" style="margin-left:auto">
+        <div class="pay-card">
+          <div class="row" style="justify-content:space-between">
+            <div><strong>${escapeHTML(name)}</strong> • <span class="meta">${when}</span></div>
+            <div class="chip">${via}</div>
+          </div>
+          <div class="row" style="margin-top:6px">
             <div>Bruto: <strong>${gross}</strong></div>
             <div>Taxas: ${fees}</div>
             <div>Líquido: <strong>${net}</strong></div>
@@ -491,15 +487,14 @@
     async function loadPayments(){
       try{
         const arr = await apiJSON('/api/admin/payments?limit=10');
-        const list = Array.isArray(arr?.items) ? arr.items : (Array.isArray(arr)?arr:[]);
-        $('pay_list').innerHTML = (list||[]).map(renderPayment).join('') || '<div class="meta">Nenhum pagamento ainda.</div>';
+        $('pay_list').innerHTML = (arr||[]).map(renderPayment).join('') || '<div class="meta">Nenhum pagamento ainda.</div>';
       }catch(e){
         $('pay_list').innerHTML = '<div class="warn">Falha ao carregar pagamentos.</div>';
       }
     }
     $('pay_reload').addEventListener('click', loadPayments);
 
-    // ===== Boot =====
+    // Boot
     (async function init(){
       await loadMetrics();
       await loadCidades();
@@ -509,10 +504,10 @@
       await loadPayments();
     })();
 
-    // SW (mesma política do app)
+    // SW
     if ('serviceWorker' in navigator){
       window.addEventListener('load', ()=>{
-        navigator.serviceWorker.register('/sw.js?v=admin-2025-09-12').catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=admin-2025-09-11b').catch(()=>{});
       });
     }
   })();
