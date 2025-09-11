@@ -1881,7 +1881,36 @@ app.get("/api/admin/export/csv", requireAdmin, (req,res)=>{
     res.status(500).type("text").send("erro");
   }
 });
-
+// Admin: resetar PIN do profissional (obriga definir novamente no próximo login)
+app.post("/api/admin/profissionais/:id/reset-pin", requireAdmin, (req,res)=>{
+  try{
+    const id = Number(req.params.id||"0");
+    const db = readDB();
+    const p = db.find(x=> Number(x.id)===id);
+    if (!p) return res.status(404).json({ ok:false });
+    p.pinHash = null;
+    p.mustSetPin = true;
+    writeDB(db);
+    res.json({ ok:true });
+  }catch(e){
+    res.status(500).json({ ok:false, error:String(e) });
+  }
+});
+// Admin: resetar PIN do profissional (obriga definir novamente no próximo login)
+app.post("/api/admin/profissionais/:id/reset-pin", requireAdmin, (req,res)=>{
+  try{
+    const id = Number(req.params.id||"0");
+    const db = readDB();
+    const p = db.find(x=> Number(x.id)===id);
+    if (!p) return res.status(404).json({ ok:false });
+    p.pinHash = null;
+    p.mustSetPin = true;
+    writeDB(db);
+    res.json({ ok:true });
+  }catch(e){
+    res.status(500).json({ ok:false, error:String(e) });
+  }
+});
 // /api/admin/export?what=profissionais|payments|metrics
 app.get("/api/admin/export", requireAdmin, (req,res)=>{
   try{

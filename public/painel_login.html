@@ -15,6 +15,7 @@
       --azul-escuro:#0b1f63; --azul:#2D81FF;
       --bd:#e5e7eb; --txt:#111827; --mut:#64748b;
       --ok:#16a34a; --warn:#92400e; --err:#991b1b;
+      --chip:#eef2ff;
     }
     html,body{height:100%;margin:0;background:var(--azul-escuro);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
     .page{min-height:100vh;display:flex;flex-direction:column}
@@ -27,34 +28,34 @@
     .header .btn{border:1px solid #ffffff44;background:transparent;color:#fff;padding:8px 12px;border-radius:10px;text-decoration:none;font-weight:800;font-size:14px}
     .header .btn:hover{background:#ffffff18}
 
-    /* Main/Card */
+    /* Main / Card */
     main{flex:1;display:flex;align-items:center;justify-content:center;padding:18px}
-    .wrap{width:100%;max-width:980px}
+    .wrap{width:100%;max-width:900px}
     .card{background:#fff;border:1px solid var(--bd);border-radius:22px;padding:20px;box-shadow:0 8px 24px rgba(0,0,0,.06)}
     .grid{display:grid;grid-template-columns:1fr;gap:16px}
-    @media(min-width:900px){ .grid{grid-template-columns:1.15fr 1fr} }
+    @media(min-width:900px){ .grid{grid-template-columns:1.25fr 1fr} }
 
     .title{margin:0 0 6px;font-size:24px;font-weight:900;color:var(--azul-escuro)}
+    .badge{font-size:.75rem;background:var(--chip);color:#3730a3;border-radius:999px;padding:2px 8px;margin-left:6px}
     .subtitle{margin:0 0 14px;color:var(--mut);font-size:14px}
 
     label{display:block;font-weight:700;margin:10px 0 6px}
     .input{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:12px;background:#fff;font-size:15px}
     .input:focus{border-color:var(--azul);box-shadow:0 0 0 4px rgba(45,108,223,.2);outline:0}
-
     .row{display:flex;gap:10px;flex-wrap:wrap}
+    .right{display:flex;gap:8px;align-items:flex-end}
+
     .btn{appearance:none;border:none;border-radius:12px;padding:12px 14px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
     .btn-primary{background:var(--azul);color:#fff}
     .btn-ghost{background:#f1f5f9;border:1px solid var(--bd);color:#111827}
-    .btn-dark{background:var(--azul-escuro);color:#fff}
 
-    .badge{font-size:.75rem;background:#eef2ff;color:#3730a3;border-radius:999px;padding:2px 8px;margin-left:6px}
-    .muted{color:var(--mut)} .small{font-size:.92rem}
-
+    .muted{color:var(--mut)}
+    .small{font-size:.92rem}
+    .preview{font-size:12px;color:#334155;margin-top:4px;min-height:1em}
     #hint{margin-top:8px;font-size:.95rem}
     #hint.ok{color:var(--ok)} #hint.warn{color:var(--warn)} #hint.err{color:var(--err)}
-    .preview{font-size:12px;color:#334155;margin-top:4px;min-height:1em}
 
-    /* Instruções */
+    /* Lado direito (instruções) */
     .side{background:#f8fafc;border:1px solid var(--bd);border-radius:16px;padding:12px}
     .side h3{margin:0 0 6px;font-size:16px}
     .bullet{display:flex;gap:8px;align-items:flex-start;color:#0b1f63}
@@ -67,187 +68,198 @@
     .foot-links a:hover{text-decoration:underline}
     .copy{ text-align:center;font-size:11.5px;color:#b8cffc;margin-top:4px }
 
-    /* Acessibilidade */
     a:focus, button:focus, input:focus{outline:3px solid #a5b4fc;outline-offset:2px}
   </style>
 </head>
+
 <body>
-  <div class="page">
-    <!-- Header -->
-    <header class="header" role="banner" aria-label="Cabeçalho">
-      <a href="/" aria-label="Início"><img src="/img/logo.png" alt="Autônoma.app" class="logo" onerror="this.style.display='none'"></a>
-      <div class="spacer"></div>
-      <a class="btn" href="/clientes.html">Cliente</a>
-    </header>
+<div class="page">
+  <!-- Header -->
+  <header class="header" role="banner" aria-label="Cabeçalho">
+    <a href="/" aria-label="Início">
+      <img src="/img/logo.png" alt="Autônoma.app" class="logo" onerror="this.style.display='none'">
+    </a>
+    <div class="spacer"></div>
+    <a class="btn" href="/clientes.html">Cliente</a>
+  </header>
 
-    <!-- Main -->
-    <main class="wrap" role="main">
-      <div class="card">
-        <h1 class="title">Entrar no painel <span class="badge">acesso com PIN</span></h1>
-        <p class="subtitle">
-          Digite seu <b>WhatsApp (com DDD)</b> e seu <b>PIN</b>. No primeiro acesso,
-          se você ainda não tiver um PIN, o código que você digitar será
-          <b>cadastrado como seu PIN</b>.
-        </p>
+  <!-- Main -->
+  <main class="wrap" role="main">
+    <div class="card">
+      <h1 class="title">Entrar no painel <span class="badge">acesso com PIN</span></h1>
+      <p class="subtitle">
+        Digite seu <b>WhatsApp (com DDD)</b> e seu <b>PIN</b>. No primeiro acesso, se você ainda não tiver PIN,
+        o código que você digitar será <b>cadastrado como seu PIN</b>.
+      </p>
 
-        <div class="grid">
-          <!-- Esquerda: formulário -->
-          <div>
-            <label for="whats">WhatsApp (somente números — com ou sem 55)</label>
-            <input id="whats" class="input" inputmode="numeric" autocomplete="tel" placeholder="21987654321"/>
+      <div class="grid">
+        <!-- Coluna esquerda -->
+        <div>
+          <div class="row">
+            <div style="flex:1 1 260px">
+              <label for="whats">WhatsApp (somente números — com ou sem 55)</label>
+              <input id="whats" class="input" inputmode="numeric" autocomplete="tel" placeholder="21987654321"/>
+              <div id="pretty" class="preview"></div>
 
-            <div id="pretty" class="preview"></div>
-
-            <label for="pin">PIN (6 dígitos)</label>
-            <input id="pin" name="pin" type="password" inputmode="numeric" pattern="\d{6}" minlength="6" maxlength="6" placeholder="******" class="input" required />
-
-            <div class="row" style="margin-top:10px">
-              <button id="btnEntrar" class="btn btn-primary" type="button">Entrar</button>
-              <button id="btnMostrarPin" class="btn btn-ghost" type="button" aria-pressed="false">Mostrar PIN</button>
+              <label for="pin">PIN (6 dígitos)</label>
+              <div class="row" style="gap:8px">
+                <input id="pin" name="pin" class="input" style="flex:1 1 220px"
+                       type="password" inputmode="numeric" pattern="\d{6}"
+                       minlength="6" maxlength="6" placeholder="******" required />
+                <button id="togglePin" class="btn btn-ghost" type="button" aria-controls="pin" aria-label="Mostrar/ocultar PIN">Mostrar PIN</button>
+              </div>
             </div>
 
-            <div id="hint" class="muted" aria-live="polite"></div>
+            <div class="right">
+              <button id="btnEntrar" class="btn btn-primary" type="button">Entrar</button>
+            </div>
           </div>
 
-          <!-- Direita: instruções -->
-          <aside class="side">
-            <h3>Como funciona</h3>
-            <div class="bullet">✅ <span>Informe seu número do WhatsApp com DDD (apenas números).</span></div>
-            <div class="bullet">🔐 <span>Digite um <b>PIN de 6 dígitos</b>. Se for seu primeiro acesso, esse PIN será cadastrado para você.</span></div>
-            <div class="bullet">🔁 <span>Nos próximos logins, use o <b>mesmo PIN</b>.</span></div>
-            <div class="bullet">🧠 <span>Esqueceu o PIN? Fale com o suporte para redefinição.</span></div>
-            <hr style="border:none;border-top:1px solid #e5e7eb;margin:10px 0">
-            <p class="muted small">
-              Dica: use o navegador padrão (Chrome/Safari). Cookies precisam estar habilitados.
-            </p>
-          </aside>
+          <div id="hint" class="muted"></div>
         </div>
+
+        <!-- Coluna direita (instruções) -->
+        <aside class="side">
+          <h3>Como funciona</h3>
+          <div class="bullet">✅ <span>Informe seu número do WhatsApp com DDD (apenas números).</span></div>
+          <div class="bullet">🔐 <span>Digite um <b>PIN de 6 dígitos</b>. No <b>primeiro acesso</b>, esse PIN será cadastrado para você.</span></div>
+          <div class="bullet">🔁 <span>Nos próximos logins, use o <b>mesmo PIN</b>.</span></div>
+          <div class="bullet">❓ <span>Esqueceu o PIN? Fale com o suporte para <b>redefinição</b>.</span></div>
+          <hr style="border:none;border-top:1px solid #e5e7eb;margin:10px 0">
+          <p class="muted small">
+            Dica: use o navegador padrão (Chrome/Safari). Cookies precisam estar habilitados.
+          </p>
+        </aside>
       </div>
-    </main>
+    </div>
+  </main>
 
-    <!-- Footer -->
-    <footer class="footer" role="contentinfo">
-      <nav class="foot-links" aria-label="Links do rodapé">
-        <a href="/termos.html">Termos</a>
-        <a href="/privacidade.html">Privacidade</a>
-        <a href="/top10.html">Top 10</a>
-        <a href="/planos.html">Planos</a>
-        <a href="/politica-de-seguranca.html">Segurança</a>
-        <a href="/favoritos.html">Favoritos</a>
-      </nav>
-      <div class="copy">© 2025 Autônoma.app — Todos os direitos reservados.</div>
-    </footer>
-  </div>
+  <!-- Footer -->
+  <footer class="footer" role="contentinfo">
+    <nav class="foot-links" aria-label="Links do rodapé">
+      <a href="/termos.html">Termos</a>
+      <a href="/privacidade.html">Privacidade</a>
+      <a href="/top10.html">Top 10</a>
+      <a href="/planos.html">Planos</a>
+      <a href="/politica-de-seguranca.html">Segurança</a>
+      <a href="/favoritos.html">Favoritos</a>
+    </nav>
+    <div class="copy">© 2025 Autônoma.app — Todos os direitos reservados.</div>
+  </footer>
+</div>
 
-  <!-- Script do login com PIN -->
-  <script>
-  (function(){
-    const $ = (id)=> document.getElementById(id);
+<script>
+(function(){
+  // ---------- helpers ----------
+  const $ = id => document.getElementById(id);
 
-    // helpers de visual / formatação
-    function onlyDigits(s){ return String(s||'').replace(/\D/g,''); }
-    function ensureBR(d){ if(!d) return ''; if(d.startsWith('55')) return d; if(d.length===10||d.length===11) return '55'+d; return d; }
-    function pretty(d55){
-      if(!/^\d{12,13}$/.test(d55)) return '';
-      const cc=d55.slice(0,2), ddd=d55.slice(2,4), rest=d55.slice(4);
-      return rest.length===9 ? `+${cc} (${ddd}) ${rest.slice(0,5)}-${rest.slice(5)}` : `+${cc} (${ddd}) ${rest.slice(0,4)}-${rest.slice(4)}`;
-    }
-    function updatePretty(){
-      const raw = onlyDigits($('whats').value);
-      const with55 = ensureBR(raw);
-      const p = pretty(with55);
-      $('pretty').textContent = p ? ('Formato: '+p) : '';
-    }
-    $('whats').addEventListener('input', updatePretty);
-    $('whats').addEventListener('blur', updatePretty);
+  function onlyDigits(s){ return String(s||'').replace(/\D/g,''); }
+  function ensureBR(d){
+    if (!d) return '';
+    if (d.startsWith('55')) return d;
+    if (d.length===10 || d.length===11) return '55'+d;
+    return d;
+  }
+  function pretty(d55){
+    if(!/^\d{12,13}$/.test(d55)) return '';
+    const cc=d55.slice(0,2), ddd=d55.slice(2,4), rest=d55.slice(4);
+    return rest.length===9
+      ? `+${cc} (${ddd}) ${rest.slice(0,5)}-${rest.slice(5)}`
+      : `+${cc} (${ddd}) ${rest.slice(0,4)}-${rest.slice(4)}`;
+  }
+  function updatePretty(){
+    const raw = onlyDigits($('whats').value);
+    const with55 = ensureBR(raw);
+    const p = pretty(with55);
+    const el = $('pretty');
+    el.textContent = p ? ('Formato: '+p) : '';
+  }
 
-    function setHint(msg, tone){
-      const el = $('hint');
-      el.textContent = msg || '';
-      el.className = 'muted';
-      if (tone) el.classList.add(tone);
-    }
+  async function apiJSON(url, opts){
+    const r = await fetch(url, { credentials:'same-origin', ...opts });
+    const ct = r.headers.get('content-type') || '';
+    let body = null;
+    try { body = ct.includes('application/json') ? await r.json() : await r.text(); }
+    catch { body = null; }
+    return { ok: r.ok, status: r.status, body };
+  }
 
-    async function apiJSON(url, opts){
-      const r = await fetch(url, { credentials:'same-origin', ...opts });
-      const ct = r.headers.get('content-type') || '';
-      let body=null;
-      try{ body = ct.includes('application/json') ? await r.json() : await r.text(); }catch{}
-      return { ok:r.ok, status:r.status, body };
-    }
+  function showHint(msg, tone){
+    const h = $('hint');
+    h.textContent = msg || '';
+    h.className = '';
+    h.id = 'hint';
+    if (tone) h.classList.add(tone);
+  }
 
-    // Mostrar / ocultar PIN
-    $('btnMostrarPin').addEventListener('click', ()=>{
-      const ip = $('pin');
-      const isPwd = ip.type === 'password';
-      ip.type = isPwd ? 'text' : 'password';
-      $('btnMostrarPin').textContent = isPwd ? 'Ocultar PIN' : 'Mostrar PIN';
-      $('btnMostrarPin').setAttribute('aria-pressed', String(isPwd));
-      ip.focus();
+  // ---------- Entrar ----------
+  $('btnEntrar').addEventListener('click', async ()=>{
+    const phone = onlyDigits(($('whats').value||''));
+    const pin   = String(($('pin').value||'')).trim();
+
+    if (!phone){ showHint('Informe seu WhatsApp com DDD.', 'warn'); $('whats').focus(); return; }
+    if (!/^\d{6}$/.test(pin)){ showHint('Digite um PIN de 6 dígitos.', 'warn'); $('pin').focus(); return; }
+
+    // tenta login
+    const r = await apiJSON('/api/painel/login', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ phone, pin })
     });
 
-    // Entrar / Cadastrar PIN
-    $('btnEntrar').addEventListener('click', async ()=>{
-      const phone = onlyDigits($('whats').value);
-      const pin   = String($('pin').value||'').trim();
-
-      if (!phone){ setHint('Informe seu WhatsApp com DDD.', 'warn'); $('whats').focus(); return; }
-      if (!/^\d{6}$/.test(pin)){ setHint('PIN precisa ter 6 dígitos.', 'warn'); $('pin').focus(); return; }
-
-      setHint('Verificando…');
-
-      // tenta login normal
-      const r = await apiJSON('/api/painel/login', {
+    // 1º acesso: servidor exige criação do PIN
+    if (r.status === 409) {
+      const s = await apiJSON('/api/painel/set-pin', {
         method:'POST',
         headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ phone, pin })
+        body: JSON.stringify({ pin })
       });
-
-      // 409 => não tem PIN ainda: cadastrar com este PIN
-      if (r.status === 409) {
-        const s = await apiJSON('/api/painel/set-pin', {
-          method:'POST',
-          headers:{ 'Content-Type':'application/json' },
-          body: JSON.stringify({ pin })
-        });
-        if (!s.ok){ setHint('Não foi possível definir o PIN. Tente novamente.', 'err'); return; }
-        location.href = '/painel.html';
-        return;
-      }
-
-      if (!r.ok){
-        const err = (r.body && r.body.error) || 'erro';
-        const map = {
-          phone_required: 'Informe o número do WhatsApp.',
-          not_found: 'WhatsApp não encontrado.',
-          pin_required: 'Informe seu PIN de 6 dígitos.',
-          pin_invalid: 'PIN incorreto.',
-          pin_invalid_format: 'PIN precisa ter 6 dígitos.',
-          pin_not_set: 'Defina seu PIN e tente novamente.'
-        };
-        setHint(map[err] || 'Falha no login.', 'err');
-        return;
-      }
-
-      // login OK
+      if (!s.ok) { showHint('Não foi possível definir o PIN. Tente novamente.', 'err'); return; }
       location.href = '/painel.html';
-    });
-
-    // PWA (mesma política do site)
-    if ('serviceWorker' in navigator){
-      window.addEventListener('load', ()=>{
-        navigator.serviceWorker.register('/sw.js?v=painel-login-2025-09-11-pin').catch(()=>{});
-      });
-      let reloaded=false;
-      navigator.serviceWorker.addEventListener('controllerchange', ()=>{
-        if(!reloaded){ reloaded=true; location.reload(); }
-      });
+      return;
     }
 
-    // start
-    $('whats').focus({preventScroll:true});
-    updatePretty();
-  })();
-  </script>
+    if (!r.ok) {
+      const err = (r.body && r.body.error) || 'erro';
+      const msgs = {
+        phone_required: 'Informe o número do WhatsApp.',
+        not_found: 'WhatsApp não encontrado.',
+        pin_required: 'Informe seu PIN de 6 dígitos.',
+        pin_invalid: 'PIN incorreto.',
+        pin_invalid_format: 'PIN deve ter 6 dígitos.',
+        pin_not_set: 'Defina seu PIN e tente novamente.'
+      };
+      showHint(msgs[err] || 'Falha no login.', 'err');
+      return;
+    }
+
+    location.href = '/painel.html';
+  });
+
+  // Mostrar/ocultar PIN
+  $('togglePin').addEventListener('click', ()=>{
+    const f = $('pin');
+    f.type = (f.type === 'password') ? 'text' : 'password';
+    $('togglePin').textContent = (f.type === 'password') ? 'Mostrar PIN' : 'Ocultar PIN';
+  });
+
+  // PWA
+  if ('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('/sw.js?v=painel-login-2025-09-11-pin').catch(()=>{});
+    });
+    let reloaded=false;
+    navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+      if(!reloaded){ reloaded=true; location.reload(); }
+    });
+  }
+
+  // start
+  $('whats').focus({preventScroll:true});
+  updatePretty();
+  $('whats').addEventListener('input', updatePretty);
+  $('whats').addEventListener('blur', updatePretty);
+})();
+</script>
 </body>
 </html>
