@@ -4,751 +4,384 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Admin • Autônoma.app</title>
-  <meta name="theme-color" content="#2d6cdf">
-  <link rel="stylesheet" href="/css/app.css?v=admin-2025-09-10c">
+  <meta name="theme-color" content="#0b1f63">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" href="/favicon.ico">
+  <link rel="stylesheet" href="/css/app.css?v=admin-2025-09-11"/>
   <style>
-    /* ===== Layout base ===== */
-    .header { display:flex; align-items:center; gap:12px; padding:12px 16px; }
-    .header .logo { height:32px; width:auto; display:block; }
-    .header .home { margin-left:auto }
-    .wrap-max{ max-width:1120px; margin:0 auto; padding:16px; }
-
-    /* KPIs – fluído no mobile */
-    .cards{ display:grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap:12px; }
-    .kpi{ background:#fff; border:1px solid #e5e7eb; border-radius:16px; padding:14px; }
-    .kpi strong{ font-size:20px }
-    .kpi .meta{ color:#64748b }
-    .panel{ background:#fff; border:1px solid #e5e7eb; border-radius:16px; padding:14px; }
-    .grid2{ display:grid; grid-template-columns:1fr; gap:16px; }
-    @media (min-width:920px){ .grid2{ grid-template-columns: 2fr 1fr; } }
-    .charts-col { display:grid; gap:16px; grid-template-rows: 1fr 1fr; }
-    .chart-box{ background:#fafafa; border:1px solid #e5e7eb; border-radius:14px; padding:10px; }
-    .chart-title{ margin:0 0 6px; font-size:14px; color:#334155; font-weight:600 }
-
-    .toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px }
-    .toolbar .input, .toolbar .btn { min-height:40px }
-
-    .table{ width:100%; border-collapse: collapse; }
-    .table th, .table td{ border-bottom:1px solid #e5e7eb; padding:8px; text-align:left; font-size:14px; vertical-align:middle }
-    .table th{ background:#f8fafc; position:sticky; top:0; z-index:1 }
-
-    .badge{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid #e5e7eb; background:#f1f5f9 }
-    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap }
-    .meta{ color:#64748b }
-    .warn{ color:#b91c1c }
-
-    .avatar { width:38px; height:38px; border-radius:999px; object-fit:cover; object-position:center; border:1px solid #e5e7eb; background:#f1f5f9; }
-    .namecell{ display:flex; align-items:center; gap:8px; min-width:220px }
-    .rating-low{ color:#b91c1c; font-weight:700 }
-    tr.low-row td { background:#fff7f7 }
-    .status-pill{ font-size:12px; padding:2px 6px; border-radius:999px; border:1px solid #fecaca; background:#fee2e2; color:#991b1b }
-
-    /* Canvas responsivo */
-    .chart-canvas{ width:100%; height:280px; display:block; }
-    @media (min-width:920px){ #chartPie, #chartBars { height:240px; } }
-    a:focus, button:focus, select:focus, input:focus { outline:3px solid #a5b4fc; outline-offset:2px; }
-
-    /* ===== Denúncias ===== */
-    .den-grid { display:grid; grid-template-columns: 1fr; gap:12px; }
-    @media (min-width:980px){ .den-grid { grid-template-columns: 2fr 1fr; } }
-    .chip { font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid #e5e7eb; background:#f8fafc }
-    .chip.aberta{ border-color:#93c5fd; background:#eff6ff; color:#1d4ed8 }
-    .chip.em_analise{ border-color:#fde68a; background:#fffbeb; color:#92400e }
-    .chip.resolvida{ border-color:#bbf7d0; background:#ecfccb; color:#166534 }
-    .chip.descartada{ border-color:#fecaca; background:#fee2e2; color:#991b1b }
-    .den-actions .btn{ padding:6px 8px; }
-    .den-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px; }
-
-    /* ===== Badges de plano ===== */
-    .plan-badge{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid #e5e7eb; background:#f1f5f9; font-weight:800; margin-left:6px }
-    .plan-badge.PRO{ background:#eef2ff; border-color:#6366f1 }
-    .plan-badge.PREMIUM{ background:#fffbeb; border-color:#fbbf24 }
-
-    /* ===== Melhorias mobile extras ===== */
-    @media (max-width:640px){
-      .wrap-max{ padding:12px; }
-      .panel{ padding:12px; border-radius:14px; }
-      .chart-canvas{ height:220px; }
-      .namecell{ min-width:auto }
-      .table th, .table td{ padding:8px 6px; font-size:13.5px }
+    :root{
+      --azul-escuro:#0b1f63; --azul:#2D81FF;
+      --bd:#e5e7eb; --txt:#111827; --mut:#64748b;
+      --ok:#16a34a; --warn:#92400e; --err:#991b1b;
+      --card-bg:#ffffff; --chip:#f1f5f9;
     }
-    /* Ações da tabela quebram bonito no mobile */
-    td.row { gap:6px; }
-    td.row .btn{ padding:6px 8px; font-size:12.5px; }
-    @media (max-width:640px){ td.row { flex-wrap:wrap; } }
+    html,body{height:100%;margin:0;background:var(--azul-escuro);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    .page{min-height:100vh;display:flex;flex-direction:column}
+    header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px}
+    header .brand{display:flex;gap:10px;align-items:center}
+    header .brand img{height:32px}
+    header .actions{display:flex;gap:8px}
+    .btn{appearance:none;border:none;border-radius:12px;padding:10px 12px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+    .btn-ghost{background:#f1f5f9;border:1px solid var(--bd);color:#111827}
+    .btn-danger{background:#fee2e2;border:1px solid #fecaca;color:#991b1b}
+    .btn-primary{background:var(--azul);color:#fff}
+    main{flex:1;padding:18px}
+    .container{max-width:1150px;margin:0 auto}
+    .grid{display:grid;gap:14px}
+    .grid.cards{grid-template-columns:repeat(4,1fr)}
+    .grid.columns-2{grid-template-columns:2fr 1fr}
+    @media (max-width: 980px){ .grid.cards{grid-template-columns:repeat(2,1fr)} .grid.columns-2{grid-template-columns:1fr} }
+    @media (max-width: 560px){ .grid.cards{grid-template-columns:1fr} }
+    .card{background:var(--card-bg);border:1px solid var(--bd);border-radius:22px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.06)}
+    .card h2{margin:0 0 10px;font-size:18px;font-weight:900;color:var(--azul-escuro)}
+    .kpi{display:flex;align-items:flex-end;justify-content:space-between}
+    .kpi .val{font-size:28px;font-weight:900}
+    .kpi .mut{color:var(--mut);font-size:12px}
+    .mut{color:var(--mut)}
+    .chip{display:inline-flex;align-items:center;gap:6px;background:var(--chip);border:1px solid var(--bd);border-radius:999px;padding:6px 10px;font-size:12px}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    .list{list-style:none;margin:0;padding:0}
+    .list li{display:flex;align-items:center;justify-content:space-between;border-bottom:1px dashed #e5e7eb;padding:8px 0}
+    .list li:last-child{border-bottom:none}
+    .meta{color:var(--mut);font-size:13px}
+    .warn{color:var(--warn);font-weight:700}
+    .error{color:var(--err);font-weight:700}
+    .loading{height:160px;display:flex;align-items:center;justify-content:center;color:#3b82f6;font-weight:700}
+    footer{background:var(--azul-escuro);color:#cde1ff;padding:10px 8px;border-top:1px solid #0a1a55;text-align:center;font-size:12px;margin-top:16px}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .input{padding:10px;border:1px solid #d1d5db;border-radius:10px}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{padding:8px;border-bottom:1px solid #eef2f7;text-align:left;font-size:14px}
+    .table th{color:var(--mut);font-weight:800}
+    .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px}
+    canvas{max-width:100%;height:auto;min-height:240px}
+    .pay-card{border:1px solid var(--bd);border-radius:14px;padding:10px;margin-bottom:10px}
   </style>
+  <!-- Chart.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
-  <header class="header">
-    <a href="/" aria-label="Início">
-      <img src="/img/logo.png" alt="Autônoma.app" class="logo" onerror="this.style.display='none'">
-    </a>
-    <div class="home">
-      <a class="btn ghost" href="/">Início</a>
-      <a class="btn outline" href="/admin/logout">Sair</a>
-    </div>
-  </header>
-
-  <main class="wrap-max">
-    <!-- KPIs -->
-    <div class="cards" id="kpis">
-      <div class="kpi"><div class="meta">Profissionais (ativos)</div><strong id="k_ativos">—</strong></div>
-      <div class="kpi"><div class="meta">Suspensos</div><strong id="k_susp">—</strong></div>
-      <div class="kpi"><div class="meta">Excluídos</div><strong id="k_exc">—</strong></div>
-      <div class="kpi"><div class="meta">Visitas (total)</div><strong id="k_vis">—</strong></div>
-      <div class="kpi"><div class="meta">Chamadas (total)</div><strong id="k_calls">—</strong></div>
-      <div class="kpi"><div class="meta">Nota média geral</div><strong id="k_avg">—</strong></div>
-    </div>
-
-    <!-- Gráficos -->
-    <div class="panel" style="margin-top:12px">
-      <div class="grid2">
-        <div>
-          <h2 style="margin:6px 0 12px">Métricas (últimos 30 dias)</h2>
-          <div class="chart-box">
-            <p class="chart-title">Visitas • Chamadas • Cadastros</p>
-            <canvas id="chartLines" class="chart-canvas" aria-label="Série temporal"></canvas>
-          </div>
-        </div>
-        <div class="charts-col">
-          <div class="chart-box">
-            <p class="chart-title">Verificados</p>
-            <canvas id="chartPie" class="chart-canvas" aria-label="Verificados"></canvas>
-          </div>
-          <div class="chart-box">
-            <p class="chart-title">Top serviços</p>
-            <canvas id="chartBars" class="chart-canvas" aria-label="Top serviços"></canvas>
-          </div>
-        </div>
+  <div class="page">
+    <header>
+      <div class="brand">
+        <a href="/" aria-label="Início"><img src="/img/logo.png" alt="Autônoma.app"></a>
+        <span class="chip">Admin</span>
       </div>
-      <p id="errMet" class="meta warn" style="display:none; margin-top:8px">Falha ao carregar métricas do admin.</p>
-      <div class="row" style="margin-top:10px">
-        <button id="btnRecompute" class="btn outline">Recalcular verificações</button>
-        <a id="btnCSV" class="btn" href="/api/admin/export/csv" target="_blank" rel="noopener">Exportar CSV</a>
-        <a class="btn ghost" href="/api/admin/export?what=profissionais" target="_blank" rel="noopener">Profissionais CSV</a>
-        <a class="btn ghost" href="/api/admin/export?what=metrics" target="_blank" rel="noopener">Métricas CSV</a>
-        <button id="btnDiag" class="btn outline" title="Executa checagem rápida das rotas de métricas e lista">🧪 Diagnóstico</button>
+      <div class="actions">
+        <a id="csv_link" class="btn btn-ghost" href="/api/admin/export.csv">Exportar CSV</a>
+        <form id="logoutForm" method="POST" action="/admin/logout">
+          <button class="btn btn-danger" type="submit">Sair</button>
+        </form>
       </div>
-    </div>
+    </header>
 
-    <!-- Filtros + Lista -->
-    <div class="panel" style="margin-top:12px">
-      <div class="toolbar">
-        <input id="f_q" class="input" placeholder="Buscar (nome, serviço, bairro…)" style="min-width:220px">
-        <input id="f_cidade" class="input" placeholder="Cidade" list="lista-cidades" style="min-width:160px">
-        <datalist id="lista-cidades"></datalist>
-        <input id="f_serv" class="input" placeholder="Serviço/Profissão" style="min-width:160px">
-        <select id="f_verif" class="input">
-          <option value="all">Todos</option>
-          <option value="true">Verificados</option>
-          <option value="false">Não verificados</option>
-        </select>
-        <select id="f_status" class="input">
-          <option value="all">Todos</option>
-          <option value="ativos">Ativos</option>
-          <option value="suspensos">Suspensos</option>
-          <option value="excluidos">Excluídos</option>
-        </select>
-        <select id="f_sort" class="input">
-          <option value="recent">Recentes</option>
-          <option value="nome">Nome</option>
-          <option value="cidade">Cidade</option>
-          <option value="servico">Serviço</option>
-          <option value="verificado">Verificado</option>
-          <option value="avaliacoes">Avaliações</option>
-          <option value="rating">Rating</option>
-          <option value="visitas">Visitas</option>
-          <option value="chamadas">Chamadas</option>
-        </select>
-        <select id="f_dir" class="input">
-          <option value="desc">Desc</option>
-          <option value="asc">Asc</option>
-        </select>
-        <button id="f_go" class="btn">Filtrar</button>
-      </div>
-
-      <div style="overflow:auto; max-height:60vh; min-height:220px">
-        <table class="table" id="tab">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Profissional</th>
-              <th>Cidade</th>
-              <th>Bairro</th>
-              <th>Serviço</th>
-              <th>Verif.</th>
-              <th>Rating</th>
-              <th>Aval.</th>
-              <th>Visitas</th>
-              <th>Chamadas</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody id="tbody"></tbody>
-        </table>
-      </div>
-
-      <div class="row" style="justify-content:space-between; margin-top:10px">
-        <div class="meta" id="listInfo">—</div>
-        <div class="row">
-          <button id="prev" class="btn ghost" aria-label="Página anterior">«</button>
-          <span id="pageInfo" class="meta">1/1</span>
-          <button id="next" class="btn ghost" aria-label="Próxima página">»</button>
-        </div>
-      </div>
-      <p id="errList" class="meta warn" style="display:none">Erro ao carregar lista.</p>
-    </div>
-
-    <!-- Denúncias -->
-    <div class="panel" style="margin-top:12px">
-      <div class="den-grid">
-        <div>
-          <h2 style="margin:6px 0 12px">Denúncias</h2>
+    <main>
+      <div class="container">
+        <!-- Filtros rápidos -->
+        <div class="card">
           <div class="toolbar">
-            <select id="d_status" class="input">
-              <option value="all">Todos os status</option>
-              <option value="aberta">Abertas</option>
-              <option value="em_analise">Em análise</option>
-              <option value="resolvida">Resolvidas</option>
-              <option value="descartada">Descartadas</option>
-            </select>
-            <input id="d_q" class="input" placeholder="Buscar por motivo/descrição/ID prof.">
-            <button id="d_go" class="btn">Filtrar</button>
+            <input id="q" class="input" placeholder="Buscar por nome/serviço…">
+            <select id="city" class="input"></select>
+            <select id="svc" class="input"></select>
+            <button id="search_btn" class="btn btn-primary">Buscar</button>
+            <button id="clear_btn" class="btn btn-ghost">Limpar</button>
           </div>
-          <div style="overflow:auto; max-height:420px">
-            <table class="table" id="tabDen">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Quando</th>
-                  <th>Profissional</th>
-                  <th>Motivo</th>
-                  <th>Status</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyDen"></tbody>
+        </div>
+
+        <!-- KPIs -->
+        <div class="grid cards" id="kpis">
+          <div class="card"><h2>Ativos</h2><div class="kpi"><div class="val" id="kpi-ativos">—</div><div class="mut">profissionais</div></div></div>
+          <div class="card"><h2>Suspensos</h2><div class="kpi"><div class="val" id="kpi-suspensos">—</div><div class="mut">em revisão</div></div></div>
+          <div class="card"><h2>Excluídos</h2><div class="kpi"><div class="val" id="kpi-excluidos">—</div><div class="mut">na base</div></div></div>
+          <div class="card"><h2>Média Geral</h2><div class="kpi"><div class="val" id="kpi-media">—</div><div class="mut">⭐ avaliações</div></div></div>
+        </div>
+
+        <div class="grid columns-2" style="margin-top:14px">
+          <!-- Série 30 dias -->
+          <div class="card">
+            <h2>Últimos 30 dias</h2>
+            <div id="ts-loading" class="loading">Carregando gráfico…</div>
+            <canvas id="chart-ts" style="display:none"></canvas>
+            <p id="ts-error" class="error" style="display:none">Falha ao carregar séries.</p>
+          </div>
+          <!-- Verificados + Top serviços -->
+          <div class="card">
+            <h2>Verificados</h2>
+            <div class="row" style="align-items:center">
+              <canvas id="chart-verif" style="max-height:180px;flex:1 1 180px"></canvas>
+              <div>
+                <div class="chip"><span id="v-yes">—</span> verificados</div><br/>
+                <div class="chip"><span id="v-no">—</span> pendentes</div>
+              </div>
+            </div>
+            <h2 style="margin-top:14px">Top Serviços</h2>
+            <ul id="top-serv" class="list">
+              <li><span class="meta">Carregando…</span><span>—</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Lista de profissionais -->
+        <div class="card" style="margin-top:14px">
+          <h2>Profissionais</h2>
+          <div class="meta" id="list_meta">—</div>
+          <div class="table-wrap" style="overflow:auto">
+            <table class="table" id="list_tbl">
+              <thead><tr><th>ID</th><th>Nome</th><th>Serviço</th><th>Cidade</th><th>Bairro</th><th>Plano</th><th>Verif.</th><th>⭐</th></tr></thead>
+              <tbody id="list_body"><tr><td colspan="8" class="meta">Carregando…</td></tr></tbody>
             </table>
           </div>
-          <div class="row" style="justify-content:space-between; margin-top:10px">
-            <div class="meta" id="denInfo">—</div>
-            <div class="row">
-              <button id="d_prev" class="btn ghost" aria-label="Página anterior">«</button>
-              <span id="d_pageInfo" class="meta">1/1</span>
-              <button id="d_next" class="btn ghost" aria-label="Próxima página">»</button>
-            </div>
-          </div>
-          <p id="errDen" class="meta warn" style="display:none">Erro ao carregar denúncias.</p>
-        </div>
-        <div>
-          <div class="den-card">
-            <h3 style="margin:0 0 6px">Resumo</h3>
-            <div class="meta" id="denResumo">—</div>
+          <div class="pager">
+            <button id="list_prev" class="btn btn-ghost">«</button>
+            <span id="list_page" class="meta">1</span>
+            <button id="list_next" class="btn btn-ghost">»</button>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Pagamentos -->
-    <div class="panel" style="margin-top:12px">
-      <div class="row" style="justify-content:space-between;align-items:center">
-        <h2 style="margin:6px 0 12px">Pagamentos (últimos)</h2>
-        <div class="row">
-          <button id="pay_reload" class="btn outline">Recarregar</button>
-          <a class="btn" href="/api/admin/export?what=payments" target="_blank" rel="noopener">Exportar pagamentos CSV</a>
+        <!-- Denúncias -->
+        <div class="card" style="margin-top:14px">
+          <h2>Denúncias</h2>
+          <ul id="den_list" class="list">
+            <li><span class="meta">Carregando…</span><span>—</span></li>
+          </ul>
+          <div class="pager">
+            <button id="den_prev" class="btn btn-ghost">«</button>
+            <span id="den_page" class="meta">1</span>
+            <button id="den_next" class="btn btn-ghost">»</button>
+          </div>
+        </div>
+
+        <!-- Pagamentos -->
+        <div class="card" style="margin-top:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <h2>Pagamentos recentes</h2>
+            <button id="pay_reload" class="btn btn-ghost">Recarregar</button>
+          </div>
+          <div id="pay_list">
+            <div class="meta">Carregando…</div>
+          </div>
         </div>
       </div>
-      <div id="pay_list" class="meta">—</div>
-    </div>
-  </main>
+    </main>
+
+    <footer>© 2025 Autônoma.app — Painel administrativo</footer>
+  </div>
 
   <script>
   (function(){
     const $ = (id)=> document.getElementById(id);
-
-    // ======= KPIs =======
-    const kAtivos=$('k_ativos'), kSusp=$('k_susp'), kExc=$('k_exc'),
-          kVis=$('k_vis'), kCalls=$('k_calls'), kAvg=$('k_avg');
-
-    // ======= Charts =======
-    const cLines=$('chartLines'), cPie=$('chartPie'), cBars=$('chartBars');
-    const errMet=$('errMet');
-    const btnRecompute=$('btnRecompute'), btnCSV=$('btnCSV'), btnDiag=$('btnDiag');
-
-    // ======= Lista profissionais =======
-    const f_q=$('f_q'), f_cidade=$('f_cidade'), f_serv=$('f_serv'),
-          f_verif=$('f_verif'), f_status=$('f_status'),
-          f_sort=$('f_sort'), f_dir=$('f_dir'), f_go=$('f_go');
-    const tbody=$('tbody'), listInfo=$('listInfo'),
-          prev=$('prev'), next=$('next'), pageInfo=$('pageInfo');
-    const dlCidades=$('lista-cidades');
-    let PAGE=1, PAGES=1;
-
-    // ======= Denúncias =======
-    const d_status=$('d_status'), d_q=$('d_q'), d_go=$('d_go');
-    const tbodyDen=$('tbodyDen'), denInfo=$('denInfo'),
-          d_prev=$('d_prev'), d_next=$('d_next'), d_pageInfo=$('d_pageInfo');
-    const errDen=$('errDen');
-    let D_PAGE=1, D_PAGES=1;
-
-    let metricsCache=null;
-
-    // ---- fetch helpers (com sessão + redireciona se 401) ----
-    async function apiJSON(url, opt){
-      const r = await fetch(url, { cache:'no-store', credentials:'same-origin', ...(opt||{}) });
-      if (r.status === 401) {
-        const next = encodeURIComponent('/admin.html');
-        location.href = '/admin/login?next=' + next;
-        throw new Error('401');
-      }
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      return r.json();
-    }
-    async function postJSON(url, body){
-      const r = await fetch(url, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        credentials:'same-origin',
-        body: JSON.stringify(body||{})
-      });
-      if (r.status === 401) {
-        const next = encodeURIComponent('/admin.html');
-        location.href = '/admin/login?next=' + next;
-        throw new Error('401');
-      }
+    // ----- Helpers -----
+    function fmt(n){ return (n??0).toLocaleString('pt-BR'); }
+    function money(n){ return (n??0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+    async function apiJSON(url, opts){
+      const r = await fetch(url, { credentials:'same-origin', ...opts });
       if (!r.ok) throw new Error('HTTP '+r.status);
-      return r.json();
+      const ct = r.headers.get('content-type')||'';
+      if (ct.includes('application/json')) return r.json();
+      return r.text();
     }
 
-    function escapeHtml(s){
-      return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-    }
-
-    function deviceScaleCanvas(canvas){
-      const dpr = window.devicePixelRatio || 1;
-      const rect = canvas.getBoundingClientRect();
-      if (!rect.width || !rect.height) return;
-      canvas.width = Math.round(rect.width * dpr);
-      canvas.height = Math.round(rect.height * dpr);
-      const ctx = canvas.getContext('2d');
-      ctx.setTransform(dpr,0,0,dpr,0,0);
-      return ctx;
-    }
-
-    // ===== Charts (vanilla) =====
-    function drawLineChart(cv, series, labels){
-      const ctx = deviceScaleCanvas(cv); if (!ctx) return;
-      const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
-      ctx.clearRect(0,0,W,H);
-      // axes
-      ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(40,10); ctx.lineTo(40,H-30); ctx.lineTo(W-10,H-30); ctx.stroke();
-      const max = Math.max(1, ...series.flat());
-      const scaleY = (H-40)/max;
-      const stepX = (W-60)/Math.max(1, labels.length-1);
-      const colors = ['#2563eb','#16a34a','#f97316']; // visitas, chamadas, cadastros
-      // grid Y
-      ctx.strokeStyle='#f1f5f9';
-      for(let t=1;t<=5;t++){
-        const v = Math.round(max*t/5);
-        const y = (H-30) - v*scaleY;
-        ctx.beginPath(); ctx.moveTo(40,y); ctx.lineTo(W-10,y); ctx.stroke();
-      }
-      series.forEach((data,si)=>{
-        const grad = ctx.createLinearGradient(0,10,0,H-30);
-        grad.addColorStop(0, colors[si] + 'cc');
-        grad.addColorStop(1, colors[si] + '11');
-        ctx.beginPath();
-        data.forEach((v,i)=>{
-          const x=40 + i*stepX;
-          const y=(H-30) - v*scaleY;
-          if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-        });
-        ctx.strokeStyle=colors[si]; ctx.lineWidth=2; ctx.stroke();
-        const lastX=40 + (data.length-1)*stepX;
-        ctx.lineTo(lastX, H-30);
-        ctx.lineTo(40, H-30);
-        ctx.closePath();
-        ctx.fillStyle=grad; ctx.fill();
-      });
-      // labels X
-      ctx.fillStyle='#64748b'; ctx.font='12px system-ui';
-      const every = Math.ceil(labels.length/8);
-      labels.forEach((lb,i)=>{ if (i%every===0){ const x=40 + i*stepX; ctx.fillText(lb, x-10, H-10); } });
-      // legend
-      const legends = ['Visitas','#2563eb','Chamadas','#16a34a','Cadastros','#f97316'];
-      ctx.font='12px system-ui'; ctx.textBaseline='middle';
-      const baseY=16; let off=46;
-      for(let i=0;i<legends.length;i+=2){
-        ctx.fillStyle=legends[i+1]; ctx.fillRect(off-16, baseY-5, 10,10);
-        ctx.fillStyle='#111827'; ctx.fillText(legends[i], off, baseY);
-        off += ctx.measureText(legends[i]).width + 54;
-      }
-    }
-
-    function drawPie(cv, vals){
-      const ctx = deviceScaleCanvas(cv); if (!ctx) return;
-      const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
-      ctx.clearRect(0,0,W,H);
-      const sum = vals.reduce((a,b)=>a+b,0) || 1;
-      const cx=W/2, cy=H/2, r=Math.min(W,H)*0.36, inner=r*0.58;
-      const colors=['#10b981','#e5e7eb'];
-      let ang= -Math.PI/2;
-      vals.forEach((v,i)=>{
-        const a = (v/sum)*Math.PI*2;
-        ctx.beginPath(); ctx.arc(cx,cy,r,ang,ang+a); ctx.arc(cx,cy,inner,ang+a,ang,true); ctx.closePath();
-        ctx.fillStyle=colors[i%colors.length]; ctx.fill();
-        ang += a;
-      });
-      ctx.fillStyle='#111827'; ctx.font='600 16px system-ui'; ctx.textAlign='center';
-      ctx.fillText('Verificados', cx, cy-4);
-      ctx.font='12px system-ui'; ctx.fillStyle='#334155';
-      ctx.fillText(vals[0] + ' de ' + (vals[0]+vals[1]), cx, cy+14);
-    }
-
-    function drawBars(cv, labels, values){
-      const ctx = deviceScaleCanvas(cv); if (!ctx) return;
-      const rect = cv.getBoundingClientRect(); const W=rect.width, H=rect.height;
-      ctx.clearRect(0,0,W,H);
-      const max = Math.max(1, ...values);
-      const axisL = 40, axisB = 30;
-      const bw = Math.max(16, (W-axisL-20)/Math.max(1, labels.length) - 10);
-      const scaleY = (H- axisB - 14)/max;
-      ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(axisL,10); ctx.lineTo(axisL,H-axisB); ctx.lineTo(W-10,H-axisB); ctx.stroke();
-      ctx.strokeStyle='#f1f5f9';
-      for(let t=1;t<=5;t++){ const y = (H-axisB) - (max*t/5)*scaleY; ctx.beginPath(); ctx.moveTo(axisL,y); ctx.lineTo(W-10,y); ctx.stroke(); }
-      let x = axisL + 8;
-      values.forEach((v,i)=>{
-        const h = v*scaleY;
-        const grad = ctx.createLinearGradient(0,(H-axisB)-h,0,H-axisB);
-        grad.addColorStop(0,'#2563eb'); grad.addColorStop(1,'#93c5fd');
-        ctx.fillStyle=grad;
-        ctx.fillRect(x, (H-axisB)-h, bw, h);
-        // labels
-        ctx.save();
-        ctx.translate(x + bw/2, H-10);
-        ctx.rotate(-Math.PI/4);
-        ctx.fillStyle='#334155'; ctx.font='11px system-ui'; ctx.textAlign='left';
-        const lab = labels[i] || '';
-        ctx.fillText(lab.length>16 ? lab.slice(0,16)+'…' : lab, 0, 0);
-        ctx.restore();
-        x += bw + 10;
-      });
-    }
-
-    let resizeTimer;
-    window.addEventListener('resize', ()=>{
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(()=>{ if(metricsCache) paintCharts(metricsCache); }, 120);
+    // ----- Controles -----
+    const elQ = $('q'), elCity = $('city'), elSvc = $('svc');
+    $('search_btn').addEventListener('click', ()=> { loadList(1); updateCSVLink(); });
+    $('clear_btn').addEventListener('click', ()=>{
+      elQ.value=''; elCity.value=''; elSvc.value='';
+      updateCSVLink();
+      loadList(1);
     });
 
-    // ====== Mapeamento flexível dos dados de métricas ======
-    function mapDay(d){
-      const date = d.date || d.data || d.dia || d.day || d.d;
-      const visitas = d.visitas ?? d.visits ?? 0;
-      const chamadas = d.chamadas ?? d.calls ?? d.ligacoes ?? 0;
-      const cad = d.cadastros ?? d.signups ?? d.registros ?? 0;
-      return { date, visitas, chamadas, cad };
-    }
-
-    function paintCharts(m){
-      const daysRaw = (m.timeseries?.days || m.dias || m.series || []);
-      const days = daysRaw.map(mapDay);
-      const labels = days.map(d=> String(d.date||'').slice(5));
-      const visits = days.map(d=>d.visitas||0);
-      const calls  = days.map(d=>d.chamadas||0);
-      const sign   = days.map(d=>d.cad||0);
-      if(labels.length){ drawLineChart(cLines, [visits,calls,sign], labels); }
-
-      const verified = m.verified || m.verificados || {};
-      const vY = Number(verified.yes ?? verified.sim ?? verified.true ?? 0);
-      const vN = Number(verified.no  ?? verified.nao ?? verified.false ?? 0);
-      drawPie(cPie, [vY, vN]);
-
-      const top = (m.top?.servicos || m.topServicos || m.top_services || []);
-      const labs = top.map(x=> String(x.name || x.servico || x.titulo || ''));
-      const vals = top.map(x=> Number(x.value ?? x.total ?? x.count ?? 0));
-      if(labs.length){ drawBars(cBars, labs, vals); }
-    }
+    // ----- KPIs / Métricas -----
+    const elAtivos=$('kpi-ativos'), elSuspensos=$('kpi-suspensos'), elExcluidos=$('kpi-excluidos'), elMedia=$('kpi-media');
+    const elVYes=$('v-yes'), elVNo=$('v-no');
+    const elTsLoading=$('ts-loading'), elTsCanvas=$('chart-ts'), elTsError=$('ts-error');
+    let chartTs=null, chartVerif=null;
 
     async function loadMetrics(){
       try{
-        const m = await apiJSON('/api/admin/metrics');
-        metricsCache = m;
-        kAtivos.textContent = String(m.ativos ?? m.actives ?? 0);
-        kSusp.textContent   = String(m.suspensos ?? m.suspended ?? 0);
-        kExc.textContent    = String(m.excluidos ?? m.deleted ?? 0);
-        kVis.textContent    = String(m.visitas ?? m.totalVisits ?? 0);
-        kCalls.textContent  = String(m.chamadas ?? m.totalCalls ?? 0);
-        const media = m.mediaGeral ?? m.avg ?? m.ratingMedio;
-        kAvg.textContent    = (media!=null) ? Number(media).toFixed(2) : '—';
-        paintCharts(m);
-        errMet.style.display='none';
+        const j = await apiJSON('/api/admin/metrics');
+        // Espera { ok:true, ativos, suspensos, excluidos, mediaGeral, verified:{yes,no}, timeseries:{days:[{date,visitas,chamadas,cadastros}]}, top:{servicos:[{name,value}]}}
+        if (j.ok !== true) throw new Error('payload');
+        elAtivos.textContent = fmt(j.ativos);
+        elSuspensos.textContent = fmt(j.suspensos);
+        elExcluidos.textContent = fmt(j.excluidos);
+        elMedia.textContent = Number(j.mediaGeral||0).toFixed(2);
+        // verificados
+        const vy = Number(j.verified?.yes||0), vn = Number(j.verified?.no||0);
+        elVYes.textContent = fmt(vy); elVNo.textContent = fmt(vn);
+        renderVerifChart(vy, vn);
+        // timeseries
+        renderTsChart(j.timeseries?.days || []);
+        // top serviços
+        renderTopServ(j.top?.servicos || []);
       }catch(e){
-        errMet.style.display='';
+        elTsLoading.style.display='none';
+        elTsCanvas.style.display='none';
+        elTsError.style.display='block';
+        console.error('metrics error', e);
       }
     }
 
-    btnRecompute.addEventListener('click', async ()=>{
-      btnRecompute.disabled = true;
+    function renderTsChart(days){
       try{
-        const r = await postJSON('/api/admin/recompute', {});
-        alert('Recalcular verificações: '+ (r.changed||0)+' alterados.');
-      }catch{ alert('Falha ao recalcular.'); }
-      finally{ btnRecompute.disabled=false; }
-    });
+        elTsLoading.style.display='none';
+        elTsCanvas.style.display='block';
+        const labels = days.map(d => (d.date||'').slice(5));
+        const visitas = days.map(d => d.visitas||0);
+        const chamadas = days.map(d => d.chamadas||0);
+        const cad = days.map(d => d.cadastros||0);
+        if (chartTs) chartTs.destroy();
+        chartTs = new Chart(elTsCanvas.getContext('2d'), {
+          type:'line',
+          data:{ labels, datasets:[
+            { label:'Visitas', data:visitas, tension:.35 },
+            { label:'Chamadas', data:chamadas, tension:.35 },
+            { label:'Cadastros', data:cad, tension:.35 }
+          ]},
+          options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom' } }, scales:{ y:{ beginAtZero:true } } }
+        });
+      }catch(e){
+        elTsCanvas.style.display='none';
+        elTsError.style.display='block';
+        console.error('ts chart error', e);
+      }
+    }
 
-    // ====== Diagnóstico rápido ======
-    btnDiag.addEventListener('click', async ()=>{
+    function renderVerifChart(yes,no){
       try{
-        const [met, sample] = await Promise.allSettled([
-          apiJSON('/api/admin/metrics'),
-          apiJSON('/api/admin/profissionais?limit=1')
-        ]);
-        let txt = '🧪 Diagnóstico\n';
-        if(met.status==='fulfilled'){
-          const m=met.value, days=(m.timeseries?.days||[]).length;
-          const yes = m.verified?.yes ?? m.verificados?.sim ?? 'n/d';
-          txt += `• /metrics OK (dias=${days}, verifYes=${yes})\n`;
-        }else{
-          txt += '• /metrics FALHOU\n';
-        }
-        if(sample.status==='fulfilled'){
-          const d=sample.value;
-          txt += `• /profissionais OK (total=${d.total ?? 'n/d'})\n`;
-        }else{
-          txt += '• /profissionais FALHOU\n';
-        }
-        alert(txt);
-        console.log('[diagnostic]', { metrics: met, list: sample });
-      }catch(_){ alert('Diagnóstico não pôde ser concluído.'); }
-    });
+        const ctx = $('chart-verif').getContext('2d');
+        if (chartVerif) chartVerif.destroy();
+        chartVerif = new Chart(ctx, {
+          type:'doughnut',
+          data:{ labels:['Verificados','Pendentes'], datasets:[{ data:[yes,no] }] },
+          options:{ plugins:{ legend:{ position:'bottom' } } }
+        });
+      }catch(e){ console.error('verif chart error', e); }
+    }
 
-    // ====== Lista de profissionais ======
+    function renderTopServ(list){
+      const el = $('top-serv');
+      el.innerHTML='';
+      if (!list.length){ el.innerHTML = '<li><span class="meta">Sem dados</span><span>—</span></li>'; return; }
+      list.forEach(it=>{
+        const li=document.createElement('li');
+        li.innerHTML = `<strong>${it.name || '—'}</strong><span>${fmt(it.value||0)}</span>`;
+        el.appendChild(li);
+      });
+    }
+
+    // ----- Cidades / Serviços -----
     async function loadCidades(){
       try{
-        const list = await apiJSON('/api/geo/cidades');
-        dlCidades.innerHTML = (list||[]).map(c=>`<option value="${escapeHtml(c)}">`).join('');
-      }catch{}
+        const arr = await apiJSON('/api/geo/cidades');
+        elCity.innerHTML = '<option value="">Todas as cidades</option>' + (arr||[]).map(c=>`<option>${c}</option>`).join('');
+        const arrS = await apiJSON('/api/geo/servicos');
+        elSvc.innerHTML = '<option value="">Todos os serviços</option>' + (arrS||[]).map(s=>`<option>${s}</option>`).join('');
+      }catch(_){
+        elCity.innerHTML='<option value="">Cidades</option>';
+        elSvc.innerHTML='<option value="">Serviços</option>';
+      }
     }
 
+    // ----- Export CSV link -----
     function updateCSVLink(){
-      const qs = new URLSearchParams({
-        q: f_q.value.trim(),
-        cidade: f_cidade.value.trim(),
-        servico: f_serv.value.trim(),
-        verificado: f_verif.value,
-        status: f_status.value,
-        sort: f_sort.value,
-        dir: f_dir.value
-      });
-      btnCSV.href = '/api/admin/export/csv?'+qs.toString();
+      const q = encodeURIComponent(elQ.value||'');
+      const c = encodeURIComponent(elCity.value||'');
+      const s = encodeURIComponent(elSvc.value||'');
+      $('csv_link').href = `/api/admin/export.csv?q=${q}&cidade=${c}&servico=${s}`;
     }
-    [f_q,f_cidade,f_serv,f_verif,f_status,f_sort,f_dir].forEach(el=>{
-      el.addEventListener('change', updateCSVLink);
-      el.addEventListener('input', updateCSVLink);
+    ['input','change'].forEach(ev=>{
+      elQ.addEventListener(ev, updateCSVLink);
+      elCity.addEventListener(ev, updateCSVLink);
+      elSvc.addEventListener(ev, updateCSVLink);
     });
 
-    async function loadList(page=1){
-      PAGE = page;
-      const qs = new URLSearchParams({
-        q: f_q.value.trim(),
-        cidade: f_cidade.value.trim(),
-        servico: f_serv.value.trim(),
-        verificado: f_verif.value,
-        status: f_status.value,
-        sort: f_sort.value,
-        dir: f_dir.value,
-        page: String(PAGE),
-        limit: "20"
-      });
+    // ----- Lista de profissionais -----
+    let listPage=1, listTotal=0, listLimit=20;
+    async function loadList(page){
       try{
-        const data = await apiJSON('/api/admin/profissionais?'+qs.toString());
-        renderList(data);
-        $('errList').style.display='none';
-      }catch{
-        $('errList').style.display='';
-      }
-      updateCSVLink();
-    }
-
-    function renderList(data){
-      const items = data.items||[];
-      tbody.innerHTML = items.map(p=>{
-        const foto = p.foto || '/icons/icon-192.png';
-        const svc  = (p.servico||p.profissao||'');
-        const ver  = p.verificado ? '✅' : '—';
-        const ratingVal = (p.rating!=null) ? Number(p.rating) : null;
-        const ratingStr = (ratingVal!=null) ? ratingVal.toFixed(2) : '—';
-        const isLow = ratingVal!=null && ratingVal<3;
-        const ratingCell = isLow
-          ? `<span class="rating-low" title="Rating baixo — atenção">⚠️ ${ratingStr}</span>`
-          : ratingStr;
-        const statusChip = p.excluido ? '<span class="status-pill">Excluído</span>'
-                           : (p.suspenso ? '<span class="status-pill" style="border-color:#fde68a;background:#fef3c7;color:#92400e">Suspenso</span>' : '');
-        const plano = String(p.plano||'free').toLowerCase();
-        const badgePlano = (plano==='premium') ? '<span class="plan-badge PREMIUM">PREMIUM</span>'
-                           : (plano==='pro' ? '<span class="plan-badge PRO">PRO</span>' : '');
-        const rowClass = isLow ? ' class="low-row"' : '';
-        return `<tr${rowClass}>
-          <td>${p.id}</td>
-          <td>
-            <div class="namecell">
-              <img class="avatar" src="${foto}" alt="Foto de ${escapeHtml(p.nome)}" onerror="this.src='/icons/icon-192.png'">
-              <div>
-                <div style="font-weight:600">${escapeHtml(p.nome)} ${badgePlano}</div>
-                ${statusChip}
-              </div>
-            </div>
-          </td>
-          <td>${escapeHtml(p.cidade||'')}</td>
-          <td>${escapeHtml(p.bairro||'')}</td>
-          <td>${escapeHtml(svc)}</td>
-          <td>${ver}</td>
-          <td>${ratingCell}</td>
-          <td>${p.avalCount||0}</td>
-          <td>${p.visitas||0}</td>
-          <td>${p.chamadas||0}</td>
-          <td class="row">
-            ${p.excluido ? `
-              <button class="btn outline" data-act="restaurar" data-id="${p.id}">Restaurar</button>
-            ` : `
-              ${p.suspenso ? `<button class="btn outline" data-act="ativar" data-id="${p.id}">Ativar</button>`
-                            : `<button class="btn outline" data-act="suspender" data-id="${p.id}">Suspender</button>`}
-              <button class="btn ghost" data-act="excluir" data-id="${p.id}">Excluir</button>
-            `}
-            <a class="btn" href="/profissional/${p.id}" target="_blank" rel="noopener">Abrir</a>
-          </td>
-        </tr>`;
-      }).join('');
-      listInfo.textContent = `Total: ${data.total} • Página ${data.page}/${data.pages}`;
-      PAGES = data.pages;
-      pageInfo.textContent = `${data.page}/${data.pages}`;
-      tbody.querySelectorAll('button[data-act]').forEach(btn=>{
-        btn.addEventListener('click', async ()=>{
-          const id = btn.getAttribute('data-id');
-          const act = btn.getAttribute('data-act');
-          try{
-            if (act==='suspender'){
-              const motivo = prompt('Motivo da suspensão (opcional):','');
-              await postJSON(`/api/admin/profissionais/${id}/suspender`, { motivo });
-            } else if (act==='ativar'){
-              await postJSON(`/api/admin/profissionais/${id}/ativar`, {});
-            } else if (act==='excluir'){
-              if (!confirm('Tem certeza que deseja excluir?')) return;
-              const r = await fetch(`/api/admin/profissionais/${id}`, { method:'DELETE', credentials:'same-origin' });
-              if(!r.ok) throw new Error('HTTP '+r.status);
-            } else if (act==='restaurar'){
-              await postJSON(`/api/admin/profissionais/${id}/restaurar`, {});
-            }
-          }catch(_){ alert('Ação não concluída.'); }
-          loadList(PAGE);
-        });
-      });
-    }
-
-    prev.addEventListener('click', ()=>{ if (PAGE>1) loadList(PAGE-1); });
-    next.addEventListener('click', ()=>{ if (PAGE<PAGES) loadList(PAGE+1); });
-    f_go.addEventListener('click', ()=> loadList(1));
-
-    // ===== Denúncias (admin) =====
-    async function loadDenuncias(page=1){
-      D_PAGE = page;
-      const qs = new URLSearchParams({
-        status: d_status.value,
-        q: d_q.value.trim(),
-        page: String(D_PAGE),
-        limit: "20"
-      });
-      try{
-        const data = await apiJSON('/api/admin/denuncias?'+qs.toString());
-        renderDenuncias(data);
-        errDen.style.display='none';
-      }catch{
-        errDen.style.display='';
+        listPage = Math.max(1, page||1);
+        $('list_body').innerHTML = `<tr><td colspan="8" class="meta">Carregando…</td></tr>`;
+        const q = encodeURIComponent(elQ.value||'');
+        const c = encodeURIComponent(elCity.value||'');
+        const s = encodeURIComponent(elSvc.value||'');
+        const url = `/api/admin/list?page=${listPage}&limit=${listLimit}&q=${q}&cidade=${c}&servico=${s}`;
+        const j = await apiJSON(url);
+        // Espera { ok:true, total, items:[{id,nome,servico,cidade,bairro,plano,verificado,rating}] }
+        if (j.ok!==true){ throw new Error('payload'); }
+        listTotal = j.total||0;
+        $('list_meta').textContent = `${fmt(Math.min((listPage-1)*listLimit+1,listTotal))}–${fmt(Math.min(listPage*listLimit,listTotal))} de ${fmt(listTotal)}`;
+        $('list_body').innerHTML = (j.items||[]).map(p=>(
+          `<tr>
+            <td>${p.id}</td>
+            <td><a href="/profissional/${p.id}" target="_blank" rel="noopener">${p.nome||'—'}</a></td>
+            <td>${p.servico||'—'}</td>
+            <td>${p.cidade||'—'}</td>
+            <td>${p.bairro||'—'}</td>
+            <td>${p.plano||'free'}</td>
+            <td>${p.verificado?'✔':'—'}</td>
+            <td>${Number(p.rating||0).toFixed(2)}</td>
+          </tr>`
+        )).join('') || `<tr><td colspan="8" class="meta">Nenhum resultado.</td></tr>`;
+        $('list_page').textContent = String(listPage);
+      }catch(e){
+        $('list_body').innerHTML = `<tr><td colspan="8" class="error">Falha ao carregar lista.</td></tr>`;
+        console.error('list error', e);
       }
     }
+    $('list_prev').addEventListener('click', ()=> { if (listPage>1) loadList(listPage-1); });
+    $('list_next').addEventListener('click', ()=> {
+      const maxPage = Math.max(1, Math.ceil(listTotal/listLimit));
+      if (listPage < maxPage) loadList(listPage+1);
+    });
 
-    function renderDenuncias(data){
-      const items = data.items||[];
-      tbodyDen.innerHTML = items.map(d=>{
-        const when = (d.createdAt||'').replace('T',' ').slice(0,16);
-        const prof = d.profissional || {};
-        const status = String(d.status||'aberta');
-        const chip = `<span class="chip ${status}">${escapeHtml(status.replace('_',' '))}</span>`;
-        const profIdText = (prof.id!=null) ? ('#'+ String(prof.id)) : '';
-        return `<tr>
-          <td>${d.id}</td>
-          <td><span class="meta">${escapeHtml(when)}</span></td>
-          <td>
-            <div>${profIdText} ${prof.nome ? escapeHtml(prof.nome) : ''}</div>
-            <div class="meta">${escapeHtml(prof.cidade||'')} • ${escapeHtml(prof.bairro||'')}</div>
-          </td>
-          <td>${escapeHtml(d.motivo||'—')}</td>
-          <td>${chip}</td>
-          <td class="den-actions row">
-            <button class="btn outline" data-s="em_analise" data-id="${d.id}">Em análise</button>
-            <button class="btn outline" data-s="resolvida" data-id="${d.id}">Resolvida</button>
-            <button class="btn ghost" data-s="descartada" data-id="${d.id}">Descartar</button>
-          </td>
-        </tr>`;
-      }).join('');
-      denInfo.textContent = `Total: ${data.total} • Página ${data.page}/${data.pages}`;
-      D_PAGES = data.pages;
-      d_pageInfo.textContent = `${data.page}/${data.pages}`;
-      tbodyDen.querySelectorAll('button[data-s]').forEach(btn=>{
-        btn.addEventListener('click', async ()=>{
-          const id = btn.getAttribute('data-id');
-          const status = btn.getAttribute('data-s');
-          try{
-            await postJSON(`/api/admin/denuncias/${id}/status`, { status });
-          }catch(_){ alert('Falha ao atualizar status.'); }
-          loadDenuncias(D_PAGE);
-        });
-      });
-      // resumo lateral
-      const counts = { aberta:0, em_analise:0, resolvida:0, descartada:0 };
-      (data.items||[]).forEach(d=>{
-        const k = String(d.status||'aberta');
-        counts[k] = (counts[k]||0)+1;
-      });
-      $('denResumo').textContent =
-        `Abertas: ${counts.aberta||0} • Em análise: ${counts.em_analise||0} • Resolvidas: ${counts.resolvida||0} • Descartadas: ${counts.descartada||0}`;
+    // ----- Denúncias -----
+    let denPage=1, denTotal=0, denLimit=10;
+    async function loadDenuncias(page){
+      try{
+        denPage = Math.max(1, page||1);
+        const j = await apiJSON(`/api/admin/denuncias?page=${denPage}&limit=${denLimit}`);
+        // Espera { ok:true, total, items:[{id,ts,ip,profId,motivo,msg}] }
+        if (j.ok!==true) throw new Error('payload');
+        denTotal = j.total||0;
+        $('den_page').textContent = String(denPage);
+        const list = (j.items||[]).map(d=>{
+          const when = new Date(d.ts||Date.now()).toLocaleString('pt-BR');
+          const msg = (d.msg||'').replace(/[<>&]/g, s=>({ '<':'&lt;','>':'&gt;','&':'&amp;' }[s]));
+          const motivo = (d.motivo||'—');
+          return `<li>
+            <span class="meta">#${d.id} • ${when} • IP ${d.ip||'—'}</span>
+            <span><a href="/profissional/${d.profId}" target="_blank" rel="noopener">Prof ${d.profId}</a> • ${motivo} — ${msg}</span>
+          </li>`;
+        }).join('');
+        $('den_list').innerHTML = list || `<li><span class="meta">Sem denúncias.</span><span>—</span></li>`;
+      }catch(e){
+        $('den_list').innerHTML = `<li><span class="error">Falha ao carregar denúncias.</span><span>—</span></li>`;
+        console.error('denuncias error', e);
+      }
     }
-    d_prev.addEventListener('click', ()=>{ if (D_PAGE>1) loadDenuncias(D_PAGE-1); });
-    d_next.addEventListener('click', ()=>{ if (D_PAGE<D_PAGES) loadDenuncias(D_PAGE+1); });
-    d_go.addEventListener('click', ()=> loadDenuncias(1));
+    $('den_prev').addEventListener('click', ()=> { if (denPage>1) loadDenuncias(denPage-1); });
+    $('den_next').addEventListener('click', ()=> {
+      const maxPage = Math.max(1, Math.ceil(denTotal/denLimit));
+      if (denPage < maxPage) loadDenuncias(denPage+1);
+    });
 
-    // ===== Pagamentos (últimos) =====
-    function moneyBR(v){
-      const n = Number(v||0);
-      return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
+    // ----- Pagamentos -----
     function renderPayment(p){
-      const id   = escapeHtml(String(p.id||'—'));
-      const pro  = escapeHtml(String(p.proId||'—'));
-      const meth = escapeHtml(String(p.method||'').toUpperCase());  // PIX|CARD
-      const st   = escapeHtml(String(p.status||'—'));               // paid|pending|...
-      const gross= moneyBR(p.amount);
-      const fees = moneyBR(p.fees);
-      const net  = moneyBR(p.net);
-      const when = (p.createdAt||'').replace('T',' ').slice(0,19).replace(/-/g,'/');
+      const when = new Date(p.createdAt||Date.now()).toLocaleString('pt-BR');
+      const gross = money(p.gross||0), fees = money(p.fees||0), net = money(p.net||0);
+      const via = p.method?.toUpperCase?.() || '—';
+      const name = p.name || `Prof #${p.profId||'—'}`;
       return `
-        <div class="kpi" style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
-          <div>
-            <div><strong>Pagamento #${id}</strong> — Pro #${pro}</div>
-            <div class="meta">Data: ${escapeHtml(when)}</div>
-            <div class="row" style="margin-top:6px">
-              <span class="badge">Método <strong>${meth}</strong></span>
-              <span class="badge">Status <strong>${st}</strong></span>
-            </div>
+        <div class="pay-card">
+          <div class="row" style="justify-content:space-between">
+            <div><strong>${name}</strong> • <span class="meta">${when}</span></div>
+            <div class="chip">${via}</div>
           </div>
-          <div style="text-align:right">
-            <div>Bruto: R$ ${gross}</div>
-            <div>Taxas: R$ ${fees}</div>
-            <div><strong>Líquido: R$ ${net}</strong></div>
+          <div class="row" style="margin-top:6px">
+            <div>Bruto: <strong>${gross}</strong></div>
+            <div>Taxas: ${fees}</div>
+            <div>Líquido: <strong>${net}</strong></div>
           </div>
         </div>
       `;
@@ -772,6 +405,13 @@
       await loadDenuncias(1);
       await loadPayments();
     })();
+
+    // SW (mesma política do app)
+    if ('serviceWorker' in navigator){
+      window.addEventListener('load', ()=>{
+        navigator.serviceWorker.register('/sw.js?v=admin-2025-09-11').catch(()=>{});
+      });
+    }
   })();
   </script>
 </body>
