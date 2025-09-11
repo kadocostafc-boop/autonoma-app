@@ -1051,17 +1051,8 @@ app.get("/api/painel/me", (req, res) => {
 });
 
 // Painel HTML com ?token= opcional
+// Painel HTML (somente com sessão válida; sem login por token)
 app.get("/painel.html", (req, res) => {
-  const tokenRaw = req.query.token || "";
-  if (tokenRaw) {
-    const token = ensureBR(onlyDigits(tokenRaw));
-    const db = readDB();
-    const pro = db.find(p => ensureBR(onlyDigits(p.whatsapp)) === token && !p.excluido);
-    if (pro) {
-      req.session.painel = { ok:true, proId: pro.id, when: Date.now() };
-      return res.redirect("/painel.html"); // limpa query
-    }
-  }
   if (!(req.session?.painel?.ok)) return res.redirect("/painel_login.html");
   return res.sendFile(path.join(PUBLIC_DIR, "painel.html"));
 });

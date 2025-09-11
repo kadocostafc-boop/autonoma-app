@@ -8,7 +8,8 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/css/app.css?v=painel-login-2025-09-09r"/>
+  <link rel="stylesheet" href="/css/app.css?v=painel-login-2025-09-11-pin"/>
+
   <style>
     :root{
       --azul-escuro:#0b1f63; --azul:#2D81FF;
@@ -19,19 +20,19 @@
     .page{min-height:100vh;display:flex;flex-direction:column}
     @supports(min-height:100svh){.page{min-height:100svh}}
 
-    /* ===== Header (novo layout) ===== */
+    /* Header */
     .header{background:var(--azul-escuro);color:#fff;display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #0a1a55}
     .header .logo{height:32px;width:auto;display:block}
     .header .spacer{flex:1}
     .header .btn{border:1px solid #ffffff44;background:transparent;color:#fff;padding:8px 12px;border-radius:10px;text-decoration:none;font-weight:800;font-size:14px}
     .header .btn:hover{background:#ffffff18}
 
-    /* ===== Main/Card ===== */
+    /* Main/Card */
     main{flex:1;display:flex;align-items:center;justify-content:center;padding:18px}
     .wrap{width:100%;max-width:980px}
     .card{background:#fff;border:1px solid var(--bd);border-radius:22px;padding:20px;box-shadow:0 8px 24px rgba(0,0,0,.06)}
     .grid{display:grid;grid-template-columns:1fr;gap:16px}
-    @media(min-width:900px){ .grid{grid-template-columns:1.25fr 1fr} }
+    @media(min-width:900px){ .grid{grid-template-columns:1.15fr 1fr} }
 
     .title{margin:0 0 6px;font-size:24px;font-weight:900;color:var(--azul-escuro)}
     .subtitle{margin:0 0 14px;color:var(--mut);font-size:14px}
@@ -41,8 +42,6 @@
     .input:focus{border-color:var(--azul);box-shadow:0 0 0 4px rgba(45,108,223,.2);outline:0}
 
     .row{display:flex;gap:10px;flex-wrap:wrap}
-    .right{display:flex;gap:8px;align-items:flex-end}
-
     .btn{appearance:none;border:none;border-radius:12px;padding:12px 14px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
     .btn-primary{background:var(--azul);color:#fff}
     .btn-ghost{background:#f1f5f9;border:1px solid var(--bd);color:#111827}
@@ -53,20 +52,15 @@
 
     #hint{margin-top:8px;font-size:.95rem}
     #hint.ok{color:var(--ok)} #hint.warn{color:var(--warn)} #hint.err{color:var(--err)}
-
     .preview{font-size:12px;color:#334155;margin-top:4px;min-height:1em}
 
-    #qrBox{display:flex;align-items:center;justify-content:center;min-height:220px;background:#f9fafb;border:1px dashed #e5e7eb;border-radius:12px}
-    .help{display:none;margin-top:8px}
-    .help.show{display:block}
-
-    /* Lado direito (instruções) */
+    /* Instruções */
     .side{background:#f8fafc;border:1px solid var(--bd);border-radius:16px;padding:12px}
     .side h3{margin:0 0 6px;font-size:16px}
     .bullet{display:flex;gap:8px;align-items:flex-start;color:#0b1f63}
     .bullet span{color:#111827}
 
-    /* ===== Footer ===== */
+    /* Footer */
     footer{background:var(--azul-escuro);color:#cde1ff;padding:10px 8px;border-top:1px solid #0a1a55}
     .foot-links{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
     .foot-links a{color:#cde1ff;font-size:13px;text-decoration:none}
@@ -81,9 +75,7 @@
   <div class="page">
     <!-- Header -->
     <header class="header" role="banner" aria-label="Cabeçalho">
-      <a href="/" aria-label="Início">
-        <img src="/img/logo.png" alt="Autônoma.app" class="logo" onerror="this.style.display='none'">
-      </a>
+      <a href="/" aria-label="Início"><img src="/img/logo.png" alt="Autônoma.app" class="logo" onerror="this.style.display='none'"></a>
       <div class="spacer"></div>
       <a class="btn" href="/clientes.html">Cliente</a>
     </header>
@@ -91,58 +83,42 @@
     <!-- Main -->
     <main class="wrap" role="main">
       <div class="card">
-        <h1 class="title">Entrar no painel <span class="badge">acesso por token</span></h1>
+        <h1 class="title">Entrar no painel <span class="badge">acesso com PIN</span></h1>
         <p class="subtitle">
-          Informe seu WhatsApp (com DDD). Vamos gerar um <strong>link</strong> e um <strong>QR</strong> para criar a sessão.
-          Se estiver em loop no celular, abra o link no <b>navegador padrão</b> (Chrome/Safari).
+          Digite seu <b>WhatsApp (com DDD)</b> e seu <b>PIN</b>. No primeiro acesso,
+          se você ainda não tiver um PIN, o código que você digitar será
+          <b>cadastrado como seu PIN</b>.
         </p>
 
         <div class="grid">
-          <!-- Coluna esquerda -->
+          <!-- Esquerda: formulário -->
           <div>
-            <div class="row">
-              <div style="flex:1 1 260px">
-                <label for="whats">WhatsApp (somente números — com ou sem 55)</label>
-                <input id="whats" class="input" inputmode="numeric" autocomplete="tel" placeholder="21987654321"/>
-                <label for="pin">PIN (6 dígitos)</label>
-<input id="pin" name="pin" type="password" inputmode="numeric" pattern="\d{6}" minlength="6" maxlength="6" placeholder="******" required />
-                <div id="pretty" class="preview"></div>
-              </div>
-              <div class="right">
-                <button id="btnLink" class="btn btn-primary" type="button">Gerar link &amp; QR</button>
-                <button id="btnEntrar" class="btn btn-ghost" type="button" title="Abrir o painel agora com o token">Entrar agora</button>
-              </div>
+            <label for="whats">WhatsApp (somente números — com ou sem 55)</label>
+            <input id="whats" class="input" inputmode="numeric" autocomplete="tel" placeholder="21987654321"/>
+
+            <div id="pretty" class="preview"></div>
+
+            <label for="pin">PIN (6 dígitos)</label>
+            <input id="pin" name="pin" type="password" inputmode="numeric" pattern="\d{6}" minlength="6" maxlength="6" placeholder="******" class="input" required />
+
+            <div class="row" style="margin-top:10px">
+              <button id="btnEntrar" class="btn btn-primary" type="button">Entrar</button>
+              <button id="btnMostrarPin" class="btn btn-ghost" type="button" aria-pressed="false">Mostrar PIN</button>
             </div>
 
-            <div id="hint" class="muted"></div>
-            <div id="loopHelp" class="help small">
-              Dica: se ao abrir o link você voltar para esta tela, pode ser bloqueio de cookies no WebView do app.
-              Use o navegador (Chrome/Safari) ou abra em aba anônima.
-            </div>
-
-            <div style="margin-top:12px" class="row">
-              <div style="flex:1 1 320px">
-                <div id="qrBox" aria-live="polite">O QR aparecerá aqui após gerar o link.</div>
-                <div class="row" style="margin-top:10px">
-                  <button id="btnCheck" class="btn btn-dark" type="button" title="Confere se a sessão foi criada corretamente">Verificar sessão</button>
-                  <button id="btnShare" class="btn btn-ghost" type="button" title="Compartilhar link" style="display:none">Compartilhar</button>
-                </div>
-                <p id="sessOut" class="small muted" style="margin-top:6px"></p>
-              </div>
-            </div>
+            <div id="hint" class="muted" aria-live="polite"></div>
           </div>
 
-          <!-- Coluna direita (instruções) -->
+          <!-- Direita: instruções -->
           <aside class="side">
             <h3>Como funciona</h3>
-            <div class="bullet">✅ <span>Informe seu número do WhatsApp com DDD.</span></div>
-            <div class="bullet">🔗 <span>Geramos um link para <code>/painel.html?token=SEU_WHATSAPP</code>.</span></div>
-            <div class="bullet">📱 <span>Abra esse link no celular onde vai usar o painel (via QR/compartilhar).</span></div>
-            <div class="bullet">🔐 <span>Ao abrir, a sessão é criada e você é redirecionado para <code>/painel.html</code>.</span></div>
+            <div class="bullet">✅ <span>Informe seu número do WhatsApp com DDD (apenas números).</span></div>
+            <div class="bullet">🔐 <span>Digite um <b>PIN de 6 dígitos</b>. Se for seu primeiro acesso, esse PIN será cadastrado para você.</span></div>
+            <div class="bullet">🔁 <span>Nos próximos logins, use o <b>mesmo PIN</b>.</span></div>
+            <div class="bullet">🧠 <span>Esqueceu o PIN? Fale com o suporte para redefinição.</span></div>
             <hr style="border:none;border-top:1px solid #e5e7eb;margin:10px 0">
             <p class="muted small">
-              Android: prefira abrir no <b>Chrome</b>.<br/>
-              iPhone: abra no <b>Safari</b> (não dentro de outros apps).
+              Dica: use o navegador padrão (Chrome/Safari). Cookies precisam estar habilitados.
             </p>
           </aside>
         </div>
@@ -163,155 +139,104 @@
     </footer>
   </div>
 
+  <!-- Script do login com PIN -->
   <script>
   (function(){
-    // ---------- helpers ----------
-    const $ = sel => document.querySelector(sel);
-    const whatsEl = $('#whats');
-    const hintEl  = $('#hint');
-    const prettyEl= $('#pretty');
-    const qrBox   = $('#qrBox');
-    const sessOut = $('#sessOut');
-    const btnShare= $('#btnShare');
+    const $ = (id)=> document.getElementById(id);
 
-    const NO_STORE = { cache:'no-store' };
-    const ts = () => 'ts=' + Date.now();
-
-    function hint(msg, tone){
-      hintEl.textContent = msg || '';
-      hintEl.className = '';
-      hintEl.id = 'hint';
-      if (tone) hintEl.classList.add(tone);
-    }
-
-    // normalização (front) — servidor também normaliza
+    // helpers de visual / formatação
     function onlyDigits(s){ return String(s||'').replace(/\D/g,''); }
-    function ensureBR(d){
-      if (!d) return '';
-      if (d.startsWith('55')) return d;
-      if (d.length===10 || d.length===11) return '55'+d;
-      return d;
-    }
+    function ensureBR(d){ if(!d) return ''; if(d.startsWith('55')) return d; if(d.length===10||d.length===11) return '55'+d; return d; }
     function pretty(d55){
       if(!/^\d{12,13}$/.test(d55)) return '';
       const cc=d55.slice(0,2), ddd=d55.slice(2,4), rest=d55.slice(4);
-      return rest.length===9
-        ? `+${cc} (${ddd}) ${rest.slice(0,5)}-${rest.slice(5)}`
-        : `+${cc} (${ddd}) ${rest.slice(0,4)}-${rest.slice(4)}`;
+      return rest.length===9 ? `+${cc} (${ddd}) ${rest.slice(0,5)}-${rest.slice(5)}` : `+${cc} (${ddd}) ${rest.slice(0,4)}-${rest.slice(4)}`;
     }
     function updatePretty(){
-      const raw = onlyDigits(whatsEl.value);
+      const raw = onlyDigits($('whats').value);
       const with55 = ensureBR(raw);
       const p = pretty(with55);
-      prettyEl.textContent = p ? ('Formato: '+p) : '';
+      $('pretty').textContent = p ? ('Formato: '+p) : '';
     }
-    whatsEl.addEventListener('input', updatePretty);
-    whatsEl.addEventListener('blur', updatePretty);
+    $('whats').addEventListener('input', updatePretty);
+    $('whats').addEventListener('blur', updatePretty);
 
-    function buildLink(tokenDigits){
-      const base = location.origin || (location.protocol + '//' + location.host);
-      return base + '/painel.html?token=' + encodeURIComponent(tokenDigits);
+    function setHint(msg, tone){
+      const el = $('hint');
+      el.textContent = msg || '';
+      el.className = 'muted';
+      if (tone) el.classList.add(tone);
     }
 
-    // ---------- QR + Link ----------
-    async function gerarLinkEQR(){
-      const raw = onlyDigits(whatsEl.value);
-      if (!raw){
-        hint('Informe seu WhatsApp com DDD.', 'warn');
-        whatsEl.focus();
+    async function apiJSON(url, opts){
+      const r = await fetch(url, { credentials:'same-origin', ...opts });
+      const ct = r.headers.get('content-type') || '';
+      let body=null;
+      try{ body = ct.includes('application/json') ? await r.json() : await r.text(); }catch{}
+      return { ok:r.ok, status:r.status, body };
+    }
+
+    // Mostrar / ocultar PIN
+    $('btnMostrarPin').addEventListener('click', ()=>{
+      const ip = $('pin');
+      const isPwd = ip.type === 'password';
+      ip.type = isPwd ? 'text' : 'password';
+      $('btnMostrarPin').textContent = isPwd ? 'Ocultar PIN' : 'Mostrar PIN';
+      $('btnMostrarPin').setAttribute('aria-pressed', String(isPwd));
+      ip.focus();
+    });
+
+    // Entrar / Cadastrar PIN
+    $('btnEntrar').addEventListener('click', async ()=>{
+      const phone = onlyDigits($('whats').value);
+      const pin   = String($('pin').value||'').trim();
+
+      if (!phone){ setHint('Informe seu WhatsApp com DDD.', 'warn'); $('whats').focus(); return; }
+      if (!/^\d{6}$/.test(pin)){ setHint('PIN precisa ter 6 dígitos.', 'warn'); $('pin').focus(); return; }
+
+      setHint('Verificando…');
+
+      // tenta login normal
+      const r = await apiJSON('/api/painel/login', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ phone, pin })
+      });
+
+      // 409 => não tem PIN ainda: cadastrar com este PIN
+      if (r.status === 409) {
+        const s = await apiJSON('/api/painel/set-pin', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json' },
+          body: JSON.stringify({ pin })
+        });
+        if (!s.ok){ setHint('Não foi possível definir o PIN. Tente novamente.', 'err'); return; }
+        location.href = '/painel.html';
         return;
       }
-      const link = buildLink(raw);
 
-      // copia link quando possível
-      try{
-        await navigator.clipboard.writeText(link);
-        hint('Link copiado. Escaneie o QR ou use “Entrar agora”.', 'ok');
-      }catch{
-        hint('Link: ' + link, 'warn');
-      }
-
-      // QR com cache-buster
-      const img = new Image();
-      img.width = 220; img.height = 220; img.alt = 'QR de acesso';
-      img.onload = ()=>{ qrBox.innerHTML=''; qrBox.appendChild(img); };
-      img.onerror = ()=>{ qrBox.textContent='QR indisponível'; };
-      img.src = '/api/qr?text=' + encodeURIComponent(link) + '&' + ts();
-
-      // compartilhamento nativo (se suportado)
-      if (navigator.share){
-        btnShare.style.display = '';
-        btnShare.onclick = async ()=>{
-          try{
-            await navigator.share({ title:'Autônoma • Painel', text:'Acesse seu painel com este link:', url: link });
-          }catch{}
+      if (!r.ok){
+        const err = (r.body && r.body.error) || 'erro';
+        const map = {
+          phone_required: 'Informe o número do WhatsApp.',
+          not_found: 'WhatsApp não encontrado.',
+          pin_required: 'Informe seu PIN de 6 dígitos.',
+          pin_invalid: 'PIN incorreto.',
+          pin_invalid_format: 'PIN precisa ter 6 dígitos.',
+          pin_not_set: 'Defina seu PIN e tente novamente.'
         };
-      }
-
-      // salva última tentativa (para dicas)
-      try{ localStorage.setItem('aut_last_token', raw); }catch{}
-    }
-
-    function entrarAgora(){
-      const raw = onlyDigits(whatsEl.value);
-      if (!raw){
-        hint('Informe seu WhatsApp com DDD.', 'warn');
-        whatsEl.focus();
+        setHint(map[err] || 'Falha no login.', 'err');
         return;
       }
-      try{ localStorage.setItem('aut_last_token', raw); }catch{}
-      location.href = buildLink(raw); // servidor cria a sessão e redireciona para /painel.html
-    }
 
-    // ---------- Verificar sessão ----------
-    async function verificarSessao(){
-      sessOut.textContent = 'Verificando sessão…';
-      try{
-        const r = await fetch('/api/painel/me?'+ts(), NO_STORE);
-        if (!r.ok){
-          sessOut.textContent = 'Não logado ainda. Abra o link/QR no mesmo navegador (Chrome/Safari) e tente novamente.';
-          return;
-        }
-        const js = await r.json();
-        if (js && js.ok){
-          sessOut.textContent = 'Sessão OK! Abrindo painel…';
-          setTimeout(()=> location.href = '/painel.html', 400);
-        }else{
-          sessOut.textContent = 'Não logado ainda. Se abriu o link e voltou, pode ser bloqueio de cookies do app. Abra no navegador.';
-        }
-      }catch{
-        sessOut.textContent = 'Falha ao verificar. Tente novamente.';
-      }
-    }
+      // login OK
+      location.href = '/painel.html';
+    });
 
-    // ---------- Cookies / Loop help ----------
-    function testFirstPartyCookies(){
-      try{
-        document.cookie = 'aut_test=1; Path=/';
-        const ok = document.cookie.indexOf('aut_test=1') !== -1;
-        document.cookie = 'aut_test=; Path=/; Max-Age=0';
-        return ok;
-      }catch{ return false; }
-    }
-    function showLoopHelpIfNeeded(){
-      try{
-        if(localStorage.getItem('aut_last_token')) document.getElementById('loopHelp').classList.add('show');
-      }catch{}
-      if (!testFirstPartyCookies()){
-        hint('Seu navegador está bloqueando cookies. Abra em outro navegador ou aba anônima.', 'warn');
-        document.getElementById('loopHelp').classList.add('show');
-      }
-    }
-
-    // ---------- binds ----------
-    document.getElementById('btnLink').addEventListener('click', gerarLinkEQR);
-    document.getElementById('btnEntrar').addEventListener('click', entrarAgora);
-    document.getElementById('btnCheck').addEventListener('click', verificarSessao);
-
-    // PWA (mantém padrão do site)
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=painel-login-2025-09-09r').catch(()=>{});
+    // PWA (mesma política do site)
+    if ('serviceWorker' in navigator){
+      window.addEventListener('load', ()=>{
+        navigator.serviceWorker.register('/sw.js?v=painel-login-2025-09-11-pin').catch(()=>{});
       });
       let reloaded=false;
       navigator.serviceWorker.addEventListener('controllerchange', ()=>{
@@ -319,15 +244,8 @@
       });
     }
 
-    // Compat: ?ok=1 -> ir para /painel (fluxo antigo)
-    const params = new URLSearchParams(location.search);
-    if (params.get('ok') === '1') {
-      location.replace('/painel');
-    }
-
     // start
-    whatsEl.focus({preventScroll:true});
-    showLoopHelpIfNeeded();
+    $('whats').focus({preventScroll:true});
     updatePretty();
   })();
   </script>
