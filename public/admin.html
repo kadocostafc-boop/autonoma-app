@@ -8,7 +8,8 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/css/app.css?v=admin-2025-09-11"/>
+  <link rel="stylesheet" href="/css/app.css?v=admin-2025-09-12"/>
+
   <style>
     :root{
       --azul-escuro:#0b1f63; --azul:#2D81FF;
@@ -26,6 +27,7 @@
     .btn-ghost{background:#f1f5f9;border:1px solid var(--bd);color:#111827}
     .btn-danger{background:#fee2e2;border:1px solid #fecaca;color:#991b1b}
     .btn-primary{background:var(--azul);color:#fff}
+    .btn-small{padding:6px 10px;font-weight:700;border-radius:10px;font-size:12px}
     main{flex:1;padding:18px}
     .container{max-width:1150px;margin:0 auto}
     .grid{display:grid;gap:14px}
@@ -52,12 +54,23 @@
     .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
     .input{padding:10px;border:1px solid #d1d5db;border-radius:10px}
     .table{width:100%;border-collapse:collapse}
-    .table th,.table td{padding:8px;border-bottom:1px solid #eef2f7;text-align:left;font-size:14px}
+    .table th,.table td{padding:8px;border-bottom:1px solid #eef2f7;text-align:left;font-size:14px;vertical-align:middle}
     .table th{color:var(--mut);font-weight:800}
     .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px}
-    canvas{max-width:100%;height:auto;min-height:240px}
     .pay-card{border:1px solid var(--bd);border-radius:14px;padding:10px;margin-bottom:10px}
+    /* Mini charts em linha */
+    .mini-charts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .mini-chart-wrap{display:flex;align-items:center;gap:10px}
+    .mini-chart-wrap canvas{width:220px;max-width:100%;height:72px}
+    .mini-chart-legend{min-width:90px}
+    @media (max-width: 860px){
+      .mini-charts{grid-template-columns:1fr}
+      .mini-chart-wrap canvas{height:90px}
+    }
+    .badge-low{background:#fff7ed;border:1px solid #fed7aa;color:#c2410c;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:700}
+    .badge-susp{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:999px;padding:3px 8px;font-size:12px;font-weight:700}
   </style>
+
   <!-- Chart.js -->
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
@@ -78,6 +91,7 @@
 
     <main>
       <div class="container">
+
         <!-- Filtros rápidos -->
         <div class="card">
           <div class="toolbar">
@@ -98,14 +112,36 @@
         </div>
 
         <div class="grid columns-2" style="margin-top:14px">
-          <!-- Série 30 dias -->
+          <!-- Mini gráficos horizontais -->
           <div class="card">
             <h2>Últimos 30 dias</h2>
-            <div id="ts-loading" class="loading">Carregando gráfico…</div>
-            <canvas id="chart-ts" style="display:none"></canvas>
+            <div id="ts-loading" class="loading">Carregando…</div>
+
+            <div id="mini-charts" class="mini-charts" style="display:none">
+              <div class="mini-chart-wrap">
+                <div class="mini-chart-legend">
+                  <div class="chip">Visitas</div>
+                </div>
+                <canvas id="chart-visits"></canvas>
+              </div>
+              <div class="mini-chart-wrap">
+                <div class="mini-chart-legend">
+                  <div class="chip">Chamadas</div>
+                </div>
+                <canvas id="chart-calls"></canvas>
+              </div>
+              <div class="mini-chart-wrap">
+                <div class="mini-chart-legend">
+                  <div class="chip">QRs</div>
+                </div>
+                <canvas id="chart-qrs"></canvas>
+              </div>
+            </div>
+
             <p id="ts-error" class="error" style="display:none">Falha ao carregar séries.</p>
           </div>
-          <!-- Verificados + Top serviços -->
+
+          <!-- Verificados -->
           <div class="card">
             <h2>Verificados</h2>
             <div class="row" style="align-items:center">
@@ -115,10 +151,6 @@
                 <div class="chip"><span id="v-no">—</span> pendentes</div>
               </div>
             </div>
-            <h2 style="margin-top:14px">Top Serviços</h2>
-            <ul id="top-serv" class="list">
-              <li><span class="meta">Carregando…</span><span>—</span></li>
-            </ul>
           </div>
         </div>
 
@@ -128,8 +160,13 @@
           <div class="meta" id="list_meta">—</div>
           <div class="table-wrap" style="overflow:auto">
             <table class="table" id="list_tbl">
-              <thead><tr><th>ID</th><th>Nome</th><th>Serviço</th><th>Cidade</th><th>Bairro</th><th>Plano</th><th>Verif.</th><th>⭐</th></tr></thead>
-              <tbody id="list_body"><tr><td colspan="8" class="meta">Carregando…</td></tr></tbody>
+              <thead>
+                <tr>
+                  <th>ID</th><th>Nome</th><th>Serviço</th><th>Cidade</th><th>Bairro</th>
+                  <th>Plano</th><th>Verif.</th><th>⭐</th><th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="list_body"><tr><td colspan="9" class="meta">Carregando…</td></tr></tbody>
             </table>
           </div>
           <div class="pager">
@@ -162,6 +199,7 @@
             <div class="meta">Carregando…</div>
           </div>
         </div>
+
       </div>
     </main>
 
@@ -171,6 +209,7 @@
   <script>
   (function(){
     const $ = (id)=> document.getElementById(id);
+
     // ----- Helpers -----
     function fmt(n){ return (n??0).toLocaleString('pt-BR'); }
     function money(n){ return (n??0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
@@ -181,6 +220,7 @@
       if (ct.includes('application/json')) return r.json();
       return r.text();
     }
+    function esc(s=''){ return String(s).replace(/[<>&"]/g, m=>({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[m])); }
 
     // ----- Controles -----
     const elQ = $('q'), elCity = $('city'), elSvc = $('svc');
@@ -194,56 +234,64 @@
     // ----- KPIs / Métricas -----
     const elAtivos=$('kpi-ativos'), elSuspensos=$('kpi-suspensos'), elExcluidos=$('kpi-excluidos'), elMedia=$('kpi-media');
     const elVYes=$('v-yes'), elVNo=$('v-no');
-    const elTsLoading=$('ts-loading'), elTsCanvas=$('chart-ts'), elTsError=$('ts-error');
-    let chartTs=null, chartVerif=null;
+    const elTsLoading=$('ts-loading'), elMiniWrap=$('mini-charts'), elTsError=$('ts-error');
+    let chartVerif=null, cVisits=null, cCalls=null, cQrs=null;
+
+    function tinyLine(canvas, labels, data){
+      const ctx = canvas.getContext('2d');
+      return new Chart(ctx, {
+        type:'line',
+        data:{ labels, datasets:[{ data, tension:.35, pointRadius:0, borderWidth:2 }] },
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{ display:false }, tooltip:{ intersect:false, mode:'index' } },
+          scales:{
+            x:{ display:false }, y:{ display:false, beginAtZero:true }
+          }
+        }
+      });
+    }
 
     async function loadMetrics(){
       try{
         const j = await apiJSON('/api/admin/metrics');
-        // Espera { ok:true, ativos, suspensos, excluidos, mediaGeral, verified:{yes,no}, timeseries:{days:[{date,visitas,chamadas,cadastros}]}, top:{servicos:[{name,value}]}}
+        // Esperado: { ok:true, counters:{ total, ativos, suspensos, excluidos, verificados, mediaRating }, last30:[{day,visits,calls,qrs}] }
         if (j.ok !== true) throw new Error('payload');
-        elAtivos.textContent = fmt(j.ativos);
-        elSuspensos.textContent = fmt(j.suspensos);
-        elExcluidos.textContent = fmt(j.excluidos);
-        elMedia.textContent = Number(j.mediaGeral||0).toFixed(2);
-        // verificados
-        const vy = Number(j.verified?.yes||0), vn = Number(j.verified?.no||0);
-        elVYes.textContent = fmt(vy); elVNo.textContent = fmt(vn);
-        renderVerifChart(vy, vn);
-        // timeseries
-        renderTsChart(j.timeseries?.days || []);
-        // top serviços
-        renderTopServ(j.top?.servicos || []);
+
+        const c = j.counters || {};
+        elAtivos.textContent   = fmt(c.ativos||0);
+        elSuspensos.textContent= fmt(c.suspensos||0);
+        elExcluidos.textContent= fmt(c.excluidos||0);
+        elMedia.textContent    = Number(c.mediaRating||0).toFixed(2);
+
+        const verifYes = c.verificados||0;
+        const verifNo  = Math.max(0, (c.total||0) - verifYes);
+        elVYes.textContent = fmt(verifYes);
+        elVNo.textContent  = fmt(verifNo);
+        renderVerifChart(verifYes, verifNo);
+
+        const days = j.last30 || [];
+        const labels = days.map(d => String(d.day||'').slice(5));
+        const visits = days.map(d => d.visits||0);
+        const calls  = days.map(d => d.calls ||0);
+        const qrs    = days.map(d => d.qrs   ||0);
+
+        elTsLoading.style.display='none';
+        elMiniWrap.style.display='grid';
+
+        if (cVisits) cVisits.destroy();
+        if (cCalls)  cCalls.destroy();
+        if (cQrs)    cQrs.destroy();
+
+        cVisits = tinyLine($('chart-visits'), labels, visits);
+        cCalls  = tinyLine($('chart-calls'),  labels, calls);
+        cQrs    = tinyLine($('chart-qrs'),    labels, qrs);
+
       }catch(e){
         elTsLoading.style.display='none';
-        elTsCanvas.style.display='none';
+        elMiniWrap.style.display='none';
         elTsError.style.display='block';
         console.error('metrics error', e);
-      }
-    }
-
-    function renderTsChart(days){
-      try{
-        elTsLoading.style.display='none';
-        elTsCanvas.style.display='block';
-        const labels = days.map(d => (d.date||'').slice(5));
-        const visitas = days.map(d => d.visitas||0);
-        const chamadas = days.map(d => d.chamadas||0);
-        const cad = days.map(d => d.cadastros||0);
-        if (chartTs) chartTs.destroy();
-        chartTs = new Chart(elTsCanvas.getContext('2d'), {
-          type:'line',
-          data:{ labels, datasets:[
-            { label:'Visitas', data:visitas, tension:.35 },
-            { label:'Chamadas', data:chamadas, tension:.35 },
-            { label:'Cadastros', data:cad, tension:.35 }
-          ]},
-          options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom' } }, scales:{ y:{ beginAtZero:true } } }
-        });
-      }catch(e){
-        elTsCanvas.style.display='none';
-        elTsError.style.display='block';
-        console.error('ts chart error', e);
       }
     }
 
@@ -259,24 +307,13 @@
       }catch(e){ console.error('verif chart error', e); }
     }
 
-    function renderTopServ(list){
-      const el = $('top-serv');
-      el.innerHTML='';
-      if (!list.length){ el.innerHTML = '<li><span class="meta">Sem dados</span><span>—</span></li>'; return; }
-      list.forEach(it=>{
-        const li=document.createElement('li');
-        li.innerHTML = `<strong>${it.name || '—'}</strong><span>${fmt(it.value||0)}</span>`;
-        el.appendChild(li);
-      });
-    }
-
     // ----- Cidades / Serviços -----
     async function loadCidades(){
       try{
         const arr = await apiJSON('/api/geo/cidades');
-        elCity.innerHTML = '<option value="">Todas as cidades</option>' + (arr||[]).map(c=>`<option>${c}</option>`).join('');
+        elCity.innerHTML = '<option value="">Todas as cidades</option>' + (arr||[]).map(c=>`<option>${esc(c)}</option>`).join('');
         const arrS = await apiJSON('/api/geo/servicos');
-        elSvc.innerHTML = '<option value="">Todos os serviços</option>' + (arrS||[]).map(s=>`<option>${s}</option>`).join('');
+        elSvc.innerHTML = '<option value="">Todos os serviços</option>' + (arrS||[]).map(s=>`<option>${esc(s)}</option>`).join('');
       }catch(_){
         elCity.innerHTML='<option value="">Cidades</option>';
         elSvc.innerHTML='<option value="">Serviços</option>';
@@ -296,36 +333,91 @@
       elSvc.addEventListener(ev, updateCSVLink);
     });
 
-    // ----- Lista de profissionais -----
+    // ----- Lista de profissionais (com ações) -----
     let listPage=1, listTotal=0, listLimit=20;
     async function loadList(page){
       try{
         listPage = Math.max(1, page||1);
-        $('list_body').innerHTML = `<tr><td colspan="8" class="meta">Carregando…</td></tr>`;
+        $('list_body').innerHTML = `<tr><td colspan="9" class="meta">Carregando…</td></tr>`;
         const q = encodeURIComponent(elQ.value||'');
         const c = encodeURIComponent(elCity.value||'');
         const s = encodeURIComponent(elSvc.value||'');
-        const url = `/api/admin/list?page=${listPage}&limit=${listLimit}&q=${q}&cidade=${c}&servico=${s}`;
+        // Vamos usar o endpoint completo com paginação/filtros
+        const url = `/api/admin/profissionais?page=${listPage}&limit=${listLimit}&q=${q}&cidade=${c}&servico=${s}&status=all`;
         const j = await apiJSON(url);
-        // Espera { ok:true, total, items:[{id,nome,servico,cidade,bairro,plano,verificado,rating}] }
         if (j.ok!==true){ throw new Error('payload'); }
+
         listTotal = j.total||0;
         $('list_meta').textContent = `${fmt(Math.min((listPage-1)*listLimit+1,listTotal))}–${fmt(Math.min(listPage*listLimit,listTotal))} de ${fmt(listTotal)}`;
-        $('list_body').innerHTML = (j.items||[]).map(p=>(
-          `<tr>
-            <td>${p.id}</td>
-            <td><a href="/profissional/${p.id}" target="_blank" rel="noopener">${p.nome||'—'}</a></td>
-            <td>${p.servico||'—'}</td>
-            <td>${p.cidade||'—'}</td>
-            <td>${p.bairro||'—'}</td>
-            <td>${p.plano||'free'}</td>
-            <td>${p.verificado?'✔':'—'}</td>
-            <td>${Number(p.rating||0).toFixed(2)}</td>
-          </tr>`
-        )).join('') || `<tr><td colspan="8" class="meta">Nenhum resultado.</td></tr>`;
+
+        const rows = (j.items||[]).map(p=>{
+          const low = Number(p.rating||0) < 3.0;
+          const alerts = [];
+          if (low) alerts.push('<span class="badge-low" title="Média abaixo de 3.0">⚠️ baixa</span>');
+          if (p.suspenso) alerts.push('<span class="badge-susp" title="Conta suspensa">suspenso</span>');
+          const alertsHTML = alerts.length? `<div class="row">${alerts.join('')}</div>` : '';
+
+          // Botões conforme status
+          let actions = [];
+          if (p.excluido){
+            actions.push(`<button class="btn btn-small btn-primary" data-act="restaurar" data-id="${p.id}">Restaurar</button>`);
+          } else {
+            if (p.suspenso){
+              actions.push(`<button class="btn btn-small btn-primary" data-act="ativar" data-id="${p.id}">Ativar</button>`);
+            } else {
+              actions.push(`<button class="btn btn-small btn-ghost" data-act="suspender" data-id="${p.id}">Suspender</button>`);
+            }
+            actions.push(`<button class="btn btn-small btn-danger" data-act="excluir" data-id="${p.id}">Excluir</button>`);
+          }
+
+          return `
+            <tr>
+              <td>${p.id}</td>
+              <td>
+                <a href="/profissional/${p.id}" target="_blank" rel="noopener">${esc(p.nome||'—')}</a>
+                ${alertsHTML}
+              </td>
+              <td>${esc(p.servico||'—')}</td>
+              <td>${esc(p.cidade||'—')}</td>
+              <td>${esc(p.bairro||'—')}</td>
+              <td>${esc(p.plano||'free')}</td>
+              <td>${p.verificado?'✔':'—'}</td>
+              <td>${Number(p.rating||0).toFixed(2)}</td>
+              <td class="row" style="gap:6px">${actions.join('')}</td>
+            </tr>
+          `;
+        }).join('');
+
+        $('list_body').innerHTML = rows || `<tr><td colspan="9" class="meta">Nenhum resultado.</td></tr>`;
         $('list_page').textContent = String(listPage);
+
+        // Bind actions
+        $('list_body').querySelectorAll('button[data-act]').forEach(btn=>{
+          btn.addEventListener('click', async ()=>{
+            const id = Number(btn.getAttribute('data-id'));
+            const act = btn.getAttribute('data-act');
+            try{
+              if (act==='suspender'){
+                const motivo = prompt('Motivo da suspensão (opcional):') || '';
+                await apiJSON(`/api/admin/profissionais/${id}/suspender`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({motivo}) });
+              } else if (act==='ativar'){
+                await apiJSON(`/api/admin/profissionais/${id}/ativar`, { method:'POST' });
+              } else if (act==='excluir'){
+                if (!confirm('Tem certeza que deseja excluir este profissional?')) return;
+                await apiJSON(`/api/admin/profissionais/${id}`, { method:'DELETE' });
+              } else if (act==='restaurar'){
+                await apiJSON(`/api/admin/profissionais/${id}/restaurar`, { method:'POST' });
+              }
+              await loadList(listPage);
+            }catch(e){
+              alert('Falha na ação ('+act+'). Ver console.');
+              console.error('admin action error', e);
+            }
+          });
+        });
+
       }catch(e){
-        $('list_body').innerHTML = `<tr><td colspan="8" class="error">Falha ao carregar lista.</td></tr>`;
+        $('list_body').innerHTML = `<tr><td colspan="9" class="error">Falha ao carregar lista.</td></tr>`;
         console.error('list error', e);
       }
     }
@@ -341,17 +433,17 @@
       try{
         denPage = Math.max(1, page||1);
         const j = await apiJSON(`/api/admin/denuncias?page=${denPage}&limit=${denLimit}`);
-        // Espera { ok:true, total, items:[{id,ts,ip,profId,motivo,msg}] }
         if (j.ok!==true) throw new Error('payload');
         denTotal = j.total||0;
         $('den_page').textContent = String(denPage);
         const list = (j.items||[]).map(d=>{
-          const when = new Date(d.ts||Date.now()).toLocaleString('pt-BR');
-          const msg = (d.msg||'').replace(/[<>&]/g, s=>({ '<':'&lt;','>':'&gt;','&':'&amp;' }[s]));
-          const motivo = (d.motivo||'—');
+          const when = new Date(d.createdAt||Date.now()).toLocaleString('pt-BR');
+          const proId = d?.profissional?.id || d.profId || d.id || '—';
+          const nome  = d?.profissional?.nome || ('Prof '+proId);
+          const motivo = esc(d.motivo||'—');
           return `<li>
-            <span class="meta">#${d.id} • ${when} • IP ${d.ip||'—'}</span>
-            <span><a href="/profissional/${d.profId}" target="_blank" rel="noopener">Prof ${d.profId}</a> • ${motivo} — ${msg}</span>
+            <span class="meta">#${d.id} • ${when}</span>
+            <span><a href="/profissional/${proId}" target="_blank" rel="noopener">${esc(nome)}</a> • ${motivo}</span>
           </li>`;
         }).join('');
         $('den_list').innerHTML = list || `<li><span class="meta">Sem denúncias.</span><span>—</span></li>`;
@@ -369,13 +461,15 @@
     // ----- Pagamentos -----
     function renderPayment(p){
       const when = new Date(p.createdAt||Date.now()).toLocaleString('pt-BR');
-      const gross = money(p.gross||0), fees = money(p.fees||0), net = money(p.net||0);
-      const via = p.method?.toUpperCase?.() || '—';
-      const name = p.name || `Prof #${p.profId||'—'}`;
+      const gross = money(p.amount||p.gross||0),
+            fees  = money(p.appFee||p.fees||0),
+            net   = money(p.toPro||p.net||0);
+      const via = (p.method||'').toUpperCase() || '—';
+      const name = p.proName || `Prof #${p.proId||'—'}`;
       return `
         <div class="pay-card">
           <div class="row" style="justify-content:space-between">
-            <div><strong>${name}</strong> • <span class="meta">${when}</span></div>
+            <div><strong>${esc(name)}</strong> • <span class="meta">${when}</span></div>
             <div class="chip">${via}</div>
           </div>
           <div class="row" style="margin-top:6px">
@@ -388,7 +482,8 @@
     }
     async function loadPayments(){
       try{
-        const arr = await apiJSON('/api/admin/payments?limit=10');
+        const q = await apiJSON('/api/admin/payments?limit=10');
+        const arr = Array.isArray(q?.items) ? q.items : (Array.isArray(q)?q:[]);
         $('pay_list').innerHTML = (arr||[]).map(renderPayment).join('') || '<div class="meta">Nenhum pagamento ainda.</div>';
       }catch(e){
         $('pay_list').innerHTML = '<div class="warn">Falha ao carregar pagamentos.</div>';
@@ -409,7 +504,7 @@
     // SW (mesma política do app)
     if ('serviceWorker' in navigator){
       window.addEventListener('load', ()=>{
-        navigator.serviceWorker.register('/sw.js?v=admin-2025-09-11').catch(()=>{});
+        navigator.serviceWorker.register('/sw.js?v=admin-2025-09-12').catch(()=>{});
       });
     }
   })();
