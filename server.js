@@ -995,13 +995,48 @@ app.get("/api/top10", (req,res)=>{
   res.json({ ok:true, week: weekKey(), items:list });
 });
 // ===== WhatsApp sender (STUB) =====
-// Troque este stub por integração real (Meta WhatsApp Cloud API / provedor)
-// Por enquanto, só loga o texto. Isso já habilita o fluxo de reset.
+// Envio real via Meta WhatsApp Cloud API
+// Configure variáveis de ambiente: WA_TOKEN, WA_PHONE_ID
 async function sendWhatsAppMessage(toDigits55, text){
-  console.log("[WHATSAPP][STUB] ->", toDigits55, "MSG:", text);
-  // TODO: integrar com a API real (por ex. Meta Cloud API)
-  return true;
+  try{
+    const token   = process.env.WA_TOKEN;     // ex: EAAG... (permanent token)
+    const phoneId = process.env.WA_PHONE_ID;  // ex: 123456789012345
+
+    if (!token || !phoneId) {
+      console.warn("[WHATSAPP] Faltam WA_TOKEN/WA_PHONE_ID — usando STUB");
+      console.log("[WHATSAPP][STUB] ->", toDigits55, "MSG:", text);
+      return true;
+    }
+
+    const url = `https://graph.facebook.com/v20.0/${phoneId}/messages`;
+    const payload = {
+      messaging_product: "whatsapp",
+      to: toDigits55,
+      type: "text",
+      text: { body: text }
+    };
+
+    const r = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!r.ok) {
+      const body = await r.text();
+      console.error("[WHATSAPP] Erro", r.status, body);
+      return false;
+    }
+    return true;
+  }catch(e){
+    console.error("[WHATSAPP] Exception", e);
+    return false;
+  }
 }
+
 function random6(){ return String(Math.floor(100000 + Math.random()*900000)); }
 // ========= Reset de PIN por WhatsApp =========
 

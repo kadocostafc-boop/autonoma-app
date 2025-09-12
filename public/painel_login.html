@@ -90,7 +90,15 @@
           <div class="row">
             <div style="flex:1 1 260px">
               <label for="whats">WhatsApp (somente números — com ou sem 55)</label>
-              <input id="whats" class="input" inputmode="numeric" autocomplete="tel" placeholder="21987654321"/>
+              <input id="whats"
+       name="phone"
+       class="input"
+       inputmode="numeric"
+       autocomplete="off"
+       autocapitalize="off"
+       spellcheck="false"
+       placeholder="21987654321"
+       value="" />
               <div id="pretty" class="preview"></div>
 
               <label for="pin">PIN (6 dígitos)</label>
