@@ -994,6 +994,83 @@ app.get("/api/top10", (req,res)=>{
              }));
   res.json({ ok:true, week: weekKey(), items:list });
 });
+// ===== WhatsApp sender (STUB) =====
+// Troque este stub por integração real (Meta WhatsApp Cloud API / provedor)
+// Por enquanto, só loga o texto. Isso já habilita o fluxo de reset.
+async function sendWhatsAppMessage(toDigits55, text){
+  console.log("[WHATSAPP][STUB] ->", toDigits55, "MSG:", text);
+  // TODO: integrar com a API real (por ex. Meta Cloud API)
+  return true;
+}
+function random6(){ return String(Math.floor(100000 + Math.random()*900000)); }
+// ========= Reset de PIN por WhatsApp =========
+
+// 1) Solicitar código: cria um token 6 dígitos e envia via WhatsApp
+app.post("/api/painel/reset-pin/request", async (req,res)=>{
+  try{
+    const phoneRaw = String(req.body?.phone||"").trim();
+    const phoneDigits = ensureBR(onlyDigits(phoneRaw));
+    if (!/^\d{12,13}$/.test(phoneDigits)){
+      return res.status(400).json({ ok:false, error:"phone_required" });
+    }
+    const db = readDB();
+    const p = db.find(x => ensureBR(onlyDigits(x.whatsapp||"")) === phoneDigits && !x.excluido);
+    if (!p) return res.status(404).json({ ok:false, error:"not_found" });
+
+    const code = random6();
+    const expiresAt = Date.now() + 10*60*1000; // 10 minutos
+    p.pinReset = { code, expiresAt, sentAt: Date.now() };
+    writeDB(db);
+
+    const msg = `Autônoma.app\nSeu código para redefinir PIN é: ${code}\nVálido por 10 minutos.\nSe não foi você, ignore.`;
+    await sendWhatsAppMessage(phoneDigits, msg);
+
+    res.json({ ok:true });
+  }catch(e){
+    res.status(500).json({ ok:false, error:String(e) });
+  }
+});
+// 2) Confirmar reset: valida código e define novo PIN
+app.post("/api/painel/reset-pin/confirm", (req,res)=>{
+  try{
+    const phoneRaw = String(req.body?.phone||"").trim();
+    const code = String(req.body?.code||"").trim();
+    const newPin = String(req.body?.newPin||"").trim();
+
+    const phoneDigits = ensureBR(onlyDigits(phoneRaw));
+    if (!/^\d{12,13}$/.test(phoneDigits)) return res.status(400).json({ ok:false, error:"phone_required" });
+    if (!/^\d{6}$/.test(code)) return res.status(400).json({ ok:false, error:"code_invalid" });
+    if (!/^\d{6}$/.test(newPin)) return res.status(400).json({ ok:false, error:"pin_invalid_format" });
+
+    const db = readDB();
+    const p = db.find(x => ensureBR(onlyDigits(x.whatsapp||"")) === phoneDigits && !x.excluido);
+    if (!p) return res.status(404).json({ ok:false, error:"not_found" });
+
+    const pr = p.pinReset || {};
+    if (!pr.code || !pr.expiresAt) return res.status(400).json({ ok:false, error:"no_request" });
+    if (Date.now() > Number(pr.expiresAt)) return res.status(400).json({ ok:false, error:"code_expired" });
+    if (String(pr.code) !== code) return res.status(400).json({ ok:false, error:"code_invalid" });
+
+    // define novo PIN
+    const saltRounds = 10;
+    try{
+      p.pinHash = bcrypt.hashSync(newPin, saltRounds);
+    }catch(e){
+      return res.status(500).json({ ok:false, error:"hash_error" });
+    }
+    p.mustSetPin = false;
+    p.pinReset = null;
+    writeDB(db);
+
+    // cria sessão painel
+    if (!req.session) req.session = {};
+    req.session.painel = { ok:true, proId: p.id, when: Date.now() };
+
+    res.json({ ok:true });
+  }catch(e){
+    res.status(500).json({ ok:false, error:String(e) });
+  }
+});
 // =====================[ Painel do Profissional ]================
 app.get("/api/painel/me", (req, res) => {
   try {
@@ -1072,7 +1149,7 @@ app.post("/api/painel/login", loginLimiter, (req, res) => {
     if (!pro.pinHash) {
       pro.mustSetPin = true;
       writeDB(db);
-      return res.status(403).json({ ok:false, error:"pin_not_set", needPinSetup:true });
+      return res.status(409).json({ ok:false, error:"pin_not_set", needPinSetup:true });
     }
 
     // formato do PIN
