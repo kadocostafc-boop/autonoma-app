@@ -69,6 +69,47 @@ app.get("/wa/test", async (req, res) => {
   await sendWhatsAppTemplate("5521971891276"); // seu número pessoal
   res.send("Mensagem de teste (TEMPLATE) enviada para o seu WhatsApp!");
 });
+// rota para enviar mensagem com template aprovado
+app.get("/wa/template", async (req, res) => {
+  const url = `https://graph.facebook.com/v22.0/${process.env.WA_PHONE_ID}/messages`;
+
+  const body = {
+    messaging_product: "whatsapp",
+    to: "5521971891276", // coloque o seu número com DDI 55
+    type: "template",
+    template: {
+      name: "teste_autonoma", // nome do modelo aprovado
+      language: { code: "pt_BR" },
+      components: [
+        {
+          type: "body",
+          parameters: [
+            { type: "text", text: "Kadu" } // valor que entra no {{nome}}
+          ]
+        }
+      ]
+    }
+  };
+
+  try {
+    const r = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.WA_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+
+    const data = await r.json();
+    console.log("[WHATSAPP][RESP]", data);
+
+    res.send("✅ Mensagem template enviada! Veja seu WhatsApp.");
+  } catch (err) {
+    console.error("[WHATSAPP][ERRO]", err);
+    res.status(500).send("Erro ao enviar template");
+  }
+});
 // =========================[ Config ]==========================
 const HOST = "0.0.0.0";
 const BASE_PORT = Number(process.env.PORT || 3000);
