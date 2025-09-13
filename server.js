@@ -69,6 +69,48 @@ app.get("/wa/test", async (req, res) => {
   await sendWhatsAppTemplate("5521971891276"); // seu número pessoal
   res.send("Mensagem de teste (TEMPLATE) enviada para o seu WhatsApp!");
 });
+app.get("/wa/template", async (req, res) => {
+  try {
+    const to = (req.query.to || "5521971891276").replace(/\D/g, "");
+    const url = `https://graph.facebook.com/v22.0/${process.env.WA_PHONE_ID}/messages`;
+
+    const payload = {
+      messaging_product: "whatsapp",
+      to,
+      type: "template",
+      template: {
+        name: "teste_autonoma",        // nome EXATO do template
+        language: { code: "pt_BR" },   // idioma exato do template
+        components: [
+          {
+            type: "body",
+            parameters: [
+              { type: "text", text: "Kadu" }  // aqui preenche {{nome}}
+            ]
+          }
+        ]
+      }
+    };
+
+    const r = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.WA_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const body = await r.json();
+    console.log("[WHATSAPP][RESP]", r.status, body);
+
+    if (!r.ok) return res.status(500).send("Falha ao enviar template. Veja os logs.");
+    res.send("✅ Mensagem template enviada! Veja seu WhatsApp.");
+  } catch (e) {
+    console.error(e);
+    res.status(500).send("Erro interno.");
+  }
+});
 // rota para enviar mensagem com template aprovado
 app.get("/wa/template", async (req, res) => {
   const url = `https://graph.facebook.com/v22.0/${process.env.WA_PHONE_ID}/messages`;
