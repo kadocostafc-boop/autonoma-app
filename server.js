@@ -33,6 +33,39 @@ const cookieParser = require("cookie-parser");
 
 const app = express();
 app.set("trust proxy", 1);
+// ====================== WhatsApp Cloud API Test ======================
+async function sendWhatsAppTest(to) {
+  const url = `https://graph.facebook.com/v22.0/${process.env.WA_PHONE_ID}/messages`;
+
+  const body = {
+    messaging_product: "whatsapp",
+    to: to, // número destino no formato E.164 (ex: 5521971891276)
+    type: "text",
+    text: { body: "🚀 Teste Autonoma.app direto do server.js!" },
+  };
+
+  try {
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.WA_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await resp.json();
+    console.log("[WHATSAPP][RESP]", data);
+  } catch (err) {
+    console.error("[WHATSAPP][ERRO]", err);
+  }
+}
+
+// rota de teste: acesse /wa/test no navegador
+app.get("/wa/test", async (req, res) => {
+  await sendWhatsAppTest("5521971891276"); // aqui coloque seu número pessoal
+  res.send("Mensagem de teste enviada para o seu WhatsApp!");
+});
 
 // =========================[ Config ]==========================
 const HOST = "0.0.0.0";
