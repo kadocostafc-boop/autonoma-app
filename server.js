@@ -16,7 +16,9 @@
 // - Respeita .env: PRIMARY_HOST, FORCE_HTTPS, SECURE_COOKIES, REDIRECTS_DISABLED, DATA_DIR
 // ============================================================================
 require("dotenv").config();
-
+console.log("[BOOT] WA_TOKEN len:", process.env.WA_TOKEN?.length || 0);
+console.log("[BOOT] WA_PHONE_ID:", process.env.WA_PHONE_ID || "(vazio)");
+console.log("[BOOT] WA_BUSINESS_ID:", process.env.WA_BUSINESS_ID || "(vazio)");
 const express = require("express");
 const session = require("express-session");
 const multer  = require("multer");
@@ -995,23 +997,23 @@ app.get("/api/top10", (req,res)=>{
   res.json({ ok:true, week: weekKey(), items:list });
 });
 // ===== WhatsApp sender (STUB) =====
-// Envio real via Meta WhatsApp Cloud API
-// Configure variáveis de ambiente: WA_TOKEN, WA_PHONE_ID
-async function sendWhatsAppMessage(toDigits55, text){
-  try{
-    const token   = process.env.WA_TOKEN;     // ex: EAAG... (permanent token)
-    const phoneId = process.env.WA_PHONE_ID;  // ex: 123456789012345
+// ========= Envio real via WhatsApp Cloud API =========
+
+async function sendWhatsAppMessage(toDigits55, text) {
+  try {
+    const token   = process.env.WA_TOKEN;     // token permanente
+    const phoneId = process.env.WA_PHONE_ID;  // phone number ID
 
     if (!token || !phoneId) {
-      console.warn("[WHATSAPP] Faltam WA_TOKEN/WA_PHONE_ID — usando STUB");
+      console.warn("[WHATSAPP] Faltam variáveis WA_TOKEN/WA_PHONE_ID — usando stub");
       console.log("[WHATSAPP][STUB] ->", toDigits55, "MSG:", text);
       return true;
     }
 
-    const url = `https://graph.facebook.com/v20.0/${phoneId}/messages`;
+    const url = `https://graph.facebook.com/v22.0/${phoneId}/messages`;
     const payload = {
       messaging_product: "whatsapp",
-      to: toDigits55,
+      to: toDigits55,   // número de destino em formato E.164 (ex: 5521971891276)
       type: "text",
       text: { body: text }
     };
@@ -1030,8 +1032,10 @@ async function sendWhatsAppMessage(toDigits55, text){
       console.error("[WHATSAPP] Erro", r.status, body);
       return false;
     }
+
+    console.log("[WHATSAPP] Enviado com sucesso para", toDigits55);
     return true;
-  }catch(e){
+  } catch (e) {
     console.error("[WHATSAPP] Exception", e);
     return false;
   }
