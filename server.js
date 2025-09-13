@@ -34,14 +34,18 @@ const cookieParser = require("cookie-parser");
 const app = express();
 app.set("trust proxy", 1);
 // ====================== WhatsApp Cloud API Test ======================
-async function sendWhatsAppTest(to) {
+// ====================== WhatsApp Cloud API Test ======================
+async function sendWhatsAppTemplate(to) {
   const url = `https://graph.facebook.com/v22.0/${process.env.WA_PHONE_ID}/messages`;
 
   const body = {
     messaging_product: "whatsapp",
-    to: to, // número destino no formato E.164 (ex: 5521971891276)
-    type: "text",
-    text: { body: "🚀 Teste Autonoma.app direto do server.js!" },
+    to, // número destino no formato E.164 (ex: 5521971891276)
+    type: "template",
+    template: {
+      name: "hello_world",            // template padrão aprovado pela Meta
+      language: { code: "en_US" }     // en_US é garantido para o hello_world
+    }
   };
 
   try {
@@ -53,20 +57,18 @@ async function sendWhatsAppTest(to) {
       },
       body: JSON.stringify(body),
     });
-
     const data = await resp.json();
-    console.log("[WHATSAPP][RESP]", data);
+    console.log("[WHATSAPP][RESP]", resp.status, data);
   } catch (err) {
     console.error("[WHATSAPP][ERRO]", err);
   }
 }
 
-// rota de teste: acesse /wa/test no navegador
+// rota de teste: acessando /wa/test envia o template para seu número pessoal
 app.get("/wa/test", async (req, res) => {
-  await sendWhatsAppTest("5521971891276"); // aqui coloque seu número pessoal
-  res.send("Mensagem de teste enviada para o seu WhatsApp!");
+  await sendWhatsAppTemplate("5521971891276"); // seu número pessoal
+  res.send("Mensagem de teste (TEMPLATE) enviada para o seu WhatsApp!");
 });
-
 // =========================[ Config ]==========================
 const HOST = "0.0.0.0";
 const BASE_PORT = Number(process.env.PORT || 3000);
