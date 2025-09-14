@@ -1,4 +1,6 @@
-<!doctype html><html lang="pt-BR"><head>
+<!doctype html>
+<html lang="pt-BR">
+<head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Perfil do Profissional • Autônoma.app</title>
@@ -94,6 +96,7 @@
 
       <section class="card-soft">
         <h2 class="title">Sobre o profissional</h2>
+
         <div class="list" style="margin-bottom:10px">
           <div class="item"><span class="muted">Preço base</span><strong id="precoBase">—</strong></div>
           <div class="item"><span class="muted">Site/Catálogo</span><strong><a id="site" href="#" target="_blank" rel="noopener">—</a></strong></div>
@@ -108,7 +111,6 @@
 
         <h3 class="title">Avaliações</h3>
         <div id="reviews" class="list"></div>
-        <!-- Removido: "Ainda não há avaliações" -->
         <p id="diag" class="meta" style="display:none"></p>
       </section>
     </div>
@@ -128,7 +130,6 @@
   <script>
   (function(){
     const DEBUG = false;
-
     const $ = s => document.querySelector(s);
     const esc = s => String(s||"").replace(/[&<>"]/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m]));
     const kmFmt = d => (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${Number(d).toFixed(d<10?1:0)} km`));
@@ -158,7 +159,12 @@
     const getFavs=()=>{ try{return JSON.parse(localStorage.getItem(KEY_FAVS)||'[]')}catch{return[]} };
     const setFavs=v=>{ try{localStorage.setItem(KEY_FAVS, JSON.stringify(v||[]))}catch{} };
     const isFav=pid=> getFavs().some(x=> String(x?.id)===String(pid));
-    function upsertFav(obj){ const arr=getFavs(); const i=arr.findIndex(x=>String(x?.id)===String(obj.id)); if(i>=0) arr[i]={...arr[i],...obj}; else arr.push(obj); setFavs(arr); }
+    function upsertFav(obj){
+      const arr=getFavs();
+      const i=arr.findIndex(x=>String(x?.id)===String(obj.id));
+      if(i>=0) arr[i]={...arr[i],...obj}; else arr.push(obj);
+      setFavs(arr);
+    }
     function removeFav(pid){ setFavs(getFavs().filter(x=> String(x?.id)!==String(pid))); }
 
     // Distância
@@ -302,6 +308,7 @@
         else { waBtn.classList.add('outline'); waBtn.textContent='WhatsApp indisponível'; waBtn.removeAttribute('href'); }
 
         $('#btnAval').href = buildAvalLink(id);
+
         if (isFav(id)) $('#btnFav').classList.add('on');
 
         const inline = pickInlineReviews(PROF);
@@ -313,7 +320,9 @@
         }
       }catch(e){
         const box = document.getElementById('flash');
-        box.textContent = 'Não foi possível carregar o perfil.'; box.className='card-soft msg warn'; box.style.display='';
+        box.textContent = 'Não foi possível carregar o perfil.';
+        box.className='card-soft msg warn';
+        box.style.display='';
         setDiag('Init erro: '+e.message);
       }
     }
@@ -357,7 +366,7 @@
 
     document.getElementById('btnRec').addEventListener('click', async ()=>{
       document.getElementById('btnRec').classList.add('on');
-      document.getElementById('msgActions').textContent = 'Obrigado! Recomendação registrada.';
+      document.getElementById('msgActions').textContent = 'Obrigado! Recomendação registrado.';
       document.getElementById('msgActions').className = 'msg ok';
       try{
         await fetch('/api/recomendacoes',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) });

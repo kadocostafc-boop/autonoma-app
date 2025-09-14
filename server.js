@@ -111,7 +111,72 @@ app.get("/wa/template", async (req, res) => {
     res.status(500).send("Erro interno.");
   }
 });
+// ===== Envio de template de PIN (WhatsApp) =====
+// Usa o template de autenticação "pin_login" (pt_BR) com 1 variável ({{1}} = código)
 
+async function sendPinTemplate(toDigits55, code) {
+  const url = `https://graph.facebook.com/v22.0/${process.env.WA_PHONE_ID}/messages`;
+
+  const payload = {
+    messaging_product: "whatsapp",
+    to: String(toDigits55),
+    type: "template",
+    template: {
+      name: "pin_login",            // NOME EXATO do template
+      language: { code: "pt_BR" },  // IDIOMA EXATO
+      components: [
+        {
+          type: "body",
+          parameters: [
+            { type: "text", text: String(code) } // preenche {{1}}
+          ]
+        }
+      ]
+    }
+  };
+
+  const r = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${process.env.WA_TOKEN}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const body = await r.json();
+  console.log("[WHATSAPP][TEMPLATE][RESP]", r.status, body);
+
+  // se template não estiver aprovado ainda, tenta fallback em texto simples
+  if (!r.ok) {
+    const txt = `Autônoma.app\nSeu código para entrar é: ${code}\nNão compartilhe.`;
+    console.warn("[WHATSAPP] Template falhou — enviando fallback TEXT");
+    await sendWhatsAppMessage(toDigits55, txt);
+    return false;
+  }
+  return true;
+}
+
+// ===== Rota de teste manual (GET /wa/pin?to=55DDDNUMERO&code=123456) =====
+app.get("/wa/pin", async (req, res) => {
+  try {
+    const to = String((req.query.to || "")).replace(/\D/g, "");
+    const code = String((req.query.code || "")).replace(/\D/g, "");
+
+    if (!/^\d{12,13}$/.test(to)) {
+      return res.status(400).send("Parâmetro ?to=55DDDNUMERO inválido.");
+    }
+    if (!/^\d{4,8}$/.test(code)) {
+      return res.status(400).send("Parâmetro ?code= deve ser numérico (4–8 dígitos).");
+    }
+
+    const ok = await sendPinTemplate(to, code);
+    res.send(ok ? "✅ Template enviado (veja seu WhatsApp)." : "⚠️ Enviado via fallback de texto.");
+  } catch (e) {
+    console.error(e);
+    res.status(500).send("Erro interno.");
+  }
+});
 // ====================== WhatsApp: enviar TEMPLATE aprovado ======================
 app.get("/wa/template", async (req, res) => {
   try {
