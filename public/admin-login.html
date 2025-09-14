@@ -21,10 +21,12 @@
     .title{margin:0 0 6px;font-size:24px;font-weight:900;color:var(--azul-escuro)}
     .subtitle{margin:0 0 14px;color:var(--mut);font-size:14px}
     label{display:block;font-weight:700;margin:10px 0 6px}
+    .row{display:flex;gap:8px;align-items:center}
     .input{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:12px;background:#fff;font-size:15px}
     .input:focus{border-color:var(--azul);box-shadow:0 0 0 4px rgba(45,108,223,.2);outline:0}
     .btn{appearance:none;border:none;border-radius:12px;padding:12px 14px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
     .btn-primary{background:var(--azul);color:#fff;width:100%;margin-top:12px}
+    .btn-ghost{background:#f1f5f9;border:1px solid var(--bd);color:#111827}
     .msg{font-size:14px;margin-top:8px}
     .msg.ok{color:var(--ok)} .msg.err{color:var(--err)} .msg.warn{color:var(--warn)}
     footer{background:var(--azul-escuro);color:#cde1ff;padding:10px 8px;border-top:1px solid #0a1a55}
@@ -48,12 +50,33 @@
         <p class="subtitle">Use as credenciais de administrador para acessar.</p>
 
         <!-- IMPORTANTE: envia para o backend -->
-        <form id="f" method="POST" action="/admin/login" novalidate>
+        <form id="f" method="POST" action="/admin/login" novalidate autocomplete="off">
           <label for="user">Usuário</label>
-          <input id="user" name="user" class="input" placeholder="seu usuário" autocomplete="username" required>
+          <input id="user"
+                 name="user"
+                 class="input"
+                 placeholder="seu usuário"
+                 autocomplete="off"
+                 autocapitalize="off"
+                 spellcheck="false"
+                 inputmode="text"
+                 value=""
+                 required>
 
           <label for="pass">Senha</label>
-          <input id="pass" name="password" type="password" class="input" placeholder="••••••••" autocomplete="current-password" required>
+          <div class="row">
+            <input id="pass"
+                   name="password"
+                   type="password"
+                   class="input"
+                   placeholder="••••••••"
+                   autocomplete="off"
+                   autocapitalize="off"
+                   spellcheck="false"
+                   inputmode="text"
+                   required>
+            <button id="toggle" class="btn btn-ghost" type="button" aria-controls="pass" aria-label="Mostrar/ocultar senha">Mostrar</button>
+          </div>
 
           <button id="btn" class="btn btn-primary" type="submit">Entrar</button>
           <p id="status" class="msg" aria-live="polite"></p>
@@ -78,47 +101,60 @@
   (function(){
     const form = document.getElementById('f');
     const statusEl = document.getElementById('status');
-    function setStatus(msg, kind){ statusEl.textContent = msg||''; statusEl.className = 'msg ' + (kind||''); }
+    const userEl = document.getElementById('user');
+    const passEl = document.getElementById('pass');
+    const toggle = document.getElementById('toggle');
+
+    // garante que não vem nada pré-preenchido
+    try { userEl.value = ''; passEl.value = ''; } catch {}
+
+    function setStatus(msg, kind){
+      statusEl.textContent = msg||'';
+      statusEl.className = 'msg ' + (kind||'');
+    }
+
+    toggle.addEventListener('click', ()=>{
+      passEl.type = passEl.type === 'password' ? 'text' : 'password';
+      toggle.textContent = passEl.type === 'password' ? 'Mostrar' : 'Ocultar';
+    });
 
     form.addEventListener('submit', async (ev)=>{
       ev.preventDefault();
       setStatus('Autenticando…', 'warn');
 
       const fd = new FormData(form);
-      // Envia para o backend (usa ADMIN_USER/ADMIN_PASS do .env no servidor)
+      const payload = new URLSearchParams({
+        user: String(fd.get('user')||'').trim(),
+        password: String(fd.get('password')||'')
+      });
+
       try{
         const resp = await fetch(form.action, {
           method: 'POST',
-          body: new URLSearchParams({
-            user: String(fd.get('user')||'').trim(),
-            password: String(fd.get('password')||'')
-          }),
+          body: payload,
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           redirect: 'manual',          // não seguir 302 pelo fetch
           credentials: 'include'       // pegar cookie de sessão
         });
 
-        // O servidor responde 302 Redirect em sucesso. Trate como sucesso:
+        // Sucesso típico: 302 (redirect)
         if (resp.status === 302 || resp.type === 'opaqueredirect') {
           setStatus('✔ Acesso autorizado. Redirecionando…', 'ok');
           window.location.href = '/admin.html';
           return;
         }
 
-        // Alguns hosts podem devolver 200 com o HTML de erro. Tente ler texto:
-        const text = await resp.text();
+        // Alguns hosts podem devolver 200 com HTML do painel -> tratar como ok
         if (resp.ok) {
-          // Se por algum motivo vier 200 ok (ex.: proxy), vamos ao painel:
           window.location.href = '/admin.html';
           return;
         }
 
-        // Erro conhecido (401 com página HTML simples do server.js)
+        const text = await resp.text();
         if (resp.status === 401 || /Login inválido/i.test(text)) {
           setStatus('Usuário ou senha incorretos.', 'err');
           return;
         }
-
         setStatus('Falha ao autenticar. Tente novamente.', 'err');
       }catch(e){
         setStatus('Erro de rede. Verifique sua conexão e tente novamente.', 'err');
@@ -127,7 +163,9 @@
 
     // Service Worker (opcional)
     if ('serviceWorker' in navigator){
-      window.addEventListener('load', ()=>{ navigator.serviceWorker.register('/sw.js?v=admin-login-2025-09-11').catch(()=>{}); });
+      window.addEventListener('load', ()=>{
+        navigator.serviceWorker.register('/sw.js?v=admin-login-2025-09-11').catch(()=>{});
+      });
     }
   })();
   </script>
