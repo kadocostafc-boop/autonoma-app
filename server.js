@@ -111,45 +111,62 @@ app.get("/wa/template", async (req, res) => {
     res.status(500).send("Erro interno.");
   }
 });
-// rota para enviar mensagem com template aprovado
+
+// ====================== WhatsApp: enviar TEMPLATE aprovado ======================
 app.get("/wa/template", async (req, res) => {
-  const url = `https://graph.facebook.com/v22.0/${process.env.WA_PHONE_ID}/messages`;
-
-  const body = {
-    messaging_product: "whatsapp",
-    to: "5521971891276", // coloque o seu número com DDI 55
-    type: "template",
-    template: {
-      name: "teste_autonoma", // nome do modelo aprovado
-      language: { code: "pt_BR" },
-      components: [
-        {
-          type: "body",
-          parameters: [
-            { type: "text", text: "Kadu" } // valor que entra no {{nome}}
-          ]
-        }
-      ]
-    }
-  };
-
   try {
+    // destino: usa ?to=55219XXXXXXX ou cai no padrão
+    const to = String(req.query.to || "5521971891276").replace(/\D/g, "");
+
+    const url = `https://graph.facebook.com/v22.0/${process.env.WA_PHONE_ID}/messages`;
+
+    // payload EXACTO para modelo "teste_autonoma" (pt_BR) com {{nome}}
+    const payload = {
+      messaging_product: "whatsapp",
+      to,
+      type: "template",
+      template: {
+        name: "teste_autonoma",
+        language: { code: "pt_BR" },
+        components: [
+          {
+            type: "body",
+            parameters: [
+              { type: "text", text: "Kadu" } // valor que entra no {{nome}}
+            ]
+          }
+        ]
+      }
+    };
+
+    // Logs de diagnóstico
+    console.log("[WHATSAPP][REQ]", JSON.stringify(payload));
+    console.log("[WHATSAPP][ENV] PHONE_ID:", process.env.WA_PHONE_ID, "TOKEN_LEN:", (process.env.WA_TOKEN||"").length);
+
     const r = await fetch(url, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${process.env.WA_TOKEN}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(payload)
     });
 
-    const data = await r.json();
-    console.log("[WHATSAPP][RESP]", data);
+    const body = await r.json();
+    console.log("[WHATSAPP][RESP]", r.status, body);
+
+    if (!r.ok) {
+      // Mostra dica comum quando dá (#100) Invalid parameter
+      if (body?.error?.code === 100) {
+        console.error("[WHATSAPP] Dica: confirme name=teste_autonoma, language=pt_BR e o parâmetro {{nome}}.");
+      }
+      return res.status(500).send("Falha ao enviar template. Veja os logs.");
+    }
 
     res.send("✅ Mensagem template enviada! Veja seu WhatsApp.");
-  } catch (err) {
-    console.error("[WHATSAPP][ERRO]", err);
-    res.status(500).send("Erro ao enviar template");
+  } catch (e) {
+    console.error("[WHATSAPP][ERROR]", e);
+    res.status(500).send("Erro interno.");
   }
 });
 // =========================[ Config ]==========================
