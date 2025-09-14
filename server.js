@@ -33,6 +33,68 @@ const cookieParser = require("cookie-parser");
 
 const app = express();
 app.set("trust proxy", 1);
+// --- Helpers de "banco" (JSON em /data) ---
+const fs = require('fs');
+const DATA_FILE = process.env.DATA_FILE || '/data/profissionais.json';
+
+function loadDB() {
+  try {
+    const raw = fs.readFileSync(DATA_FILE, 'utf8');
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+function saveDB(arr) {
+  try {
+    fs.mkdirSync(require('path').dirname(DATA_FILE), { recursive: true });
+    fs.writeFileSync(DATA_FILE, JSON.stringify(arr, null, 2), 'utf8');
+  } catch {}
+}
+
+// --- GET: lista avaliações do profissional (mais recentes primeiro) ---
+app.get('/api/profissional/:id/avaliacoes', (req, res) => {
+  const id = String(req.params.id);
+  const db = loadDB();
+  const prof = db.find(p => String(p.id) === id);
+  if (!prof) return res.status(404).json({ ok:false, error:'Profissional não encontrado' });
+
+  const list = Array.isArray(prof.avaliacoes) ? prof.avaliacoes : [];
+  // normaliza e ordena
+  const norm = list.map(a => ({
+    nome: a.nome || a.autor || a.cliente || 'Cliente',
+    nota: Number(a.nota ?? a.rating ?? a.estrelas ?? a.score ?? 0),
+    texto: a.texto || a.comentario || a.comment || a.mensagem || '',
+    ts: a.ts || a.createdAt || a.data || Date.now()
+  })).sort((a,b) => Number(b.ts) - Number(a.ts));
+
+  res.json(norm);
+});
+
+// --- POST: cria nova avaliação (usado pela tela /avaliar) ---
+app.post('/api/profissional/:id/avaliar', express.json(), (req, res) => {
+  const id = String(req.params.id);
+  const { nome, nota, texto } = req.body || {};
+  if (!texto && (nota == null)) {
+    return res.status(400).json({ ok:false, error:'Informe ao menos texto ou nota' });
+  }
+
+  const db = loadDB();
+  const prof = db.find(p => String(p.id) === id);
+  if (!prof) return res.status(404).json({ ok:false, error:'Profissional não encontrado' });
+
+  if (!Array.isArray(prof.avaliacoes)) prof.avaliacoes = [];
+  prof.avaliacoes.push({
+    nome: String(nome || 'Cliente'),
+    nota: Number(nota ?? 0),
+    texto: String(texto || ''),
+    ts: Date.now()
+  });
+
+  saveDB(db);
+  res.json({ ok:true });
+});
 // ====================== WhatsApp Cloud API Test ======================
 // ====================== WhatsApp Cloud API Test ======================
 async function sendWhatsAppTemplate(to) {
@@ -2291,7 +2353,34 @@ app.get("/api/admin/_dump_all", requireAdmin, (_req,res)=>{
   res.setHeader("Content-Type","application/json; charset=utf-8");
   res.send(JSON.stringify(dump,null,2));
 });
+// === Rotas de avaliações ===
+app.get('/api/profissional/:id/avaliacoes', (req, res) => {
+  const id = String(req.params.id);
+  const db = loadDB();
+  const pro = db.find(x => String(x.id) === id);
+  if (!pro) return res.json([]);
+  res.json(pro.avaliacoes || []);
+});
 
+app.post('/api/profissional/:id/avaliar', express.json(), (req, res) => {
+  const id = String(req.params.id);
+  const db = loadDB();
+  const pro = db.find(x => String(x.id) === id);
+  if (!pro) return res.status(404).json({ok:false, msg:'Profissional não encontrado'});
+  
+  const { nome, nota, texto } = req.body || {};
+  if (!texto && !nota) return res.status(400).json({ok:false, msg:'Comentário ou nota obrigatórios'});
+
+  if (!Array.isArray(pro.avaliacoes)) pro.avaliacoes = [];
+  pro.avaliacoes.unshift({
+    nome: nome || 'Cliente',
+    nota: Number(nota)||0,
+    texto: texto||'',
+    data: new Date().toISOString()
+  });
+  saveDB(db);
+  res.json({ok:true});
+});
 // =========================[ Inicialização ]=====================
 const port = BASE_PORT;
 app.listen(port, HOST, ()=>{
