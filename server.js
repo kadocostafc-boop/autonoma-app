@@ -2259,21 +2259,7 @@ app.get("/api/admin/export/csv", requireAdmin, (req,res)=>{
     res.status(500).type("text").send("erro");
   }
 });
-// Admin: resetar PIN do profissional (obriga definir novamente no próximo login)
-app.post("/api/admin/profissionais/:id/reset-pin", requireAdmin, (req,res)=>{
-  try{
-    const id = Number(req.params.id||"0");
-    const db = readDB();
-    const p = db.find(x=> Number(x.id)===id);
-    if (!p) return res.status(404).json({ ok:false });
-    p.pinHash = null;
-    p.mustSetPin = true;
-    writeDB(db);
-    res.json({ ok:true });
-  }catch(e){
-    res.status(500).json({ ok:false, error:String(e) });
-  }
-});
+
 // Admin: resetar PIN do profissional (obriga definir novamente no próximo login)
 app.post("/api/admin/profissionais/:id/reset-pin", requireAdmin, (req,res)=>{
   try{
@@ -2353,45 +2339,56 @@ app.get("/api/admin/_dump_all", requireAdmin, (_req,res)=>{
   res.setHeader("Content-Type","application/json; charset=utf-8");
   res.send(JSON.stringify(dump,null,2));
 });
-// === Rotas de avaliações ===
-app.get('/api/profissional/:id/avaliacoes', (req, res) => {
-  const id = String(req.params.id);
-  const db = loadDB();
-  const pro = db.find(x => String(x.id) === id);
-  if (!pro) return res.json([]);
-  res.json(pro.avaliacoes || []);
+// =========================[ Avaliações ]=======================
+
+// Lista (ordenadas da mais recente para a mais antiga)
+app.get("/api/profissional/:id/avaliacoes", (req, res) => {
+  const id = String(req.params.id || "");
+  const db = readDB();
+  const pro = db.find(p => String(p.id) === id && !p.excluido);
+  if (!pro) return res.status(404).json({ ok: false, error: "Profissional não encontrado" });
+
+  const list = Array.isArray(pro.avaliacoes) ? pro.avaliacoes : [];
+  const norm = list.map(a => ({
+    nome:  a.nome || a.autor || a.cliente || "Cliente",
+    nota:  Number(a.nota ?? a.rating ?? a.estrelas ?? a.score ?? 0),
+    texto: a.texto || a.comentario || a.comment || a.mensagem || "",
+    at:    a.at || a.ts || a.data || new Date().toISOString()
+  })).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+
+  res.json({ ok: true, items: norm, total: norm.length });
 });
 
-app.post('/api/profissional/:id/avaliar', express.json(), (req, res) => {
-  const id = String(req.params.id);
-  const db = loadDB();
-  const pro = db.find(x => String(x.id) === id);
-  if (!pro) return res.status(404).json({ok:false, msg:'Profissional não encontrado'});
-  
+// Criar nova avaliação (JSON)
+// body: { nome?:string, nota?:1..5, texto?:string }
+app.post("/api/profissional/:id/avaliar", express.json(), (req, res) => {
+  const id = String(req.params.id || "");
   const { nome, nota, texto } = req.body || {};
-  if (!texto && !nota) return res.status(400).json({ok:false, msg:'Comentário ou nota obrigatórios'});
+  if (!texto && (nota == null)) {
+    return res.status(400).json({ ok: false, error: "Informe ao menos texto ou nota" });
+  }
 
-  if (!Array.isArray(pro.avaliacoes)) pro.avaliacoes = [];
-  pro.avaliacoes.unshift({
-    nome: nome || 'Cliente',
-    nota: Number(nota)||0,
-    texto: texto||'',
-    data: new Date().toISOString()
+  const db = readDB();
+  const pro = db.find(p => String(p.id) === id && !p.excluido);
+  if (!pro) return res.status(404).json({ ok: false, error: "Profissional não encontrado" });
+
+  (pro.avaliacoes ||= []).unshift({
+    nome: String(nome || "Cliente"),
+    nota: Number(nota ?? 0),
+    texto: String(texto || ""),
+    at: new Date().toISOString()
   });
-  saveDB(db);
-  res.json({ok:true});
+
+  writeDB(db);
+  res.json({ ok: true });
 });
 // =====================[ Inicialização ]=====================
-
-// Não redeclarar HOST se já existe em outro lugar.
-// Usamos nomes diferentes para evitar conflito:
 const BIND_HOST = process.env.HOST || "0.0.0.0";
-const BIND_PORT = Number(process.env.PORT || (typeof BASE_PORT !== 'undefined' ? BASE_PORT : 3000));
+const BIND_PORT = Number(process.env.PORT || (typeof BASE_PORT !== "undefined" ? BASE_PORT : 3000));
 
-// Healthcheck para o Railway
+// Health para Railway e outros
 app.get("/health", (_req, res) => res.type("text").send("ok"));
 
-// Sobe o servidor
 app.listen(BIND_PORT, BIND_HOST, () => {
   console.log(`Autônoma.app rodando em http://${BIND_HOST}:${BIND_PORT}`);
 });
