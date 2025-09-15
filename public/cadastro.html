@@ -55,6 +55,7 @@
 
   <div class="card" style="max-width:880px;margin:auto">
     <form id="formCad" action="/cadastrar" method="POST" enctype="multipart/form-data" novalidate>
+
       <!-- Foto (OBRIGATÓRIA) -->
       <label for="foto">Foto de perfil <strong>(obrigatória)</strong></label>
       <div class="row-wrap" style="align-items:center">
@@ -71,7 +72,6 @@
         </label>
         <span id="seloHint" class="muted">Para análise do selo, envie um documento com foto (RG, CNH, passaporte).</span>
       </div>
-
       <div id="docWrap" style="display:none; margin-top:8px">
         <label for="doc">Documento com foto <span class="muted">(obrigatório se quiser o selo)</span></label>
         <div class="row-wrap" style="align-items:center">
@@ -150,7 +150,6 @@
       <!-- Endereço / Experiência / Preço -->
       <label for="endereco">Endereço (opcional, oculto no perfil)</label>
       <input id="endereco" name="endereco" type="text" maxlength="120" placeholder="Rua/Av, número, complemento (apenas para referência interna)">
-
       <div class="row-wrap">
         <div class="field-50">
           <label for="experiencia">Experiência (opcional)</label>
@@ -170,11 +169,45 @@
       <input type="hidden" id="lat" name="lat">
       <input type="hidden" id="lng" name="lng">
 
+      <!-- ========== [ SEGURANÇA: SENHA ] ========== -->
+      <div class="grid" style="gap:12px;margin-top:16px">
+        <div class="field">
+          <label for="senha" class="label">Senha <span style="color:#ef4444">*</span></label>
+          <div class="input-group" style="display:flex;align-items:center;gap:8px">
+            <input type="password" id="senha" name="senha" required
+                   minlength="8" autocomplete="new-password"
+                   placeholder="Mínimo 8 caracteres, letras e números"
+                   class="input" style="flex:1">
+            <button type="button" id="toggleSenha" class="btn btn-light" aria-label="Mostrar/ocultar senha">👁</button>
+          </div>
+          <small class="muted">Use ao menos 1 letra e 1 número.</small>
+
+          <div id="senhaMeterWrap" style="margin-top:8px">
+            <div id="senhaMeter" style="height:8px;border-radius:6px;background:#e5e7eb;overflow:hidden">
+              <div id="senhaMeterFill" style="height:100%;width:0%"></div>
+            </div>
+            <div id="senhaHint" class="muted" style="margin-top:6px;font-size:12px"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="confirmaSenha" class="label">Confirmar senha <span style="color:#ef4444">*</span></label>
+          <div class="input-group" style="display:flex;align-items:center;gap:8px">
+            <input type="password" id="confirmaSenha" name="confirmaSenha" required
+                   minlength="8" autocomplete="new-password"
+                   placeholder="Repita a senha"
+                   class="input" style="flex:1">
+            <button type="button" id="toggleConfirma" class="btn btn-light" aria-label="Mostrar/ocultar senha">👁</button>
+          </div>
+          <small id="matchMsg" class="muted" style="display:block;margin-top:6px"></small>
+        </div>
+      </div>
+      <!-- ========== [/SEGURANÇA: SENHA ] ========== -->
+
       <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">
         <button class="btn" type="submit">Cadastrar</button>
         <a class="btn ghost" href="/clientes.html">Cancelar</a>
       </div>
-
       <p id="err" class="meta warn" style="display:none;margin-top:8px"></p>
     </form>
   </div>
@@ -203,14 +236,12 @@
   const docWrap = $("docWrap");
   const doc = $("doc");
   const docPrev = $("docPrev");
-
   wantSelo.addEventListener("change", ()=>{
     const on = wantSelo.checked;
     docWrap.style.display = on ? "" : "none";
     doc.required = on;
     doc.setAttribute("aria-required", on ? "true" : "false");
   });
-
   if (doc){
     doc.addEventListener("change", ()=>{
       const f=doc.files?.[0];
@@ -320,6 +351,7 @@
     return dig; // outros casos (deixa como está)
   }
   function isValidBR(digCom55){ return /^\d{12,13}$/.test(digCom55); } // 55 + 2 + 8/9
+
   // Formatação bonitinha: +55 (21) 98765-4321 ou +55 (21) 3456-7890
   function formatPrettyBR(digCom55){
     if (!/^\d{12,13}$/.test(digCom55)) return "";
@@ -429,7 +461,104 @@
     }
     // passa — o servidor trata o resto
   });
+})();
+</script>
 
+<!-- ===== Novo script APENAS para SENHA (não altera seu JS acima) ===== -->
+<script>
+(function () {
+  const form = document.getElementById('formCad');
+  if (!form) return;
+
+  const err = document.getElementById('err');
+  const senha = document.getElementById('senha');
+  const confirma = document.getElementById('confirmaSenha');
+  const toggleSenha = document.getElementById('toggleSenha');
+  const toggleConfirma = document.getElementById('toggleConfirma');
+  const meterFill = document.getElementById('senhaMeterFill');
+  const senhaHint = document.getElementById('senhaHint');
+  const matchMsg = document.getElementById('matchMsg');
+
+  function bindToggle(btn, input) {
+    if (!btn || !input) return;
+    btn.addEventListener('click', () => {
+      const isPwd = input.type === 'password';
+      input.type = isPwd ? 'text' : 'password';
+      btn.textContent = isPwd ? '🙈' : '👁';
+    });
+  }
+  bindToggle(toggleSenha, senha);
+  bindToggle(toggleConfirma, confirma);
+
+  function scorePwd(v) {
+    let s = 0;
+    if (!v) return 0;
+    if (v.length >= 8) s++;
+    if (/[A-Za-z]/.test(v) && /\d/.test(v)) s++;
+    if (/[^A-Za-z0-9]/.test(v)) s++;
+    if (v.length >= 12) s++;
+    return Math.min(s, 4);
+  }
+  function updateMeter() {
+    const v = senha?.value || '';
+    const s = scorePwd(v);
+    const pct = [0,25,50,75,100][s];
+    if (meterFill) {
+      meterFill.style.width = pct + '%';
+      const colors = ['#e5e7eb','#fca5a5','#fbbf24','#60a5fa','#22c55e'];
+      meterFill.style.background = colors[s];
+    }
+    if (senhaHint) {
+      const msgs = [
+        'Crie uma senha com letras e números.',
+        'Fraca — aumente o tamanho.',
+        'Ok — adicione mais variedade.',
+        'Boa — considere 12+ caracteres.',
+        'Forte ✔'
+      ];
+      senhaHint.textContent = msgs[s];
+    }
+  }
+  senha?.addEventListener('input', updateMeter);
+  updateMeter();
+
+  function updateMatch() {
+    if (!matchMsg) return;
+    if (!confirma.value) { matchMsg.textContent = ''; return; }
+    if (confirma.value === senha.value) {
+      matchMsg.textContent = 'As senhas conferem ✔';
+      matchMsg.style.color = '#16a34a';
+    } else {
+      matchMsg.textContent = 'As senhas não conferem';
+      matchMsg.style.color = '#ef4444';
+    }
+  }
+  confirma?.addEventListener('input', updateMatch);
+  senha?.addEventListener('input', updateMatch);
+
+  // Validação de senha ANTES do submit original (capture = true)
+  form.addEventListener('submit', function (e) {
+    const v = senha?.value || '';
+    const v2 = confirma?.value || '';
+    const minOk = v.length >= 8;
+    const mixOk = /[A-Za-z]/.test(v) && /\d/.test(v);
+    const matchOk = v && v === v2;
+
+    if (!minOk || !mixOk || !matchOk) {
+      e.preventDefault();
+      if (err) {
+        err.style.display = '';
+        err.textContent = !minOk ? 'Senha muito curta (mín. 8).'
+          : !mixOk ? 'A senha precisa ter letras e números.'
+          : 'As senhas não conferem.';
+      } else {
+        alert(!minOk ? 'Senha muito curta (mín. 8).'
+          : !mixOk ? 'A senha precisa ter letras e números.'
+          : 'As senhas não conferem.');
+      }
+      return false;
+    }
+  }, true);
 })();
 </script>
 
