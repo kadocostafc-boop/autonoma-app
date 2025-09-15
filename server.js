@@ -2381,8 +2381,17 @@ app.post('/api/profissional/:id/avaliar', express.json(), (req, res) => {
   saveDB(db);
   res.json({ok:true});
 });
-// =========================[ Inicialização ]=====================
-const port = BASE_PORT;
-app.listen(port, HOST, ()=>{
-  console.log(`Autônoma.app rodando em http://localhost:${port}`);
+// =====================[ Inicialização ]=====================
+
+// Não redeclarar HOST se já existe em outro lugar.
+// Usamos nomes diferentes para evitar conflito:
+const BIND_HOST = process.env.HOST || "0.0.0.0";
+const BIND_PORT = Number(process.env.PORT || (typeof BASE_PORT !== 'undefined' ? BASE_PORT : 3000));
+
+// Healthcheck para o Railway
+app.get("/health", (_req, res) => res.type("text").send("ok"));
+
+// Sobe o servidor
+app.listen(BIND_PORT, BIND_HOST, () => {
+  console.log(`Autônoma.app rodando em http://${BIND_HOST}:${BIND_PORT}`);
 });
