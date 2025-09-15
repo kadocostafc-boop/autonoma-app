@@ -18,7 +18,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
 
   <!-- CSS global -->
-  <link rel="stylesheet" href="/css/app.css?v=painel-login-2025-09-15">
+  <link rel="stylesheet" href="/css/app.css?v=painel-login-2025-09-15r2">
   <style>
     .header { display:flex; align-items:center; gap:12px; padding:12px 16px }
     .header .logo { height:32px; width:auto; display:block }
@@ -86,7 +86,7 @@
   </div>
 </main>
 
-<!-- ========[ MODAL: ESQUECI MINHA SENHA ]======== -->
+<!-- ========[ MODAL: ESQUECI MINHA SENHA (E-MAIL OBRIGATÓRIO) ]======== -->
 <div id="forgotOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:9998"></div>
 <div id="forgotModal" role="dialog" aria-modal="true" aria-labelledby="forgotTitle"
      style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:9999">
@@ -97,12 +97,11 @@
     </div>
     <form id="forgotForm" style="padding:18px;display:grid;gap:12px">
       <p class="muted" style="margin:0 0 6px">
-        Informe seu <strong>WhatsApp</strong> (com DDD) <em>ou</em> seu <strong>e-mail</strong>. Enviaremos um link para redefinir sua senha.
+        Informe seu <strong>e-mail</strong> cadastrado. Enviaremos um link para redefinir sua senha.
       </p>
       <div class="field">
-        <label for="forgotId" class="label">WhatsApp ou e-mail</label>
-        <input id="forgotId" name="identifier" class="input" placeholder="21999998888 ou voce@exemplo.com" required>
-        <small class="muted">Se digitar número, use apenas dígitos.</small>
+        <label for="forgotEmail" class="label">E-mail</label>
+        <input id="forgotEmail" name="email" class="input" type="email" required placeholder="voce@exemplo.com" autocomplete="email">
       </div>
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
         <button type="button" id="forgotCancelBtn" class="btn btn-light">Cancelar</button>
@@ -123,7 +122,7 @@
 (function(){
   const $ = (s, r=document) => r.querySelector(s);
 
-  // ===== Helpers (WhatsApp BR) =====
+  // ===== Helpers (WhatsApp BR / e-mail) =====
   function onlyDigits(s){ return String(s||"").replace(/\D/g,""); }
   function ensureBR(dig){
     if (!dig) return "";
@@ -131,14 +130,12 @@
     if (dig.length===10 || dig.length===11) return "55"+dig;
     return dig;
   }
-  function isValidBR(digCom55){ return /^\d{12,13}$/.test(digCom55); }
-  function formatPrettyBR(digCom55){
-    if (!/^\d{12,13}$/.test(digCom55)) return "";
-    const cc = digCom55.slice(0,2);
-    const ddd = digCom55.slice(2,4);
-    const rest = digCom55.slice(4);
-    if (rest.length===9){ return `+${cc} (${ddd}) ${rest.slice(0,5)}-${rest.slice(5)}`; }
-    return `+${cc} (${ddd}) ${rest.slice(0,4)}-${rest.slice(4)}`;
+  function isValidBR(d){ return /^\d{12,13}$/.test(d); }
+  function formatPrettyBR(d){
+    if (!/^\d{12,13}$/.test(d)) return "";
+    const cc=d.slice(0,2), ddd=d.slice(2,4), rest=d.slice(4);
+    return rest.length===9 ? `+${cc} (${ddd}) ${rest.slice(0,5)}-${rest.slice(5)}`
+                           : `+${cc} (${ddd}) ${rest.slice(0,4)}-${rest.slice(4)}`;
   }
   function isEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 
@@ -154,19 +151,15 @@
 
   function updatePretty(){
     const raw = (idInput.value||'').trim();
-    if (!raw){
-      idPrev.textContent = '';
-      return;
-    }
+    if (!raw){ idPrev.textContent = ''; return; }
     if (isEmail(raw)){
       idPrev.textContent = `E-mail: ${raw}`;
       idPrev.style.color = '#334155';
       return;
     }
-    const dig = onlyDigits(raw);
-    const with55 = ensureBR(dig);
-    if (isValidBR(with55)){
-      idPrev.textContent = 'Formato: ' + formatPrettyBR(with55);
+    const dig = ensureBR( onlyDigits(raw) );
+    if (isValidBR(dig)){
+      idPrev.textContent = 'Formato: ' + formatPrettyBR(dig);
       idPrev.style.color = '#334155';
     } else {
       idPrev.textContent = 'WhatsApp inválido — use DDD+número (ex.: 21987654321)';
@@ -190,10 +183,9 @@
 
     let identifier = rawId;
     if (!isEmail(rawId)){
-      const dig = onlyDigits(rawId);
-      const with55 = ensureBR(dig);
-      if (!isValidBR(with55)){ return showErr('WhatsApp inválido. Digite com DDD.'); }
-      identifier = with55;
+      const dig = ensureBR( onlyDigits(rawId) );
+      if (!isValidBR(dig)){ return showErr('WhatsApp inválido. Digite com DDD.'); }
+      identifier = dig;
     }
 
     const password = senha.value || '';
@@ -218,7 +210,7 @@
       }
       const msg = (data && (data.message||data.error)) || 'Credenciais inválidas.';
       showErr(msg);
-    }catch(err){
+    }catch(_){
       showErr('Falha de conexão. Tente novamente.');
     }finally{
       setLoading(false);
@@ -234,14 +226,14 @@
     else    { loginBtn.disabled = false; loginBtn.textContent = 'Entrar'; }
   }
 
-  // ===== Forgot Password (modal) =====
+  // ===== Esqueci minha senha (E-MAIL obrigatório) =====
   const openBtn   = $('#forgotOpenBtn');
   const overlay   = $('#forgotOverlay');
   const modal     = $('#forgotModal');
   const closeBtn  = $('#forgotCloseBtn');
   const cancelBtn = $('#forgotCancelBtn');
   const forgotForm= $('#forgotForm');
-  const forgotId  = $('#forgotId');
+  const forgotEmail = $('#forgotEmail');
   const forgotMsg = $('#forgotMsg');
   const devWrap   = $('#forgotDev');
   const devBtn    = $('#openResetLinkBtn');
@@ -256,8 +248,8 @@
     forgotMsg.style.color   = '';
     devWrap.style.display   = 'none';
     lastResetUrl = null;
-    forgotId.value = '';
-    forgotId.focus();
+    forgotEmail.value = '';
+    forgotEmail.focus();
     document.addEventListener('keydown', escClose, { once:true });
   }
   function closeModal(){
@@ -273,24 +265,21 @@
 
   forgotForm?.addEventListener('submit', async (e)=>{
     e.preventDefault();
-    const raw = (forgotId.value||'').trim();
-    if (!raw){ return toast('Informe WhatsApp ou e-mail.', 'error'); }
-
-    const identifier = isEmail(raw) ? raw : onlyDigits(raw);
-    if (!identifier){ return toast('Informe um contato válido.', 'error'); }
+    const email = (forgotEmail.value||'').trim();
+    if (!isEmail(email)){ return toast('Digite um e-mail válido.', 'error'); }
 
     setForgotLoading(true);
     try{
       const res = await fetch('/auth/pro/forgot', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ identifier })
+        body: JSON.stringify({ identifier: email })
       });
       const data = await res.json().catch(()=> ({}));
       if (data && data.ok){
         forgotMsg.style.display = 'block';
         forgotMsg.style.color = '#16a34a';
-        forgotMsg.innerHTML = 'Se encontramos sua conta, enviaremos um link para redefinir a senha. Verifique sua caixa de entrada.';
+        forgotMsg.textContent = 'Se encontramos sua conta, enviamos um link para redefinir sua senha. Verifique seu e-mail.';
         if (data.resetUrl){
           lastResetUrl = data.resetUrl;
           devWrap.style.display = 'block';
@@ -304,7 +293,7 @@
         forgotMsg.style.color = '#ef4444';
         forgotMsg.textContent = err;
       }
-    }catch(err){
+    }catch(_){
       forgotMsg.style.display = 'block';
       forgotMsg.style.color = '#ef4444';
       forgotMsg.textContent = 'Falha de conexão. Tente novamente.';
@@ -332,10 +321,10 @@
     alert(text);
   }
 
-  // ===== PWA (igual ao seu padrão) =====
+  // ===== PWA =====
   if ('serviceWorker' in navigator){
     window.addEventListener('load', ()=>{
-      navigator.serviceWorker.register('/sw.js?v=painel-login-2025-09-15').catch(()=>{});
+      navigator.serviceWorker.register('/sw.js?v=painel-login-2025-09-15r2').catch(()=>{});
     });
     let reloaded=false;
     navigator.serviceWorker.addEventListener('controllerchange', ()=>{
