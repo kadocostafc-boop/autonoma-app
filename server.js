@@ -132,30 +132,61 @@ const PLAN_PRICES = {
   premium: 4990  // R$ 49,90
 };
 
-// Criar assinatura (Pro ou Premium)
-app.post("/api/pay/asaas/subscription/create", express.json(), async (req, res) => {
+// Criar assinatura (Pro/Premium) + salvar no banco (status pending)
+app.post('/api/pay/asaas/subscription/create', express.json(), async (req, res) => {
   try {
-    const { customerId, plan } = req.body;
+    const { customerId, plan, proId } = req.body || {};
+    const PLAN_PRICES = { pro: 29.90, premium: 49.90 };
     if (!customerId || !PLAN_PRICES[plan]) {
-      return res.status(400).json({ ok: false, error: "Parâmetros inválidos" });
+      return res.status(400).json({ ok:false, error:'Informe customerId e plan (pro|premium).' });
     }
 
-    // Criar assinatura no Asaas
-    const resp = await asaas.post("/subscriptions", {
-      customer: customerId,
-      billingType: "CREDIT_CARD",   // depois podemos expandir para PIX/Débito
-      cycle: "MONTHLY",
-      value: PLAN_PRICES[plan] / 100,
-      description: `Assinatura ${plan.toUpperCase()} Autônoma.app`
+    const value = PLAN_PRICES[plan];
+    const description = plan === 'premium' ? 'Plano Premium Mensal' : 'Plano Pro Mensal';
+    const today = new Date().toISOString().slice(0,10);
+
+    const sub = await asaasRequest('/subscriptions', {
+      method:'POST',
+      body: JSON.stringify({
+        customer: customerId,
+        value,
+        cycle: "MONTHLY",
+        nextDueDate: today,
+        description
+      })
     });
 
-    res.json({ ok: true, subscription: resp.data });
-  } catch (err) {
-    console.error("Erro ao criar assinatura:", err.response?.data || err.message);
-    res.status(500).json({ ok: false, error: "Falha ao criar assinatura" });
+    // salva no seu JSON
+    try {
+      const raw = fs.existsSync(DATA_FILE) ? fs.readFileSync(DATA_FILE,'utf8') : '{"profissionais":[]}';
+      const db  = raw ? JSON.parse(raw) : { profissionais: [] };
+      const idx = (db.profissionais||[]).findIndex(p => String(p.id) === String(proId));
+      if (idx >= 0) {
+        db.profissionais[idx].asaasSubscriptionId = sub.id;
+        db.profissionais[idx].plano = plan;              // 'pro' ou 'premium'
+        db.profissionais[idx].statusPlano = 'pending';   // aguardando pagamento
+        fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+      }
+    } catch (e) {
+      console.error('[Assinatura][persist] falha ao salvar:', e.message);
+    }
+
+    // tenta obter link da primeira cobrança
+    async function getFirstPaymentUrlForSubscription(subId){
+      try {
+        const list = await asaasRequest(`/payments?subscription=${subId}&status=PENDING&limit=1`, { method:'GET' });
+        const p = list?.data?.[0];
+        return p ? (p.invoiceUrl || p.bankSlipUrl || p.transactionReceiptUrl || null) : null;
+      } catch { return null; }
+    }
+    const payUrl = await getFirstPaymentUrlForSubscription(sub.id);
+
+    return res.json({ ok:true, subscriptionId: sub.id, url: payUrl });
+  } catch (e) {
+    console.error('[Asaas][subscription] erro:', e.message);
+    return res.status(400).json({ ok:false, error: e.message });
   }
 });
-
 // Cancelar assinatura
 app.post("/api/pay/asaas/subscription/cancel", express.json(), async (req, res) => {
   try {
@@ -171,6 +202,160 @@ app.post("/api/pay/asaas/subscription/cancel", express.json(), async (req, res) 
   } catch (err) {
     console.error("Erro ao cancelar assinatura:", err.response?.data || err.message);
     res.status(500).json({ ok: false, error: "Falha ao cancelar assinatura" });
+  }
+});
+
+// =========================[ Webhook Asaas ]=========================
+// URL pública no Asaas: https://SEU_DOMINIO/webhooks/asaas
+// Configure no painel o Authentication Token = ASAAS_WEBHOOK_TOKEN do seu .env
+
+app.post('/webhooks/asaas', express.json(), async (req, res) => {
+  try {
+    // 1) Segurança — valida token enviado pelo Asaas
+    const headerToken = req.headers['asaas-access-token'];
+    if (!headerToken || headerToken !== process.env.ASAAS_WEBHOOK_TOKEN) {
+      console.warn('[Asaas][Webhook] token inválido:', headerToken);
+      return res.status(401).send('invalid token');
+    }
+
+    // 2) Evento + payload
+    const event = req.body?.event || '';
+    const payment = req.body?.payment || null;         // quando for evento de pagamento
+    const subscription = req.body?.subscription || null; // quando for evento de assinatura
+    // Em cobranças pontuais (checkout/payment) você pode usar:
+    //   payment?.externalReference  -> e.g. "jobId#proId"
+    //   payment?.customer           -> customerId (Asaas)
+    //   payment?.subscription       -> subscriptionId (Asaas), se for de assinatura
+    //   payment?.value, payment?.status ("CONFIRMED" etc.)
+
+    console.log('[Asaas][Webhook] EVENTO:', event, {
+      paymentId: payment?.id,
+      subscriptionId: payment?.subscription || subscription?.id,
+      status: payment?.status,
+      externalReference: payment?.externalReference
+    });
+
+    // ======== Regras de negócio ========
+    // Você já tem um JSON local (DATA_FILE) e "fs" carregados no server.
+    // As funções abaixo fazem updates simples no seu "banco" (JSON).
+
+    function dbLoad() {
+      try {
+        const raw = fs.existsSync(DATA_FILE) ? fs.readFileSync(DATA_FILE, 'utf8') : '';
+        return raw ? JSON.parse(raw) : { profissionais: [], jobs: [] };
+      } catch {
+        return { profissionais: [], jobs: [] };
+      }
+    }
+    function dbSave(obj) {
+      fs.writeFileSync(DATA_FILE, JSON.stringify(obj, null, 2));
+    }
+
+    // Marca plano do profissional como ativo e atualiza validade (+30 dias simples)
+    function ativarPlanoPorSubscription(asaasSubscriptionId) {
+      const db = dbLoad();
+      const hoje = new Date();
+      const fim = new Date();
+      fim.setDate(hoje.getDate() + 30);
+
+      let alterou = false;
+      for (const p of db.profissionais || []) {
+        if (p.asaasSubscriptionId === asaasSubscriptionId) {
+          p.statusPlano = 'active';
+          p.currentPeriodEnd = fim.toISOString().slice(0,10);
+          alterou = true;
+        }
+      }
+      if (alterou) dbSave(db);
+    }
+
+    // Marca plano do profissional em atraso
+    function marcarPlanoAtrasoPorSubscription(asaasSubscriptionId) {
+      const db = dbLoad();
+      let alterou = false;
+      for (const p of db.profissionais || []) {
+        if (p.asaasSubscriptionId === asaasSubscriptionId) {
+          p.statusPlano = 'overdue';
+          alterou = true;
+        }
+      }
+      if (alterou) dbSave(db);
+    }
+
+    // Cancela plano
+    function cancelarPlanoPorSubscription(asaasSubscriptionId) {
+      const db = dbLoad();
+      let alterou = false;
+      for (const p of db.profissionais || []) {
+        if (p.asaasSubscriptionId === asaasSubscriptionId) {
+          p.statusPlano = 'canceled';
+          alterou = true;
+        }
+      }
+      if (alterou) dbSave(db);
+    }
+
+    // Marca job (serviço) como pago usando externalReference = "jobId#proId"
+    function marcarJobPagoPorExternalRef(extRef) {
+      if (!extRef) return;
+      const [jobId] = String(extRef).split('#');
+      const db = dbLoad();
+      let alterou = false;
+      for (const j of db.jobs || []) {
+        if (String(j.id) === String(jobId)) {
+          j.paid = true;
+          j.paidAt = new Date().toISOString();
+          j.payoutStatus = 'pending'; // repasse pendente
+          alterou = true;
+        }
+      }
+      if (alterou) dbSave(db);
+    }
+
+    // ======== Roteamento por evento ========
+    // Eventos comuns:
+    // - PAYMENT_CONFIRMED: pagamento confirmado (serve para assinatura e checkout)
+    // - PAYMENT_RECEIVED: crédito recebido
+    // - PAYMENT_OVERDUE: fatura em atraso
+    // - PAYMENT_DELETED: pagamento cancelado/removido
+    // - SUBSCRIPTION_DELETED: assinatura cancelada
+    // - CHECKOUT_PAID: checkout pago (alguns setups usam este)
+
+    switch (event) {
+      case 'PAYMENT_CONFIRMED':
+      case 'PAYMENT_RECEIVED':
+      case 'CHECKOUT_PAID':
+        if (payment?.subscription) {
+          // assinatura (Pro/Premium) paga
+          ativarPlanoPorSubscription(payment.subscription);
+        } else {
+          // cobrança pontual (job) paga
+          marcarJobPagoPorExternalRef(payment?.externalReference);
+        }
+        break;
+
+      case 'PAYMENT_OVERDUE':
+      case 'PAYMENT_DELETED':
+        if (payment?.subscription) {
+          marcarPlanoAtrasoPorSubscription(payment.subscription);
+        }
+        break;
+
+      case 'SUBSCRIPTION_DELETED':
+        cancelarPlanoPorSubscription(subscription?.id || payment?.subscription);
+        break;
+
+      default:
+        // outros eventos: só loga
+        console.log('[Asaas][Webhook] evento não tratado:', event);
+        break;
+    }
+
+    // 3) Resposta OK para o Asaas
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('[Asaas][Webhook] erro:', err.message);
+    return res.status(400).json({ ok:false, error: err.message });
   }
 });
 
@@ -2757,6 +2942,44 @@ app.get("/health", (_req, res) => res.type("text").send("ok"));
 const BIND_HOST = process.env.HOST || "0.0.0.0";
 const BIND_PORT = Number(process.env.PORT || 3000);
 
-app.listen(BIND_PORT, BIND_HOST, () => {
-  console.log(`Autônoma.app rodando em http://${BIND_HOST}:${BIND_PORT}`);
+// =========================[ Webhook Asaas ]=========================
+app.post("/webhooks/asaas", express.json(), (req, res) => {
+  const sig = req.headers["asaas-access-token"]; // token de autenticação enviado pelo Asaas
+  if (sig !== process.env.ASAAS_WEBHOOK_TOKEN) {
+    console.warn("[Asaas] Webhook com token inválido");
+    return res.status(401).json({ ok: false, error: "Token inválido" });
+  }
+
+  const event = req.body;
+  console.log("[Asaas] Webhook recebido:", JSON.stringify(event, null, 2));
+
+  // Aqui você trata os eventos importantes
+  switch (event.event) {
+    case "PAYMENT_CREATED":
+      console.log("💳 Pagamento criado:", event.payment.id);
+      break;
+    case "PAYMENT_CONFIRMED":
+    case "PAYMENT_RECEIVED":
+      console.log("✅ Pagamento confirmado:", event.payment.id);
+      // TODO: marcar assinatura como ativa no banco
+      break;
+    case "PAYMENT_OVERDUE":
+      console.log("⚠️ Pagamento atrasado:", event.payment.id);
+      // TODO: suspender ou alertar usuário
+      break;
+    case "PAYMENT_REFUNDED":
+      console.log("↩️ Pagamento estornado:", event.payment.id);
+      break;
+    default:
+      console.log("ℹ️ Evento ignorado:", event.event);
+  }
+
+  res.json({ ok: true });
+});
+
+// ===== Inicialização / Bind (compatível com Railway) =====
+const PORT = Number(process.env.PORT || 8080);
+// Não passe HOST — Express, sem host, escuta em 0.0.0.0 (necessário no Railway)
+app.listen(PORT, () => {
+  console.log(`[BOOT] Autônoma.app rodando na porta ${PORT}`);
 });
