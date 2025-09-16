@@ -115,7 +115,9 @@
               </div>
               <p class="hint" id="raioHint">No plano Free, o raio é 0 km (somente bairro). PRO: até 30 km • PREMIUM: até 50 km.</p>
             </div>
+
             <div class="divider"></div>
+
             <div>
               <label for="cidadeExtra">Adicionar cidades extras</label>
               <div class="row">
@@ -152,10 +154,17 @@
               <span id="badgePlano" class="plan-badge">FREE</span>
               <span class="meta" id="planoDesc">Recursos básicos.</span>
             </div>
+
+            <!-- NOVO: status textual da assinatura -->
+            <p id="planoStatus" class="hint" style="margin-top:6px;display:none"></p>
+
             <div class="row" style="margin-top:8px">
               <a id="toPro" class="btn" href="/planos.html">Upgrade para PRO</a>
               <a id="toPremium" class="btn outline" href="/planos.html">Upgrade para PREMIUM</a>
               <button id="toFree" class="btn ghost ghost-danger" type="button" disabled>Voltar ao FREE</button>
+
+              <!-- NOVO: botão cancelar assinatura -->
+              <button id="btnCancelarSub" class="btn outline" type="button" style="display:none">Cancelar assinatura</button>
             </div>
             <p class="hint">Os upgrades direcionam para a página de planos.</p>
           </div>
@@ -196,6 +205,7 @@
           <div class="stat"><div class="meta">Avaliações</div><strong id="m_aval">—</strong></div>
           <div class="stat"><div class="meta">Nota média</div><strong id="m_rate">—</strong></div>
         </div>
+
         <div class="divider"></div>
         <h3>QR do WhatsApp</h3>
         <div class="center"><div id="qrBox" class="qr center">—</div></div>
@@ -204,6 +214,7 @@
           <a id="openWa" class="btn inline" target="_blank" rel="noopener">Abrir Web</a>
         </div>
         <p class="hint" style="margin-top:8px">Compartilhe o QR no Instagram/Stories para receber contatos diretos.</p>
+
         <div class="divider"></div>
         <h3>Exportar</h3>
         <div class="row">
@@ -222,12 +233,10 @@
     const esc = s => String(s||"")
       .replace(/&/g,"&amp;").replace(/</g,"&lt;")
       .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-
     const toast = (msg, ms=3000)=>{
       const t = $('#toast'); t.textContent = msg; t.classList.add('show');
       setTimeout(()=> t.classList.remove('show'), ms);
     };
-
     const flash = (msg, type='ok')=>{
       const box = $('#flash');
       box.style.display='';
@@ -320,6 +329,12 @@
         qri.onerror = ()=>{ $('#qrBox').textContent='QR indisponível'; };
         $('#qrBox').innerHTML=''; $('#qrBox').appendChild(qri);
       }
+
+      // Disponibiliza para outras páginas (ex.: planos.html)
+      window.PRO_ID = me.id;
+      window.PRO_NAME = me.nome || '';
+      window.PRO_EMAIL = me.email || '';
+      window.PRO_WHATSAPP_DIGITOS = String(me.whatsapp||'').replace(/\D/g,'');
     }
 
     function paintMetrics(me){
@@ -350,7 +365,6 @@
       if (p==='pro') return 30;
       return 0;
     }
-
     function maxCidadesByPlan(plan){
       const p = String(plan||'free').toLowerCase();
       if (p==='premium') return 10;
@@ -409,6 +423,40 @@
       }catch{}
     }
 
+    // ===== Assinatura: status + cancelar =====
+    function paintPlanoStatus(me){
+      const statusEl = $('#planoStatus');
+      const cancelBtn = $('#btnCancelarSub');
+
+      const statusMap = { active:'Ativo', pending:'Pendente', overdue:'Atrasado', canceled:'Cancelado' };
+      const plano = String(me.plano||'free').toLowerCase();
+
+      if (plano === 'free') {
+        statusEl.style.display = 'none';
+        cancelBtn.style.display = 'none';
+        return;
+      }
+
+      let txt = `Plano: ${plano.toUpperCase()} — Status: ${statusMap[me.statusPlano] || me.statusPlano || '—'}`;
+      if (me.currentPeriodEnd) txt += ` (válido até ${me.currentPeriodEnd})`;
+      statusEl.textContent = txt;
+      statusEl.style.display = '';
+
+      if (me.asaasSubscriptionId && me.statusPlano !== 'canceled') {
+        cancelBtn.style.display = '';
+        cancelBtn.onclick = async ()=>{
+          if (!confirm('Tem certeza que deseja cancelar sua assinatura?')) return;
+          try{
+            const rs = await postJSON('/api/pay/asaas/subscription/cancel', { subscriptionId: me.asaasSubscriptionId });
+            if (rs.ok) { alert('Assinatura cancelada.'); await reload(); }
+            else { alert('Falha ao cancelar: ' + (rs.error||'')); }
+          }catch(e){ alert('Erro ao cancelar.'); }
+        };
+      } else {
+        cancelBtn.style.display = 'none';
+      }
+    }
+
     // ===== Regras de Plano (gating) =====
     function requirePlan(planNeeded){
       const have = String(ME?.plano||'free').toLowerCase();
@@ -422,9 +470,7 @@
     // ===== Ações =====
     // Sair (POST /api/painel/logout)
     $('#btnSair').addEventListener('click', async ()=>{
-      try{
-        await fetch('/api/painel/logout',{method:'POST'});
-      }catch{}
+      try{ await fetch('/api/painel/logout',{method:'POST'}); }catch{}
       try{ localStorage.removeItem('auth_token'); }catch{}
       location.href = '/painel_login.html';
     });
@@ -444,7 +490,6 @@
     $('#radarToggle').addEventListener('click', async ()=>{
       const isOn = ($('#radarStatus').textContent||'').toLowerCase()==='ligado';
       if (!isOn){
-        // tentar ligar — checar plano
         if (!requirePlan('pro')) return;
       }
       try{
@@ -510,7 +555,7 @@
       }catch{ flash('Não foi possível salvar as preferências.', 'warn'); }
     });
 
-    // Perfil (envio real para /api/painel/update)
+    // Perfil
     $('#formPerfil').addEventListener('submit', async (e)=>{
       e.preventDefault();
       const fd = new FormData();
@@ -531,6 +576,13 @@
       }
     });
 
+    async function loadCidadesOnce(){
+      try{
+        const js = await apiJSON('/api/geo/cidades');
+        $('#dl-cidades').innerHTML = (js||[]).map(c=>`<option value="${esc(c)}">`).join('');
+      }catch{}
+    }
+
     // ===== Reload principal =====
     async function reload(){
       try{
@@ -542,6 +594,7 @@
         paintArea(ME);
         paintPayPrefs(ME);
         paintProfileForm(ME);
+        paintPlanoStatus(ME); // <-- NOVO
       }catch(e){
         const box = $('#flash');
         box.style.display='';
