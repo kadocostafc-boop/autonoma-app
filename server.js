@@ -124,6 +124,56 @@ async function asaasRequest(endpoint, options = {}) {
   return res.json();
 }
 
+// =========================[ Assinaturas Pro/Premium ]=========================
+
+// Preços fixos dos planos (em centavos)
+const PLAN_PRICES = {
+  pro: 2990,     // R$ 29,90
+  premium: 4990  // R$ 49,90
+};
+
+// Criar assinatura (Pro ou Premium)
+app.post("/api/pay/asaas/subscription/create", express.json(), async (req, res) => {
+  try {
+    const { customerId, plan } = req.body;
+    if (!customerId || !PLAN_PRICES[plan]) {
+      return res.status(400).json({ ok: false, error: "Parâmetros inválidos" });
+    }
+
+    // Criar assinatura no Asaas
+    const resp = await asaas.post("/subscriptions", {
+      customer: customerId,
+      billingType: "CREDIT_CARD",   // depois podemos expandir para PIX/Débito
+      cycle: "MONTHLY",
+      value: PLAN_PRICES[plan] / 100,
+      description: `Assinatura ${plan.toUpperCase()} Autônoma.app`
+    });
+
+    res.json({ ok: true, subscription: resp.data });
+  } catch (err) {
+    console.error("Erro ao criar assinatura:", err.response?.data || err.message);
+    res.status(500).json({ ok: false, error: "Falha ao criar assinatura" });
+  }
+});
+
+// Cancelar assinatura
+app.post("/api/pay/asaas/subscription/cancel", express.json(), async (req, res) => {
+  try {
+    const { subscriptionId } = req.body;
+    if (!subscriptionId) {
+      return res.status(400).json({ ok: false, error: "ID da assinatura é obrigatório" });
+    }
+
+    // Cancelar assinatura no Asaas
+    const resp = await asaas.delete(`/subscriptions/${subscriptionId}`);
+
+    res.json({ ok: true, canceled: resp.data });
+  } catch (err) {
+    console.error("Erro ao cancelar assinatura:", err.response?.data || err.message);
+    res.status(500).json({ ok: false, error: "Falha ao cancelar assinatura" });
+  }
+});
+
 // =========================[ Arquivos / Banco JSON ]==========================
 
 const DATA_FILE = process.env.DATA_FILE || "/data/profissionais.json";
