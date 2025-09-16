@@ -17,22 +17,14 @@
 
   <!-- CSS global -->
   <link rel="stylesheet" href="/css/app.css">
-
   <style>
     .wrap-narrow{max-width:1080px;margin:auto}
     .center{text-align:center}
     .hero h1{margin:8px 0 6px}
     .hero p{margin:0;color:#64748b}
-    .grid-plans{
-      display:grid;gap:14px;grid-template-columns:1fr; margin-top:14px
-    }
-    @media(min-width: 900px){
-      .grid-plans{ grid-template-columns: 1fr 1fr 1fr; }
-    }
-    .plan{
-      border:1px solid #e5e7eb; border-radius:16px; padding:16px; background:#fff;
-      display:flex; flex-direction:column; gap:10px;
-    }
+    .grid-plans{ display:grid;gap:14px;grid-template-columns:1fr; margin-top:14px }
+    @media(min-width: 900px){ .grid-plans{ grid-template-columns: 1fr 1fr 1fr; } }
+    .plan{ border:1px solid #e5e7eb; border-radius:16px; padding:16px; background:#fff; display:flex; flex-direction:column; gap:10px; }
     .plan.pop{ border-color:#2563eb; box-shadow:0 6px 30px rgba(37,99,235,.12) }
     .tag{font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid #e5e7eb;background:#f1f5f9;display:inline-block}
     .price{font-size:28px; font-weight:800}
@@ -108,7 +100,8 @@
           <li>• <strong>Radar</strong> (tempo real): até <strong>5 ativações/mês</strong></li>
         </ul>
         <div class="cta-box">
-          <a class="btn" href="/painel_login.html?plan=pro">Assinar Pro</a>
+          <!-- alterado: chama JS (se não logado, redireciona pro painel) -->
+          <button class="btn" onclick="assinarPlano('pro')">Assinar Pro</button>
           <a class="btn ghost" href="/planos.html#comparar">Comparar</a>
         </div>
       </article>
@@ -129,7 +122,8 @@
           <li>• Elegível ao <strong>Top 10</strong> da semana</li>
         </ul>
         <div class="cta-box">
-          <a class="btn" href="/painel_login.html?plan=premium">Assinar Premium</a>
+          <!-- alterado: chama JS (se não logado, redireciona pro painel) -->
+          <button class="btn" onclick="assinarPlano('premium')">Assinar Premium</button>
           <a class="btn ghost" href="/planos.html#comparar">Comparar</a>
         </div>
       </article>
@@ -157,42 +151,12 @@
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>Presença nas buscas</td>
-            <td>Local (1 bairro/cidade)</td>
-            <td>Destaque leve</td>
-            <td>Prioridade máxima</td>
-          </tr>
-          <tr>
-            <td>Raio de atendimento</td>
-            <td>—</td>
-            <td>Até 30km</td>
-            <td>Até 50km</td>
-          </tr>
-          <tr>
-            <td>Cidades extras</td>
-            <td>—</td>
-            <td>Até 3</td>
-            <td>Até 10</td>
-          </tr>
-          <tr>
-            <td>Radar (tempo real)</td>
-            <td>—</td>
-            <td>5 ativações/mês</td>
-            <td>Ilimitado</td>
-          </tr>
-          <tr>
-            <td>Métricas</td>
-            <td>—</td>
-            <td>Básicas</td>
-            <td>Avançadas</td>
-          </tr>
-          <tr>
-            <td>Top 10</td>
-            <td>—</td>
-            <td>—</td>
-            <td>Elegível</td>
-          </tr>
+          <tr><td>Presença nas buscas</td><td>Local (1 bairro/cidade)</td><td>Destaque leve</td><td>Prioridade máxima</td></tr>
+          <tr><td>Raio de atendimento</td><td>—</td><td>Até 30km</td><td>Até 50km</td></tr>
+          <tr><td>Cidades extras</td><td>—</td><td>Até 3</td><td>Até 10</td></tr>
+          <tr><td>Radar (tempo real)</td><td>—</td><td>5 ativações/mês</td><td>Ilimitado</td></tr>
+          <tr><td>Métricas</td><td>—</td><td>Básicas</td><td>Avançadas</td></tr>
+          <tr><td>Top 10</td><td>—</td><td>—</td><td>Elegível</td></tr>
         </tbody>
       </table>
       <p class="disclaimer" style="margin-top:8px">
@@ -220,11 +184,65 @@
   </main>
 
   <script>
-    // Se vier com plan=pro|premium na URL, persistimos a intenção para o painel
+    // Mantém intenção de plano quando o usuário vem por ?plan=pro|premium
     const u = new URL(location.href);
-    const plan = (u.searchParams.get('plan')||'').toLowerCase();
-    if (plan === 'pro' || plan === 'premium'){
-      try { localStorage.setItem('intent.plan', plan); } catch(_){}
+    const planIntent = (u.searchParams.get('plan')||'').toLowerCase();
+    if (planIntent === 'pro' || planIntent === 'premium'){
+      try { localStorage.setItem('intent.plan', planIntent); } catch(_){}
+    }
+
+    // Helpers
+    function digits(s){ return String(s||'').replace(/\D/g,''); }
+
+    // Fluxo de assinatura
+    async function assinarPlano(plan){ // 'pro' | 'premium'
+      try {
+        // se não estiver logado, manda para o login mantendo intenção
+        if (!window.PRO_ID) {
+          try { localStorage.setItem('intent.plan', plan); } catch(_){}
+          location.href = '/painel_login.html?plan='+encodeURIComponent(plan);
+          return;
+        }
+
+        // dados do profissional logado — preencha no template do painel quando possível
+        const proId       = window.PRO_ID;
+        const name        = window.PRO_NAME;
+        const email       = window.PRO_EMAIL;
+        const mobilePhone = digits(window.PRO_WHATSAPP_DIGITOS||'');
+
+        if(!proId || !name || !email){
+          alert('Complete seu perfil com nome e e-mail para assinar.');
+          return;
+        }
+
+        // 1) garantir customer no Asaas (o endpoint salva no seu JSON se receber proId)
+        const cRes = await fetch('/api/pay/asaas/customer', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ name, email, mobilePhone, proId })
+        });
+        const cJs = await cRes.json();
+        if(!cJs.ok){ alert('Falha ao preparar cobrança.'); return; }
+        const customerId = cJs.customerId;
+
+        // 2) criar assinatura e abrir a 1ª fatura
+        const sRes = await fetch('/api/pay/asaas/subscription/create', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ customerId, plan, proId })
+        });
+        const sJs = await sRes.json();
+        if(!sJs.ok){ alert('Falha ao criar assinatura: ' + (sJs.error||'')); return; }
+
+        if (sJs.url) {
+          window.location.href = sJs.url;
+        } else {
+          alert('Assinatura criada. Aguarde a fatura aparecer no Asaas.');
+        }
+      } catch(e){
+        console.error(e);
+        alert('Erro inesperado. Tente novamente.');
+      }
     }
   </script>
 </body>
