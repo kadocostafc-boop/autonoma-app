@@ -36,6 +36,94 @@ const cookieParser = require("cookie-parser");
 const app = express();
 app.set("trust proxy", 1);
 
+// =========================[ Utils p/ cadastro → Asaas ]=========================
+function onlyDigits(s){ return String(s||"").replace(/\D/g,""); }
+function toBRWith55(raw){
+  const d = onlyDigits(raw);
+  if (!d) return "";
+  if (d.startsWith("55")) return d;
+  if (d.length === 10 || d.length === 11) return "55"+d; // DDD + número
+  return d; // deixa como veio
+}
+
+// =========================[ Rota: criar cliente no Asaas ]======================
+// POST /api/pay/asaas/customer
+// body: { name, email, mobilePhone, cpfCnpj, proId? }
+// - cria o "customer" no Asaas
+// - se vier proId, grava o asaasCustomerId no seu banco JSON
+app.post('/api/pay/asaas/customer', express.json(), async (req, res) => {
+  try {
+    const { name, email, mobilePhone, cpfCnpj, proId } = req.body || {};
+
+    if (!name || !email) {
+      return res.status(400).json({ ok:false, error:'name e email são obrigatórios' });
+    }
+
+    const payload = {
+      name,
+      email,
+      mobilePhone: toBRWith55(mobilePhone || ""),
+      cpfCnpj: cpfCnpj ? onlyDigits(cpfCnpj) : undefined
+    };
+
+    const customer = await asaasRequest('/customers', {
+      method:'POST',
+      body: JSON.stringify(payload)
+    });
+
+    // Se o caller informar proId, persistimos no JSON
+    if (proId) {
+      try {
+        // carrega seu banco JSON
+        const dbPath = DATA_FILE; // você já tem const DATA_FILE no seu server.js
+        const raw = fs.existsSync(dbPath) ? fs.readFileSync(dbPath,'utf8') : '{"profissionais":[]}' ;
+        const json = raw ? JSON.parse(raw) : { profissionais: [] };
+
+        const idx = (json.profissionais||[]).findIndex(p => String(p.id) === String(proId));
+        if (idx >= 0) {
+          json.profissionais[idx].asaasCustomerId = customer.id;
+          fs.writeFileSync(dbPath, JSON.stringify(json, null, 2));
+        }
+      } catch (e) {
+        console.error('[Asaas][persist] falha ao salvar asaasCustomerId:', e.message);
+        // não bloqueia a resposta — o cliente foi criado no Asaas
+      }
+    }
+
+    return res.json({ ok:true, customerId: customer.id, customer });
+  } catch (e) {
+    console.error('[Asaas][customer] erro:', e.message);
+    return res.status(400).json({ ok:false, error: e.message });
+  }
+});
+
+// =========================[ Asaas Client ]=========================
+const fetch = require("node-fetch");
+
+const ASAAS_KEY = process.env.ASAAS_API_KEY;
+const ASAAS_ENV = process.env.ASAAS_ENV || "sandbox";
+const ASAAS_BASE_URL =
+  ASAAS_ENV === "prod"
+    ? "https://api.asaas.com/v3"
+    : "https://sandbox.asaas.com/api/v3";
+
+// Função auxiliar para chamar a API do Asaas
+async function asaasRequest(endpoint, options = {}) {
+  const res = await fetch(`${ASAAS_BASE_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${ASAAS_KEY}`,
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    },
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Erro Asaas ${res.status}: ${err}`);
+  }
+  return res.json();
+}
+
 // =========================[ Arquivos / Banco JSON ]==========================
 
 const DATA_FILE = process.env.DATA_FILE || "/data/profissionais.json";
