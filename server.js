@@ -36,6 +36,26 @@ const cookieParser = require("cookie-parser");
 const app = express();
 app.set("trust proxy", 1);
 
+// ===== Healthcheck deve responder SEM redirecionar =====
+app.get('/health', (_req, res) => res.type('text').send('ok'));
+
+// ===== Forçar HTTPS (exceto /health) =====
+const PRIMARY_HOST = String(process.env.PRIMARY_HOST || '')
+  .replace(/^https?:\/\//, '') // remove protocolo se tiver
+  .replace(/\/.*$/, '');       // remove qualquer caminho
+
+if (String(process.env.FORCE_HTTPS).toLowerCase() === 'true') {
+  app.use((req, res, next) => {
+    if (req.path === '/health') return next();
+    const proto = req.headers['x-forwarded-proto'];
+    if (proto && proto !== 'https') {
+      const host = PRIMARY_HOST || req.headers.host;
+      return res.redirect(301, 'https://' + host + req.originalUrl);
+    }
+    next();
+  });
+}
+
 // =========================[ Utils p/ cadastro → Asaas ]=========================
 function onlyDigits(s){ return String(s||"").replace(/\D/g,""); }
 function toBRWith55(raw){
@@ -530,16 +550,6 @@ app.get("/wa/pin", async (req, res) => {
     res.status(500).send("Erro interno.");
   }
 });
-
-// =========================[ Config ]==========================
-const HOST = "0.0.0.0";
-const BASE_PORT = Number(process.env.PORT || 3000);
-
-// Canonical/redirects
-const PRIMARY_HOST = (process.env.PRIMARY_HOST || "").trim();
-const FORCE_HTTPS = String(process.env.FORCE_HTTPS || "false").toLowerCase() === "true";
-const REDIRECTS_DISABLED = String(process.env.REDIRECTS_DISABLED || "false").toLowerCase() === "true";
-
 // Taxas/checkout
 const FEE_CARD_PERCENT = Number(process.env.FEE_CARD_PERCENT || 4);
 const FEE_PIX_PERCENT = Number(process.env.FEE_PIX_PERCENT || 0);
@@ -878,7 +888,6 @@ const htmlErrors = (title, list, backHref = "/") =>
     backHref
   )}">Voltar</a></div></div>`;
 // =========================[ Health/diag ]======================
-app.get("/healthz", (_req, res) => res.type("text").send("ok"));
 
 app.get("/admin/check", (req, res) => {
   const info = {
@@ -2935,23 +2944,10 @@ app.post("/api/profissional/:id/avaliar", express.json(), (req, res) => {
 });
 
 // =====================[ Inicialização ]=====================
-// Healthcheck extra p/ Railway
-app.get("/health", (_req, res) => res.type("text").send("ok"));
 
 // Bind do servidor (respeitando .env)
 const BIND_HOST = process.env.HOST || "0.0.0.0";
 const BIND_PORT = Number(process.env.PORT || 3000);
-
-// =========================[ Webhook Asaas ]=========================
-app.post("/webhooks/asaas", express.json(), (req, res) => {
-  const sig = req.headers["asaas-access-token"]; // token de autenticação enviado pelo Asaas
-  if (sig !== process.env.ASAAS_WEBHOOK_TOKEN) {
-    console.warn("[Asaas] Webhook com token inválido");
-    return res.status(401).json({ ok: false, error: "Token inválido" });
-  }
-
-  const event = req.body;
-  console.log("[Asaas] Webhook recebido:", JSON.stringify(event, null, 2));
 
   // Aqui você trata os eventos importantes
   switch (event.event) {
@@ -2975,11 +2971,10 @@ app.post("/webhooks/asaas", express.json(), (req, res) => {
   }
 
   res.json({ ok: true });
-});
 
-// ===== Inicialização / Bind (compatível com Railway) =====
+// ===== Inicialização compatível com Railway =====
 const PORT = Number(process.env.PORT || 8080);
-// Não passe HOST — Express, sem host, escuta em 0.0.0.0 (necessário no Railway)
+// Não passe HOST aqui; sem host o Express usa 0.0.0.0
 app.listen(PORT, () => {
   console.log(`[BOOT] Autônoma.app rodando na porta ${PORT}`);
 });
