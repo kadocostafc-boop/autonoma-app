@@ -34,12 +34,10 @@ app.set("trust proxy", 1);
 
 // ==== Healthcheck deve responder SEM redirecionar ====
 app.get('/health',  (_req, res) => res.type('text').send('ok'));
-app.head('/health', (_req, res) => res.type('text').send('ok')); // extra
+app.head('/health', (_req, res) => res.type('text').send('ok')); // opcional
 
-// Alguns provedores usam /healthz:
 app.get('/healthz',  (_req, res) => res.type('text').send('ok'));
-app.head('/healthz', (_req, res) => res.type('text').send('ok'));
-
+app.head('/healthz', (_req, res) => res.type('text').send('ok')); // opcional
 // === Boot básico / deps ===
 require('dotenv').config();
 
@@ -50,7 +48,11 @@ const PRIMARY_HOST = String(process.env.PRIMARY_HOST || '')
 
 const FORCE_HTTPS = String(process.env.FORCE_HTTPS || 'false').toLowerCase() === 'true';
 
-if (FORCE_HTTPS) {
+const REDIRECTS_DISABLED = String(process.env.REDIRECTS_DISABLED || 'false').toLowerCase() === 'true';
+
+const SECURE_COOKIES = String(process.env.SECURE_COOKIES || 'false').toLowerCase() === 'true';
+
+if (FORCE_HTTPS && !REDIRECTS_DISABLED) {
   app.use((req, res, next) => {
     // nunca redirecionar health ou healthz
     if (req.path === '/health' || req.path === '/healthz') return next();
@@ -63,16 +65,6 @@ if (FORCE_HTTPS) {
     next();
   });
 }
-// =========================[ Utils p/ cadastro → Asaas ]=========================
-function onlyDigits(s){ return String(s||"").replace(/\D/g,""); }
-function toBRWith55(raw){
-  const d = onlyDigits(raw);
-  if (!d) return "";
-  if (d.startsWith("55")) return d;
-  if (d.length === 10 || d.length === 11) return "55"+d; // DDD + número
-  return d; // deixa como veio
-}
-
 // =========================[ Rota: criar cliente no Asaas ]======================
 // POST /api/pay/asaas/customer
 // body: { name, email, mobilePhone, cpfCnpj, proId? }
