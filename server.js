@@ -17,6 +17,10 @@
 
 require("dotenv").config();
 
+console.log("[BOOT] WA_TOKEN len:", (process.env.WA_TOKEN || "").length);
+console.log("[BOOT] WA_PHONE_ID:", process.env.WA_PHONE_ID || "(vazio)");
+console.log("[BOOT] WA_BUSINESS_ID:", process.env.WA_BUSINESS_ID || "(vazio)");
+
 const express = require("express");
 const session = require("express-session");
 const multer = require("multer");
@@ -32,32 +36,29 @@ const cookieParser = require("cookie-parser");
 const app = express();
 app.set("trust proxy", 1);
 
-// ==== Healthcheck deve responder SEM redirecionar ====
-app.get('/health',  (_req, res) => res.type('text').send('ok'));
-app.head('/health', (_req, res) => res.type('text').send('ok')); // opcional
-
-app.get('/healthz',  (_req, res) => res.type('text').send('ok'));
-app.head('/healthz', (_req, res) => res.type('text').send('ok')); // opcional
 // === Boot básico / deps ===
 require('dotenv').config();
 
-// ==== Forçar HTTPS (exceto health/healthz) ====
+app.set('trust proxy', 1);
+
+// ==== Healthcheck deve responder SEM redirecionar ====
+app.get('/health', (_req, res) => res.type('text').send('ok'));
+app.head('/health', (_req, res) => res.type('text').send('ok')); // extra segurança
+
+// ===== Forçar HTTPS (exceto /health) =====
 const PRIMARY_HOST = String(process.env.PRIMARY_HOST || '')
-  .replace(/^https?:\/\//, '') // remove protocolo
-  .replace(/\/.*$/, '');       // remove caminho
+  .replace(/^https?:\/\//, '')   // remove protocolo
+  .replace(/\/.*$/, '');         // remove caminho
 
 const FORCE_HTTPS = String(process.env.FORCE_HTTPS || 'false').toLowerCase() === 'true';
 
-const REDIRECTS_DISABLED = String(process.env.REDIRECTS_DISABLED || 'false').toLowerCase() === 'true';
-
-const SECURE_COOKIES = String(process.env.SECURE_COOKIES || 'false').toLowerCase() === 'true';
-
-if (FORCE_HTTPS && !REDIRECTS_DISABLED) {
+if (FORCE_HTTPS) {
   app.use((req, res, next) => {
-    // nunca redirecionar health ou healthz
-    if (req.path === '/health' || req.path === '/healthz') return next();
+    // NUNCA redirecionar o health
+    if (req.path === '/health') return next();
 
     const proto = (req.headers['x-forwarded-proto'] || '').toString();
+    // só força se veio por http
     if (proto && proto !== 'https') {
       const host = PRIMARY_HOST || req.headers.host;
       return res.redirect(301, `https://${host}${req.originalUrl}`);
@@ -65,6 +66,17 @@ if (FORCE_HTTPS && !REDIRECTS_DISABLED) {
     next();
   });
 }
+
+// =========================[ Utils p/ cadastro → Asaas ]=========================
+function onlyDigits(s){ return String(s||"").replace(/\D/g,""); }
+function toBRWith55(raw){
+  const d = onlyDigits(raw);
+  if (!d) return "";
+  if (d.startsWith("55")) return d;
+  if (d.length === 10 || d.length === 11) return "55"+d; // DDD + número
+  return d; // deixa como veio
+}
+
 // =========================[ Rota: criar cliente no Asaas ]======================
 // POST /api/pay/asaas/customer
 // body: { name, email, mobilePhone, cpfCnpj, proId? }
@@ -117,9 +129,7 @@ app.post('/api/pay/asaas/customer', express.json(), async (req, res) => {
 });
 
 // =========================[ Asaas Client ]=========================
-// fetch compat: usa o global do Node 18+; se não existir, carrega node-fetch dinamicamente
-const fetch = global.fetch || ((...args) =>
-  import('node-fetch').then(({ default: f }) => f(...args)));
+const fetch = require("node-fetch");
 
 const ASAAS_KEY = process.env.ASAAS_API_KEY;
 const ASAAS_ENV = process.env.ASAAS_ENV || "sandbox";
@@ -226,53 +236,43 @@ app.post("/api/pay/asaas/subscription/cancel", express.json(), async (req, res) 
   }
 });
 
-
-// ===========================[ Webhook Asaas ]===========================
-// URL pública configurada no Asaas: https://SEU_DOMINIO/webhooks/asaas
-// Authentication Token (no painel Asaas) deve ser igual a ASAAS_WEBHOOK_TOKEN do .env
+// =======================[ Webhook Asaas ]=======================
 app.post('/webhooks/asaas', express.json(), async (req, res) => {
   try {
-    // 1) Segurança – valida token enviado pelo Asaas
+    // 1) Segurança — confere token enviado pelo Asaas
     const sig = req.headers['asaas-access-token'];
     if (sig !== process.env.ASAAS_WEBHOOK_TOKEN) {
-      console.warn('[Asaas][Webhook] token inválido:', sig);
+      console.warn('[Asaas] Webhook com token inválido:', sig);
       return res.status(401).json({ ok: false, error: 'Token inválido' });
     }
 
     // 2) Evento recebido
-    const event = req.body || {};
+    const event = req.body;
     console.log('[Asaas] Webhook recebido:', JSON.stringify(event, null, 2));
 
-    // 3) Trate apenas os eventos necessários
+    // 3) Trate os eventos
     switch (event.event) {
       case 'PAYMENT_CREATED':
-        console.log('🧾 Pagamento criado:', event.payment?.id);
+        console.log('🧾 Pagamento criado:', event.payment.id);
         break;
-
       case 'PAYMENT_CONFIRMED':
       case 'PAYMENT_RECEIVED':
-        console.log('✅ Pagamento confirmado:', event.payment?.id);
-        // TODO: ativar plano do profissional vinculado a esta assinatura/pagamento
+        console.log('✅ Pagamento confirmado:', event.payment.id);
         break;
-
       case 'PAYMENT_OVERDUE':
-        console.log('⚠️  Pagamento atrasado:', event.payment?.id);
-        // TODO: suspender/rebaixar plano se necessário
+        console.log('⚠️ Pagamento atrasado:', event.payment.id);
         break;
-
       case 'PAYMENT_REFUNDED':
-        console.log('↩️  Pagamento estornado:', event.payment?.id);
-        // TODO: cancelar/suspender plano
+        console.log('↩️ Pagamento estornado:', event.payment.id);
         break;
-
       default:
-        console.log('📦 Evento ignorado:', event.event);
+        console.log('📘 Evento ignorado:', event.event);
     }
 
-    return res.json({ ok: true });
+    res.json({ ok: true });
   } catch (e) {
-    console.error('[Asaas][Webhook] erro:', e);
-    return res.status(500).json({ ok: false, error: 'Erro no webhook' });
+    console.error('[Asaas] Erro no webhook:', e);
+    res.status(500).json({ ok: false });
   }
 });
 
@@ -506,7 +506,7 @@ const escapeHTML = (s = "") =>
     .replace(/'/g, "&#39;");
 const getIP = (req) =>
   (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "";
-
+const onlyDigits = (v) => trim(v).replace(/\D/g, "");
 const ensureBR = (d) => (d && /^\d{10,13}$/.test(d) ? (d.startsWith("55") ? d : "55" + d) : d);
 const isWhatsappValid = (w) => {
   const d = onlyDigits(w);
@@ -2840,8 +2840,33 @@ app.post("/api/profissional/:id/avaliar", express.json(), (req, res) => {
   res.json({ ok: true });
 });
 
+
+  // Aqui você trata os eventos importantes
+  switch (event.event) {
+    case "PAYMENT_CREATED":
+      console.log("💳 Pagamento criado:", event.payment.id);
+      break;
+    case "PAYMENT_CONFIRMED":
+    case "PAYMENT_RECEIVED":
+      console.log("✅ Pagamento confirmado:", event.payment.id);
+      // TODO: marcar assinatura como ativa no banco
+      break;
+    case "PAYMENT_OVERDUE":
+      console.log("⚠️ Pagamento atrasado:", event.payment.id);
+      // TODO: suspender ou alertar usuário
+      break;
+    case "PAYMENT_REFUNDED":
+      console.log("↩️ Pagamento estornado:", event.payment.id);
+      break;
+    default:
+      console.log("ℹ️ Evento ignorado:", event.event);
+  }
+
+  res.json({ ok: true });
+
 // ===== Inicialização compatível com Railway =====
 const PORT = Number(process.env.PORT || 8080);
+// Não passe HOST aqui; sem host o Express usa 0.0.0.0
 app.listen(PORT, () => {
   console.log(`[BOOT] Autônoma.app rodando na porta ${PORT}`);
 });
