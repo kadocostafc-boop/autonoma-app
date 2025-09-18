@@ -44,48 +44,65 @@ app.set('trust proxy', 1);
 // ==== Healthcheck deve responder SEM redirecionar ====
 app.get('/health', (_req, res) => res.type('text').send('ok'));
 app.head('/health', (_req, res) => res.type('text').send('ok')); // extra segurança
+app.get('/healthz', (_req, res) => res.type('text').send('ok'));
+app.head('/healthz', (_req, res) => res.type('text').send('ok'));
 
-// ===== Forçar HTTPS (exceto /health) =====
+// ===== Forçar HTTPS e controlar redirects (exceto /health e /healthz) =====
 const PRIMARY_HOST = String(process.env.PRIMARY_HOST || '')
   .replace(/^https?:\/\//, '')   // remove protocolo
   .replace(/\/.*$/, '');         // remove caminho
 
-const FORCE_HTTPS = String(process.env.FORCE_HTTPS || 'false').toLowerCase() === 'true';
+const FORCE_HTTPS        = String(process.env.FORCE_HTTPS        || 'false').toLowerCase() === 'true';
+const REDIRECTS_DISABLED = String(process.env.REDIRECTS_DISABLED || 'false').toLowerCase() === 'true';
+const SECURE_COOKIES     = String(process.env.SECURE_COOKIES     || 'false').toLowerCase() === 'true';
 
-if (FORCE_HTTPS) {
+// Middleware ÚNICO de canonical + HTTPS (nunca mexe em /health ou /healthz)
+if (!REDIRECTS_DISABLED) {
   app.use((req, res, next) => {
-    // NUNCA redirecionar o health
-    if (req.path === '/health') return next();
+    const p = req.path;
+    if (p === '/health' || p === '/healthz') return next();
 
-    const proto = (req.headers['x-forwarded-proto'] || '').toString();
-    // só força se veio por http
-    if (proto && proto !== 'https') {
-      const host = PRIMARY_HOST || req.headers.host;
+    const hostNow = (req.headers.host || '').toLowerCase();
+    const isHttps = (req.headers['x-forwarded-proto'] || req.protocol) === 'https';
+
+    // Canonical host
+    if (PRIMARY_HOST && hostNow && hostNow !== PRIMARY_HOST.toLowerCase()) {
+      const scheme = (FORCE_HTTPS || isHttps) ? 'https' : 'http';
+      return res.redirect(301, `${scheme}://${PRIMARY_HOST}${req.originalUrl}`);
+    }
+
+    // Força HTTPS
+    if (FORCE_HTTPS && !isHttps) {
+      const host = hostNow || PRIMARY_HOST || 'localhost';
       return res.redirect(301, `https://${host}${req.originalUrl}`);
     }
+
     next();
   });
 }
 
 // =========================[ Utils p/ cadastro → Asaas ]=========================
-function onlyDigits(s){ return String(s||"").replace(/\D/g,""); }
-function toBRWith55(raw){
-  const d = onlyDigits(raw);
-  if (!d) return "";
-  if (d.startsWith("55")) return d;
-  if (d.length === 10 || d.length === 11) return "55"+d; // DDD + número
-  return d; // deixa como veio
-}
 
-// =========================[ Rota: criar cliente no Asaas ]======================
-// POST /api/pay/asaas/customer
-// body: { name, email, mobilePhone, cpfCnpj, proId? }
-// - cria o "customer" no Asaas
-// - se vier proId, grava o asaasCustomerId no seu banco JSON
+// ===== Helpers gerais =====
+const trim = (s) => (s ?? "").toString().trim();
+const norm = (s) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+const getIP = (req) =>
+  (req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
+  req.socket?.remoteAddress ||
+  "";
+const onlyDigits = (v) => trim(v).replace(/\D/g, "");
+const ensureBR = (d) =>
+  d && /^\d{10,13}$/.test(d)
+    ? d.startsWith("55")
+      ? d
+      : "55" + d
+    : d;
+
+// ===========================[ Rota: criar cliente no Asaas ]===========================
 app.post('/api/pay/asaas/customer', express.json(), async (req, res) => {
   try {
-    const { name, email, mobilePhone, cpfCnpj, proId } = req.body || {};
-
+    const { name, email, mobilePhone, cpfCnpj, proId } = req.body;
+    // ...
     if (!name || !email) {
       return res.status(400).json({ ok:false, error:'name e email são obrigatórios' });
     }
@@ -495,19 +512,7 @@ const ADMIN_PASS_HASH = process.env.ADMIN_PASS_HASH || ""; // se existir, tem pr
 const SESSION_SECRET = process.env.SESSION_SECRET || "troque-isto";
 
 // =========================[ Helpers ]==========================
-const trim = (s) => (s ?? "").toString().trim();
-const norm = (s) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-const escapeHTML = (s = "") =>
-  String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-const getIP = (req) =>
-  (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "";
-const onlyDigits = (v) => trim(v).replace(/\D/g, "");
-const ensureBR = (d) => (d && /^\d{10,13}$/.test(d) ? (d.startsWith("55") ? d : "55" + d) : d);
+
 const isWhatsappValid = (w) => {
   const d = onlyDigits(w);
   const br = ensureBR(d);
@@ -2839,30 +2844,6 @@ app.post("/api/profissional/:id/avaliar", express.json(), (req, res) => {
   writeDB(db);
   res.json({ ok: true });
 });
-
-
-  // Aqui você trata os eventos importantes
-  switch (event.event) {
-    case "PAYMENT_CREATED":
-      console.log("💳 Pagamento criado:", event.payment.id);
-      break;
-    case "PAYMENT_CONFIRMED":
-    case "PAYMENT_RECEIVED":
-      console.log("✅ Pagamento confirmado:", event.payment.id);
-      // TODO: marcar assinatura como ativa no banco
-      break;
-    case "PAYMENT_OVERDUE":
-      console.log("⚠️ Pagamento atrasado:", event.payment.id);
-      // TODO: suspender ou alertar usuário
-      break;
-    case "PAYMENT_REFUNDED":
-      console.log("↩️ Pagamento estornado:", event.payment.id);
-      break;
-    default:
-      console.log("ℹ️ Evento ignorado:", event.event);
-  }
-
-  res.json({ ok: true });
 
 // ===== Inicialização compatível com Railway =====
 const PORT = Number(process.env.PORT || 8080);
