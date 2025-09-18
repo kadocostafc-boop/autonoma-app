@@ -126,7 +126,9 @@ app.post('/api/pay/asaas/customer', express.json(), async (req, res) => {
 });
 
 // =========================[ Asaas Client ]=========================
-const fetch = require("node-fetch");
+// fetch compat: usa o global do Node 18+; se não existir, carrega node-fetch dinamicamente
+const fetch = global.fetch || ((...args) =>
+  import('node-fetch').then(({ default: f }) => f(...args)));
 
 const ASAAS_KEY = process.env.ASAAS_API_KEY;
 const ASAAS_ENV = process.env.ASAAS_ENV || "sandbox";
