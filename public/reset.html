@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Redefinir senha • Autônoma.app</title>
+
+  <!-- SEO / PWA / Ícones (iguais ao painel_login) -->
+  <link rel="canonical" href="https://autonomaapp.com.br/reset.html">
+  <meta name="description" content="Defina uma nova senha para acessar seu painel do Autônoma.app.">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#2d6cdf">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+
+  <!-- CSS global do app -->
+  <link rel="stylesheet" href="/css/app.css?v=reset-2025-09-18">
+
+  <style>
+    .header { display:flex; align-items:center; gap:12px; padding:12px 16px }
+    .header .logo { height:32px; width:auto; display:block }
+    .wrap-narrow { max-width:520px; margin:28px auto; padding:0 12px }
+    .muted { color:#64748b; font-size:12px }
+    .warn { color:#b91c1c }
+  </style>
+</head>
+<body>
+<header class="header" role="banner">
+  <a href="/" aria-label="Início">
+    <img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display='none'">
+  </a>
+  <div style="margin-left:auto;display:flex;gap:8px">
+    <a class="btn ghost" href="/">Início</a>
+    <a class="btn outline" href="/clientes.html">Ver profissionais</a>
+  </div>
+</header>
+
+<main class="wrap wrap-narrow" role="main">
+  <div class="card" style="padding:20px">
+    <h1 style="margin:0 0 6px">Redefinir senha</h1>
+    <p class="meta" style="margin:0 0 14px">Digite sua nova senha. O link precisa conter um <strong>token</strong> válido.</p>
+
+    <form id="resetForm" class="grid" style="gap:12px">
+      <div class="field">
+        <label for="senha1" class="label">Nova senha</label>
+        <input id="senha1" name="senha1" type="password" class="input" autocomplete="new-password" required placeholder="Nova senha">
+      </div>
+
+      <div class="field">
+        <label for="senha2" class="label">Confirmar nova senha</label>
+        <input id="senha2" name="senha2" type="password" class="input" autocomplete="new-password" required placeholder="Confirme a senha">
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+        <a class="btn btn-light" href="/painel_login.html">Cancelar</a>
+        <button type="submit" id="btnReset" class="btn btn-primary">Salvar nova senha</button>
+      </div>
+
+      <p id="msg" class="meta" style="display:none;margin-top:6px"></p>
+    </form>
+  </div>
+</main>
+
+<script>
+(() => {
+  const $ = (s, r=document) => r.querySelector(s);
+  const form = $('#resetForm');
+  const s1 = $('#senha1');
+  const s2 = $('#senha2');
+  const btn = $('#btnReset');
+  const msg = $('#msg');
+
+  // pega token da query ?token=...
+  const params = new URLSearchParams(location.search);
+  const token = params.get('token') || '';
+
+  if (!token) {
+    show('Link inválido: falta o token.', true);
+    form.querySelectorAll('input,button').forEach(el => el.disabled = true);
+    return;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    msg.style.display = 'none';
+
+    const a = (s1.value || '').trim();
+    const b = (s2.value || '').trim();
+    if (!a || !b) return show('Preencha a senha e a confirmação.', true);
+    if (a.length < 6) return show('A senha deve ter pelo menos 6 caracteres.', true);
+    if (a !== b) return show('As senhas não coincidem.', true);
+
+    setLoading(true);
+    try {
+      const res = await fetch('/auth/pro/reset', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ token, senha: a })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data && data.ok) {
+        show('Senha redefinida com sucesso! Redirecionando…', false);
+        setTimeout(() => location.href = '/painel_login.html', 1200);
+      } else {
+        show((data && (data.error || data.message)) || 'Não foi possível redefinir a senha.', true);
+      }
+    } catch (err) {
+      show('Falha de conexão. Tente novamente.', true);
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  function setLoading(on){
+    if (on){ btn.disabled = true; btn.textContent = 'Salvando…'; }
+    else    { btn.disabled = false; btn.textContent = 'Salvar nova senha'; }
+  }
+  function show(text, isErr){
+    msg.textContent = text;
+    msg.style.display = 'block';
+    msg.style.color = isErr ? '#b91c1c' : '#16a34a';
+  }
+})();
+</script>
+</body>
+</html>

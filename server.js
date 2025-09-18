@@ -17,10 +17,6 @@
 
 require("dotenv").config();
 
-console.log("[BOOT] WA_TOKEN len:", (process.env.WA_TOKEN || "").length);
-console.log("[BOOT] WA_PHONE_ID:", process.env.WA_PHONE_ID || "(vazio)");
-console.log("[BOOT] WA_BUSINESS_ID:", process.env.WA_BUSINESS_ID || "(vazio)");
-
 const express = require("express");
 const session = require("express-session");
 const multer = require("multer");
@@ -32,7 +28,35 @@ const QRCode = require("qrcode");
 const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcryptjs");
 const cookieParser = require("cookie-parser");
+const nodemailer = require("nodemailer");
 
+// Função genérica para envio de e-mails
+async function sendEmail(to, subject, text) {
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT) || 465,
+      secure: process.env.SMTP_SECURE === "true", // true para 465, false para 587
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || `Autônoma.app <${process.env.SMTP_USER}>`,
+      to,
+      subject,
+      text,
+    });
+
+    console.log("📧 E-mail enviado para:", to);
+    return true;
+  } catch (err) {
+    console.error("❌ Erro ao enviar e-mail:", err);
+    return false;
+  }
+}
 const app = express();
 app.set("trust proxy", 1);
 
@@ -47,6 +71,117 @@ app.head('/health', (_req, res) => res.type('text').send('ok')); // extra segura
 app.get('/healthz', (_req, res) => res.type('text').send('ok'));
 app.head('/healthz', (_req, res) => res.type('text').send('ok'));
 
+// =============[ Esqueci minha senha • POST /auth/pro/forgot ]=============
+const RESET_DIR = path.join(process.env.DATA_DIR || "./data", "reset");
+const RESET_DB  = path.join(RESET_DIR, "tokens.json");
+
+// util: carrega/salva JSON simples
+function loadJSONSafe(file) {
+  try { return JSON.parse(fs.readFileSync(file, "utf8")); }
+  catch { return {}; }
+}
+function saveJSON(file, obj) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(obj, null, 2));
+}
+
+// util: base URL (Railway/produção) para montar o link
+function baseUrlFrom(req) {
+  const envUrl = process.env.BASE_URL && String(process.env.BASE_URL).trim();
+  if (envUrl) return envUrl.startsWith("http") ? envUrl : `https://${envUrl}`;
+  const host = process.env.PRIMARY_HOST || req.headers.host || "";
+  const proto = (process.env.FORCE_HTTPS === "true" || req.headers["x-forwarded-proto"] === "https") ? "https" : "http";
+  return `${proto}://${host.replace(/^https?:\/\//, "")}`;
+}
+
+// util: valida e-mail
+function isEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||"").trim()); }
+
+// ROTA: solicita link de redefinição
+app.post("/auth/pro/forgot", express.json(), async (req, res) => {
+  try {
+    const identifier = String(req.body?.identifier || "").trim(); // aqui só aceitamos e-mail
+    if (!isEmail(identifier)) {
+      return res.status(400).json({ ok:false, error: "Digite um e-mail válido." });
+    }
+
+    // 1) gera token com expiração (2 horas)
+    const token = crypto.randomBytes(24).toString("hex");
+    const exp   = Date.now() + 2 * 60 * 60 * 1000; // +2h
+
+    // 2) grava token no "banco" simples em disco
+    const db = loadJSONSafe(RESET_DB);
+    // limpeza básica de tokens expirados
+    for (const [t, info] of Object.entries(db)) {
+      if (!info?.exp || Date.now() > Number(info.exp)) delete db[t];
+    }
+    db[token] = { email: identifier, exp };
+    saveJSON(RESET_DB, db);
+
+    // 3) monta link
+    const url = `${baseUrlFrom(req)}/reset?token=${encodeURIComponent(token)}`;
+
+    // 4) envia e-mail (usa seu helper sendMail)
+    const subject = "Redefinir sua senha • Autônoma.app";
+    const text =
+`Olá!
+
+Recebemos uma solicitação para redefinir sua senha no Autônoma.app.
+
+Para continuar, acesse o link abaixo (válido por 2 horas):
+${url}
+
+Se você não fez essa solicitação, ignore este e-mail.
+
+— Autônoma.app`;
+
+    // -> IMPORTANTE: este helper precisa existir (você já criou acima)
+    const ok = await sendMail(identifier, subject, text);
+
+    if (!ok) {
+      return res.status(500).json({ ok:false, error:"Não foi possível enviar o e-mail. Tente novamente." });
+    }
+
+    // 5) resposta: em produção retornamos apenas ok; no dev, também retornamos o link
+    const isDev = process.env.NODE_ENV !== "production";
+    return res.json({ ok:true, ...(isDev ? { resetUrl: url } : {}) });
+
+  } catch (err) {
+    console.error("[forgot] erro:", err);
+    return res.status(500).json({ ok:false, error:"Erro interno." });
+  }
+});
+// =============[ Redefinir senha • POST /auth/pro/reset ]=============
+app.post("/auth/pro/reset", async (req, res) => {
+  const { token, senha } = req.body;
+  if (!token || !senha) {
+    return res.status(400).json({ ok: false, error: "Token e nova senha obrigatórios" });
+  }
+
+  const users = readJSON(DB_FILE, []);
+  const user = users.find(
+    u => u.resetToken === token && u.resetExpira > Date.now()
+  );
+  if (!user) {
+    return res.status(400).json({ ok: false, error: "Token inválido ou expirado" });
+  }
+
+  // Hash da nova senha
+  const bcrypt = require("bcryptjs");
+  const hashed = await bcrypt.hash(senha, 10);
+
+  user.senha = hashed;
+  delete user.resetToken;
+  delete user.resetExpira;
+
+  writeJSON(DB_FILE, users);
+
+  res.json({ ok: true, message: "Senha redefinida com sucesso" });
+});
+// ===== Redirecionar /painel e atalhos para o login =====
+app.get(['/painel', '/pa'], (_req, res) => {
+  res.redirect(301, '/painel_login.html');
+});
 // ===== Forçar HTTPS e controlar redirects (exceto /health e /healthz) =====
 const PRIMARY_HOST = String(process.env.PRIMARY_HOST || '')
   .replace(/^https?:\/\//, '')   // remove protocolo
@@ -80,23 +215,87 @@ if (!REDIRECTS_DISABLED) {
     next();
   });
 }
-
-// =========================[ Utils p/ cadastro → Asaas ]=========================
-
-// ===== Helpers gerais =====
+// ========== Helpers (único) ==========
 const trim = (s) => (s ?? "").toString().trim();
-const norm = (s) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+const norm = (s) =>
+  (s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
 const getIP = (req) =>
-  (req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
+  (req.headers["x-forwarded-for"] || "")
+    .toString()
+    .split(",")[0]
+    .trim() ||
   req.socket?.remoteAddress ||
   "";
+
+// dígitos e telefone BR
 const onlyDigits = (v) => trim(v).replace(/\D/g, "");
 const ensureBR = (d) =>
-  d && /^\d{10,13}$/.test(d)
-    ? d.startsWith("55")
-      ? d
-      : "55" + d
-    : d;
+  d && /^\d{10,13}$/.test(d) ? (d.startsWith("55") ? d : "55" + d) : d;
+
+const isWhatsappValid = (w) => {
+  const d = onlyDigits(w);
+  const br = ensureBR(d);
+  return !!(br && /^\d{12,13}$/.test(br));
+};
+
+// datas / período
+const nowISO = () => new Date().toISOString();
+const monthRefOf = (d) => (d || nowISO()).slice(0, 7); // "YYYY-MM"
+function weekKey() {
+  const d = new Date();
+  const onejan = new Date(d.getFullYear(), 0, 1);
+  const day = Math.floor((d - onejan) / 86400000);
+  const week = Math.ceil((day + onejan.getDay() + 1) / 7);
+  return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+// distância haversine em KM
+function haversineKm(aLat, aLng, bLat, bLng) {
+  if (![aLat, aLng, bLat, bLng].every(Number.isFinite)) return null;
+  const R = 6371;
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const dLat = toRad(bLat - aLat),
+    dLng = toRad(bLng - aLng);
+  const lat1 = toRad(aLat),
+    lat2 = toRad(bLat);
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+
+// frase padrão para contato por WhatsApp
+function buildWaMessage(p) {
+  const nome = p?.nome ? ` ${p.nome}` : "";
+  const serv = p?.servico || p?.profissao || "seu serviço";
+  const loc  = [p?.bairro, p?.cidade].filter(Boolean).join(" - ");
+  const sufixo = loc ? ` (${loc})` : "";
+  return `Olá${nome}, vi seu perfil na Autônoma.app${sufixo} e gostaria de saber mais sobre ${serv}.`;
+}
+
+// util do Asaas (quando o backend enviar telefone cru)
+function toBRWith55(raw) {
+  const d = onlyDigits(raw);
+  if (!d) return "";
+  if (d.startsWith("55")) return d;
+  if (d.length === 10 || d.length === 11) return "55" + d;
+  return d; // mantém como veio se fugir do esperado
+}
+// ========== /Helpers ==========
+// ---- Helpers usados no Asaas ----
+function toBRWith55(raw) {
+  const d = onlyDigits(raw);
+  if (!d) return "";
+  if (d.startsWith("55")) return d;
+  if (d.length === 10 || d.length === 11) return "55" + d; // DDD + número
+  return d;
+}
 
 // ===========================[ Rota: criar cliente no Asaas ]===========================
 app.post('/api/pay/asaas/customer', express.json(), async (req, res) => {
@@ -324,8 +523,8 @@ app.get("/api/profissional/:id/avaliacoes", (req, res) => {
   if (!prof) return res.status(404).json({ ok: false, error: "Profissional não encontrado" });
 
   const list = Array.isArray(prof.avaliacoes) ? prof.avaliacoes : [];
-  const norm = list
-    .map((a) => ({
+
+map((a) => ({
       nome: a.nome || a.autor || a.cliente || "Cliente",
       nota: Number(a.nota ?? a.rating ?? a.estrelas ?? a.score ?? 0),
       texto: a.texto || a.comentario || a.comment || a.mensagem || "",
@@ -511,42 +710,7 @@ const ADMIN_PASS = process.env.ADMIN_PASS || process.env.ADMIN_PASSWORD || "admi
 const ADMIN_PASS_HASH = process.env.ADMIN_PASS_HASH || ""; // se existir, tem prioridade
 const SESSION_SECRET = process.env.SESSION_SECRET || "troque-isto";
 
-// =========================[ Helpers ]==========================
 
-const isWhatsappValid = (w) => {
-  const d = onlyDigits(w);
-  const br = ensureBR(d);
-  return !!(br && /^\d{12,13}$/.test(br));
-};
-const nowISO = () => new Date().toISOString();
-const monthRefOf = (d) => (d || nowISO()).slice(0, 7); // "YYYY-MM"
-function weekKey() {
-  const d = new Date();
-  const onejan = new Date(d.getFullYear(), 0, 1);
-  const day = Math.floor((d - onejan) / 86400000);
-  const week = Math.ceil((day + onejan.getDay() + 1) / 7);
-  return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
-}
-
-// Haversine
-function haversineKm(aLat, aLng, bLat, bLng) {
-  if (![aLat, aLng, bLat, bLng].every(Number.isFinite)) return null;
-  const R = 6371,
-    toRad = (d) => (d * Math.PI) / 180;
-  const dLat = toRad(bLat - aLat),
-    dLng = toRad(bLng - aLng);
-  const lat1 = toRad(aLat),
-    lat2 = toRad(bLat);
-  const x = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(x));
-}
-
-// Frase padrão WhatsApp
-function buildWaMessage(p) {
-  const nome = p?.nome ? ` ${p.nome}` : "";
-  const serv = p?.servico || p?.profissao || "seu serviço";
-  return `Olá${nome}, vi seu perfil na Autônoma.app e gostaria de contratar ${serv}. Podemos conversar?`;
-}
 
 // =========================[ Middlewares ]=====================
 app.use(compression());
@@ -576,7 +740,12 @@ if (!REDIRECTS_DISABLED) {
     next();
   });
 }
-
+// === Redirects curtos para o login do painel ===
+// Use 302 durante os testes para evitar cache do navegador.
+// (Depois que tudo estiver ok, você pode trocar para 301.)
+app.get(['/painel', '/painel/', '/pa', '/pa/'], (_req, res) => {
+  res.redirect(302, '/painel_login.html');
+});
 // Estático
 app.use(express.static(PUBLIC_DIR, { maxAge: "7d", fallthrough: true }));
 app.use("/uploads", express.static(UPLOAD_DIR, { maxAge: "30d", immutable: true }));

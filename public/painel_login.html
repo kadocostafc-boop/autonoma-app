@@ -5,141 +5,151 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Entrar no Painel • Autônoma.app</title>
 
-  <!-- Canonical + SEO -->
-  <link rel="canonical" href="https://autonomaapp.com.br/painel_login.html">
-  <meta name="description" content="Acesse seu painel do Autônoma.app para gerenciar seu perfil e receber clientes.">
+  <!-- (opcional) seu CSS global continua valendo -->
+  <link rel="stylesheet" href="/css/app.css?v=painel-login-adminlike">
 
-  <!-- PWA / Favicons -->
-  <link rel="manifest" href="/manifest.webmanifest">
-  <meta name="theme-color" content="#2d6cdf">
-  <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="icon" href="/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
-
-  <!-- CSS global -->
-  <link rel="stylesheet" href="/css/app.css?v=painel-login-2025-09-15r2">
+  <!-- Estilo FORTE (inline) para forçar o layout igual ao Admin -->
   <style>
-    .header { display:flex; align-items:center; gap:12px; padding:12px 16px }
-    .header .logo { height:32px; width:auto; display:block }
-    .muted { color:#64748b; font-size:12px }
-    .wrap-narrow { max-width:520px; margin:28px auto; padding:0 12px }
-    .preview { font-size:12px; color:#334155; margin-top:4px }
-    .btn.small { padding:8px 12px; font-size:14px }
-    .warn { color:#b91c1c }
+    :root { --bg:#0b1e5b; --card:#ffffff; --text:#0f172a; --muted:#64748b; --primary:#2563eb; --primary-900:#1e40af; }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;
+      background:var(--bg); color:var(--text);
+      display:grid; place-items:center;
+    }
+    .wrap{width:min(520px,92vw)}
+    .card{
+      background:var(--card); border-radius:18px;
+      box-shadow:0 20px 50px rgba(0,0,0,.35);
+      overflow:hidden;
+    }
+    .card-head{padding:24px 26px; border-bottom:1px solid #e5e7eb}
+    .card-body{padding:24px 26px}
+    h1{margin:0; font-size:28px; line-height:1.15}
+    .muted{color:var(--muted)}
+    .grid{display:grid; gap:14px}
+    label{display:block; font-size:14px; margin-bottom:6px; color:#334155}
+    .row{display:grid; grid-template-columns: 1fr 180px 56px; gap:10px}
+    @media (max-width:560px){
+      .row{grid-template-columns: 1fr}
+    }
+    .input{
+      width:100%; padding:12px 14px; border-radius:12px; border:1px solid #cbd5e1;
+      background:#f8fafc; outline:none; font-size:16px;
+    }
+    .input:focus{border-color:#93c5fd; box-shadow:0 0 0 3px rgba(59,130,246,.25)}
+    .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      padding:12px 18px; border-radius:12px; font-weight:600; border:0; cursor:pointer; text-decoration:none}
+    .btn-primary{background:var(--primary); color:#fff}
+    .btn-primary:hover{background:var(--primary-900)}
+    .btn-ghost{background:#0f172a; color:#fff}
+    .btn-ghost:hover{filter:brightness(1.1)}
+    .btn-light{background:#e2e8f0; color:#0f172a}
+    .actions{display:flex; gap:12px; justify-content:flex-end; margin-top:8px}
+    .remember{display:flex; align-items:center; gap:8px; font-size:14px}
+    .tips{font-size:12px; color:#475569}
+    .err{color:#dc2626; font-weight:600}
+    /* modal */
+    .overlay{position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; z-index:9998}
+    .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:9999}
+    .modal .card{width:min(520px,92vw)}
+    .modal-head{padding:14px 18px; border-bottom:1px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between}
   </style>
 </head>
 <body>
-<header class="header" role="banner">
-  <a href="/" aria-label="Início">
-    <img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display='none'">
-  </a>
-  <div style="margin-left:auto;display:flex;gap:8px">
-    <a class="btn ghost" href="/">Início</a>
-    <a class="btn outline" href="/clientes.html">Ver profissionais</a>
-  </div>
-</header>
 
-<main class="wrap wrap-narrow" role="main">
-  <div class="card" style="padding:20px">
-    <h1 style="margin:0 0 6px">Entrar no painel</h1>
-    <p class="meta" style="margin:0 0 14px">Use seu <strong>WhatsApp ou e-mail</strong> e sua <strong>senha</strong>.</p>
+<main class="wrap">
+  <div class="card">
+    <div class="card-head">
+      <h1>Entrar no painel</h1>
+      <p class="muted" style="margin:8px 0 0">Use seu <strong>WhatsApp ou e-mail</strong> e sua <strong>senha</strong>.</p>
+    </div>
 
-    <form id="loginForm" class="grid" style="gap:12px">
-      <!-- Identificador -->
-      <div class="field">
-        <label for="whatsOrEmail" class="label">WhatsApp (com DDD) ou e-mail</label>
-        <input id="whatsOrEmail" name="identifier" class="input" inputmode="text" autocomplete="username"
-               placeholder="21999998888 ou voce@exemplo.com" required>
-        <div id="idPrev" class="preview"></div>
-        <small class="muted">Se usar WhatsApp, digite apenas dígitos (DDD+número). Nós formatamos e adicionamos +55.</small>
-      </div>
+    <div class="card-body">
+      <form id="loginForm" class="grid" autocomplete="on">
+        <!-- linha 1: identificador + senha + olho -->
+        <div class="row">
+          <div>
+            <label for="whatsOrEmail">WhatsApp (com DDD) ou e-mail</label>
+            <input id="whatsOrEmail" name="identifier" class="input" inputmode="text" autocomplete="username"
+                   placeholder="21999998888 ou voce@exemplo.com" required>
+            <div id="idPrev" class="tips" style="margin-top:6px"></div>
+            <div class="tips">Se usar WhatsApp, digite apenas dígitos (DDD+número). Nós formatamos e adicionamos +55.</div>
+          </div>
 
-      <!-- Senha -->
-      <div class="field">
-        <label for="senha" class="label">Senha</label>
-        <div style="display:flex; align-items:center; gap:8px">
-          <input id="senha" name="password" type="password" class="input" required autocomplete="current-password" placeholder="Sua senha">
-          <button type="button" id="toggleSenha" class="btn btn-light" aria-label="Mostrar/ocultar senha">👁</button>
+          <div>
+            <label for="senha">Senha</label>
+            <input id="senha" name="password" type="password" class="input" required autocomplete="current-password" placeholder="Sua senha">
+          </div>
+
+          <div style="display:flex; align-items:flex-end">
+            <button type="button" id="toggleSenha" class="btn btn-ghost" aria-label="Mostrar/ocultar senha">👁</button>
+          </div>
         </div>
-      </div>
 
-      <!-- Lembrar / Esqueci -->
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
-        <label style="display:flex;gap:6px;align-items:center;font-size:14px">
-          <input type="checkbox" id="rememberMe" name="rememberMe">
-          Lembrar de mim
-        </label>
-        <button type="button" id="forgotOpenBtn" class="btn btn-link" style="font-size:14px;line-height:1">
-          Esqueci minha senha
-        </button>
-      </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px">
+          <label class="remember">
+            <input type="checkbox" id="rememberMe" name="rememberMe"> Lembrar de mim
+          </label>
+          <button type="button" id="forgotOpenBtn" class="btn btn-light">Esqueci minha senha</button>
+        </div>
 
-      <!-- Ações -->
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
-        <a href="/cadastro.html" class="btn btn-light">Criar conta</a>
-        <button type="submit" class="btn btn-primary" id="loginBtn">Entrar</button>
-      </div>
+        <div class="actions">
+          <a href="/cadastro.html" class="btn btn-light">Criar conta</a>
+          <button type="submit" class="btn btn-primary" id="loginBtn">Entrar</button>
+        </div>
 
-      <p id="errLogin" class="meta warn" style="display:none;margin-top:6px"></p>
-    </form>
+        <p id="errLogin" class="err" style="display:none; margin:4px 0 0"></p>
+      </form>
+    </div>
   </div>
 </main>
 
-<!-- ========[ MODAL: ESQUECI MINHA SENHA (E-MAIL OBRIGATÓRIO) ]======== -->
-<div id="forgotOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:9998"></div>
-<div id="forgotModal" role="dialog" aria-modal="true" aria-labelledby="forgotTitle"
-     style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:9999">
-  <div class="card" style="width:min(520px,92vw);background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.15);overflow:hidden">
-    <div style="padding:16px 18px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center">
-      <h3 id="forgotTitle" style="margin:0;font-size:18px">Redefinir senha</h3>
-      <button type="button" id="forgotCloseBtn" class="btn btn-light" aria-label="Fechar">✕</button>
+<!-- ===== Modal: Esqueci minha senha (e-mail) ===== -->
+<div id="forgotOverlay" class="overlay"></div>
+<div id="forgotModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="forgotTitle">
+  <div class="card">
+    <div class="modal-head">
+      <h3 id="forgotTitle" style="margin:0">Redefinir senha</h3>
+      <button type="button" id="forgotCloseBtn" class="btn btn-light">✕</button>
     </div>
-    <form id="forgotForm" style="padding:18px;display:grid;gap:12px">
-      <p class="muted" style="margin:0 0 6px">
-        Informe seu <strong>e-mail</strong> cadastrado. Enviaremos um link para redefinir sua senha.
-      </p>
-      <div class="field">
-        <label for="forgotEmail" class="label">E-mail</label>
+    <form id="forgotForm" style="padding:18px" class="grid">
+      <p class="muted" style="margin:0">Informe seu <strong>e-mail</strong> cadastrado. Enviaremos um link para redefinir sua senha.</p>
+      <div>
+        <label for="forgotEmail">E-mail</label>
         <input id="forgotEmail" name="email" class="input" type="email" required placeholder="voce@exemplo.com" autocomplete="email">
       </div>
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
+      <div class="actions">
         <button type="button" id="forgotCancelBtn" class="btn btn-light">Cancelar</button>
         <button type="submit" id="forgotSubmitBtn" class="btn btn-primary">Enviar link</button>
       </div>
-      <!-- Feedback -->
-      <div id="forgotMsg" style="display:none;margin-top:6px;font-size:14px"></div>
-      <!-- Atalho (modo dev) -->
-      <div id="forgotDev" style="display:none;margin-top:6px">
-        <button type="button" id="openResetLinkBtn" class="btn btn-outline">Abrir link de redefinição</button>
+      <div id="forgotMsg" style="display:none; margin-top:6px; font-size:14px"></div>
+      <div id="forgotDev" style="display:none; margin-top:6px">
+        <button type="button" id="openResetLinkBtn" class="btn btn-light">Abrir link de redefinição</button>
       </div>
     </form>
   </div>
 </div>
-<!-- ========[/ MODAL: ESQUECI MINHA SENHA ]======== -->
+<!-- ===== /Modal ===== -->
 
 <script>
 (function(){
   const $ = (s, r=document) => r.querySelector(s);
 
-  // ===== Helpers (WhatsApp BR / e-mail) =====
+  // Helpers
   function onlyDigits(s){ return String(s||"").replace(/\D/g,""); }
-  function ensureBR(dig){
-    if (!dig) return "";
-    if (dig.startsWith("55")) return dig;
-    if (dig.length===10 || dig.length===11) return "55"+dig;
-    return dig;
-  }
+  function ensureBR(d){ if(!d) return ""; if(d.startsWith("55")) return d; if(d.length===10||d.length===11) return "55"+d; return d; }
   function isValidBR(d){ return /^\d{12,13}$/.test(d); }
   function formatPrettyBR(d){
-    if (!/^\d{12,13}$/.test(d)) return "";
+    if(!/^\d{12,13}$/.test(d)) return "";
     const cc=d.slice(0,2), ddd=d.slice(2,4), rest=d.slice(4);
     return rest.length===9 ? `+${cc} (${ddd}) ${rest.slice(0,5)}-${rest.slice(5)}`
                            : `+${cc} (${ddd}) ${rest.slice(0,4)}-${rest.slice(4)}`;
   }
   function isEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 
-  // ===== Login form =====
+  // Login
   const form = $('#loginForm');
   const idInput = $('#whatsOrEmail');
   const idPrev = $('#idPrev');
@@ -151,20 +161,11 @@
 
   function updatePretty(){
     const raw = (idInput.value||'').trim();
-    if (!raw){ idPrev.textContent = ''; return; }
-    if (isEmail(raw)){
-      idPrev.textContent = `E-mail: ${raw}`;
-      idPrev.style.color = '#334155';
-      return;
-    }
+    if(!raw){ idPrev.textContent=''; return; }
+    if(isEmail(raw)){ idPrev.textContent='E-mail: '+raw; idPrev.style.color='#334155'; return; }
     const dig = ensureBR( onlyDigits(raw) );
-    if (isValidBR(dig)){
-      idPrev.textContent = 'Formato: ' + formatPrettyBR(dig);
-      idPrev.style.color = '#334155';
-    } else {
-      idPrev.textContent = 'WhatsApp inválido — use DDD+número (ex.: 21987654321)';
-      idPrev.style.color = '#b91c1c';
-    }
+    if(isValidBR(dig)){ idPrev.textContent='Formato: '+formatPrettyBR(dig); idPrev.style.color='#334155'; }
+    else{ idPrev.textContent='WhatsApp inválido — use DDD+número (ex.: 21987654321)'; idPrev.style.color='#dc2626'; }
   }
 
   toggleSenha?.addEventListener('click', ()=>{
@@ -175,41 +176,28 @@
 
   form?.addEventListener('submit', async (e)=>{
     e.preventDefault();
-    errBox.style.display = 'none';
-    errBox.textContent = '';
-
+    errBox.style.display='none'; errBox.textContent='';
     const rawId = (idInput.value||'').trim();
-    if (!rawId){ return showErr('Informe seu WhatsApp ou e-mail.'); }
-
+    if(!rawId){ return showErr('Informe seu WhatsApp ou e-mail.'); }
     let identifier = rawId;
-    if (!isEmail(rawId)){
+    if(!isEmail(rawId)){
       const dig = ensureBR( onlyDigits(rawId) );
-      if (!isValidBR(dig)){ return showErr('WhatsApp inválido. Digite com DDD.'); }
+      if(!isValidBR(dig)){ return showErr('WhatsApp inválido. Digite com DDD.'); }
       identifier = dig;
     }
-
-    const password = senha.value || '';
-    if (!password){ return showErr('Informe sua senha.'); }
+    const password = senha.value||'';
+    if(!password){ return showErr('Informe sua senha.'); }
 
     setLoading(true);
     try{
       const res = await fetch('/auth/pro/login', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          identifier,
-          password,
-          rememberMe: !!remember.checked
-        })
+        body: JSON.stringify({ identifier, password, rememberMe: !!remember.checked })
       });
       const data = await res.json().catch(()=> ({}));
-
-      if (data && data.ok){
-        location.href = data.redirect || '/painel';
-        return;
-      }
-      const msg = (data && (data.message||data.error)) || 'Credenciais inválidas.';
-      showErr(msg);
+      if(data && data.ok){ location.href = data.redirect || '/painel'; return; }
+      showErr((data && (data.message||data.error)) || 'Credenciais inválidas.');
     }catch(_){
       showErr('Falha de conexão. Tente novamente.');
     }finally{
@@ -217,125 +205,57 @@
     }
   });
 
-  function showErr(t){
-    errBox.textContent = t;
-    errBox.style.display = 'block';
-  }
-  function setLoading(on){
-    if (on){ loginBtn.disabled = true; loginBtn.textContent = 'Entrando…'; }
-    else    { loginBtn.disabled = false; loginBtn.textContent = 'Entrar'; }
-  }
+  function showErr(t){ errBox.textContent=t; errBox.style.display='block'; }
+  function setLoading(on){ if(on){ loginBtn.disabled=true; loginBtn.textContent='Entrando…'; } else { loginBtn.disabled=false; loginBtn.textContent='Entrar'; } }
 
-  // ===== Esqueci minha senha (E-MAIL obrigatório) =====
-  const openBtn   = $('#forgotOpenBtn');
-  const overlay   = $('#forgotOverlay');
-  const modal     = $('#forgotModal');
-  const closeBtn  = $('#forgotCloseBtn');
-  const cancelBtn = $('#forgotCancelBtn');
-  const forgotForm= $('#forgotForm');
-  const forgotEmail = $('#forgotEmail');
-  const forgotMsg = $('#forgotMsg');
-  const devWrap   = $('#forgotDev');
-  const devBtn    = $('#openResetLinkBtn');
-  const forgotSubmitBtn = $('#forgotSubmitBtn');
-  let lastResetUrl = null;
+  // Esqueci senha (e-mail)
+  const openBtn=$('#forgotOpenBtn'), overlay=$('#forgotOverlay'), modal=$('#forgotModal');
+  const closeBtn=$('#forgotCloseBtn'), cancelBtn=$('#forgotCancelBtn');
+  const forgotForm=$('#forgotForm'), forgotEmail=$('#forgotEmail'), forgotMsg=$('#forgotMsg');
+  const devWrap=$('#forgotDev'), devBtn=$('#openResetLinkBtn'), forgotSubmitBtn=$('#forgotSubmitBtn');
+  let lastResetUrl=null;
 
-  function openModal(){
-    overlay.style.display = 'block';
-    modal.style.display   = 'flex';
-    forgotMsg.style.display = 'none';
-    forgotMsg.textContent   = '';
-    forgotMsg.style.color   = '';
-    devWrap.style.display   = 'none';
-    lastResetUrl = null;
-    forgotEmail.value = '';
-    forgotEmail.focus();
-    document.addEventListener('keydown', escClose, { once:true });
+  function openModal(){ overlay.style.display='block'; modal.style.display='flex';
+    forgotMsg.style.display='none'; forgotMsg.textContent=''; forgotMsg.style.color='';
+    devWrap.style.display='none'; lastResetUrl=null; forgotEmail.value=''; forgotEmail.focus();
+    document.addEventListener('keydown', escClose, {once:true});
   }
-  function closeModal(){
-    overlay.style.display = 'none';
-    modal.style.display   = 'none';
-  }
-  function escClose(e){ if (e.key === 'Escape') closeModal(); }
-
+  function closeModal(){ overlay.style.display='none'; modal.style.display='none'; }
+  function escClose(e){ if(e.key==='Escape') closeModal(); }
   openBtn?.addEventListener('click', openModal);
+  overlay?.addEventListener('click', closeModal);
   closeBtn?.addEventListener('click', closeModal);
   cancelBtn?.addEventListener('click', closeModal);
-  overlay?.addEventListener('click', closeModal);
 
   forgotForm?.addEventListener('submit', async (e)=>{
     e.preventDefault();
-    const email = (forgotEmail.value||'').trim();
-    if (!isEmail(email)){ return toast('Digite um e-mail válido.', 'error'); }
-
+    const email=(forgotEmail.value||'').trim();
+    if(!isEmail(email)){ forgotMsg.style.display='block'; forgotMsg.style.color='#dc2626'; forgotMsg.textContent='Digite um e-mail válido.'; return; }
     setForgotLoading(true);
     try{
-      const res = await fetch('/auth/pro/forgot', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ identifier: email })
-      });
+      const res = await fetch('/auth/pro/forgot', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ identifier: email }) });
       const data = await res.json().catch(()=> ({}));
-      if (data && data.ok){
-        forgotMsg.style.display = 'block';
-        forgotMsg.style.color = '#16a34a';
-        forgotMsg.textContent = 'Se encontramos sua conta, enviamos um link para redefinir sua senha. Verifique seu e-mail.';
-        if (data.resetUrl){
-          lastResetUrl = data.resetUrl;
-          devWrap.style.display = 'block';
-        } else if (data.token){
-          lastResetUrl = '/reset?token=' + encodeURIComponent(data.token);
-          devWrap.style.display = 'block';
-        }
-      } else {
-        const err = (data && (data.message||data.error)) || 'Não foi possível processar sua solicitação.';
-        forgotMsg.style.display = 'block';
-        forgotMsg.style.color = '#ef4444';
-        forgotMsg.textContent = err;
+      if(data && data.ok){
+        forgotMsg.style.display='block'; forgotMsg.style.color='#16a34a';
+        forgotMsg.textContent='Se encontramos sua conta, enviamos um link para redefinir sua senha. Verifique seu e-mail.';
+        if(data.resetUrl){ lastResetUrl=data.resetUrl; devWrap.style.display='block'; }
+        else if(data.token){ lastResetUrl='/reset?token='+encodeURIComponent(data.token); devWrap.style.display='block'; }
+      }else{
+        const err=(data && (data.message||data.error))||'Não foi possível processar sua solicitação.';
+        forgotMsg.style.display='block'; forgotMsg.style.color='#dc2626'; forgotMsg.textContent=err;
       }
     }catch(_){
-      forgotMsg.style.display = 'block';
-      forgotMsg.style.color = '#ef4444';
-      forgotMsg.textContent = 'Falha de conexão. Tente novamente.';
-    }finally{
-      setForgotLoading(false);
-    }
+      forgotMsg.style.display='block'; forgotMsg.style.color='#dc2626'; forgotMsg.textContent='Falha de conexão. Tente novamente.';
+    }finally{ setForgotLoading(false); }
   });
 
-  devBtn?.addEventListener('click', ()=>{
-    if (!lastResetUrl) return;
-    window.location.href = lastResetUrl;
-  });
+  devBtn?.addEventListener('click', ()=>{ if(lastResetUrl) location.href=lastResetUrl; });
+  function setForgotLoading(on){ if(on){ forgotSubmitBtn.disabled=true; forgotSubmitBtn.textContent='Enviando…'; } else { forgotSubmitBtn.disabled=false; forgotSubmitBtn.textContent='Enviar link'; } }
 
-  function setForgotLoading(on){
-    if(on){
-      forgotSubmitBtn.disabled = true;
-      forgotSubmitBtn.textContent = 'Enviando...';
-    } else {
-      forgotSubmitBtn.disabled = false;
-      forgotSubmitBtn.textContent = 'Enviar link';
-    }
-  }
-  function toast(text){
-    if (window.showToast) return window.showToast(text, { type:'info' });
-    alert(text);
-  }
-
-  // ===== PWA =====
-  if ('serviceWorker' in navigator){
-    window.addEventListener('load', ()=>{
-      navigator.serviceWorker.register('/sw.js?v=painel-login-2025-09-15r2').catch(()=>{});
-    });
-    let reloaded=false;
-    navigator.serviceWorker.addEventListener('controllerchange', ()=>{
-      if(!reloaded){ reloaded=true; location.reload(); }
-    });
-  }
-
-  // start
-  idInput.focus({preventScroll:true});
-  idInput.addEventListener('input', updatePretty);
-  idInput.addEventListener('blur', updatePretty);
+  // Início
+  const idEl = $('#whatsOrEmail');
+  idEl?.addEventListener('input', updatePretty);
+  idEl?.addEventListener('blur', updatePretty);
   updatePretty();
 })();
 </script>
