@@ -32,30 +32,30 @@ const cookieParser = require("cookie-parser");
 const app = express();
 app.set("trust proxy", 1);
 
+// ==== Healthcheck deve responder SEM redirecionar ====
+app.get('/health',  (_req, res) => res.type('text').send('ok'));
+app.head('/health', (_req, res) => res.type('text').send('ok')); // extra
+
+// Alguns provedores usam /healthz:
+app.get('/healthz',  (_req, res) => res.type('text').send('ok'));
+app.head('/healthz', (_req, res) => res.type('text').send('ok'));
+
 // === Boot básico / deps ===
 require('dotenv').config();
 
-app.set('trust proxy', 1);
-
-// ==== Healthcheck deve responder SEM redirecionar ====
-app.get('/health', (_req, res) => res.type('text').send('ok'));
-app.head('/health', (_req, res) => res.type('text').send('ok')); // extra segurança
-
-// ===== Forçar HTTPS (exceto /health) =====
+// ==== Forçar HTTPS (exceto health/healthz) ====
 const PRIMARY_HOST = String(process.env.PRIMARY_HOST || '')
-  .replace(/^https?:\/\//, '')   // remove protocolo
-  .replace(/\/.*$/, '');         // remove caminho
+  .replace(/^https?:\/\//, '') // remove protocolo
+  .replace(/\/.*$/, '');       // remove caminho
 
 const FORCE_HTTPS = String(process.env.FORCE_HTTPS || 'false').toLowerCase() === 'true';
-const REDIRECTS_DISABLED = String(process.env.REDIRECTS_DISABLED || 'false')
-  .toLowerCase() === 'true';
+
 if (FORCE_HTTPS) {
   app.use((req, res, next) => {
-    // NUNCA redirecionar o health
-    if (req.path === '/health') return next();
+    // nunca redirecionar health ou healthz
+    if (req.path === '/health' || req.path === '/healthz') return next();
 
     const proto = (req.headers['x-forwarded-proto'] || '').toString();
-    // só força se veio por http
     if (proto && proto !== 'https') {
       const host = PRIMARY_HOST || req.headers.host;
       return res.redirect(301, `https://${host}${req.originalUrl}`);
@@ -63,7 +63,6 @@ if (FORCE_HTTPS) {
     next();
   });
 }
-
 // =========================[ Utils p/ cadastro → Asaas ]=========================
 function onlyDigits(s){ return String(s||"").replace(/\D/g,""); }
 function toBRWith55(raw){
