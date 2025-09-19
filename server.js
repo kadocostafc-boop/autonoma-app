@@ -31,80 +31,74 @@ const bcrypt = require("bcryptjs");
 const cookieParser = require("cookie-parser");
 const nodemailer = require("nodemailer");
 
-/ ===== Envio de e-mail: Brevo API (fallback p/ SMTP Nodemailer) =====
+// Função genérica para envio de e-mails (tenta Brevo API; se falhar, cai no SMTP)
 async function sendEmail(to, subject, text) {
-  const fromStr = process.env.SMTP_FROM || `Autônoma.app <${process.env.SMTP_USER || 'no-reply@autonomaapp.com.br'}>`;
-  const apiKey  = process.env.BREVO_API_KEY;
+  try {
+    // 1) Tentativa pela API do Brevo (se BREVO_API_KEY estiver setada)
+    if (process.env.BREVO_API_KEY) {
+      const senderEmail =
+        (process.env.SMTP_FROM && (process.env.SMTP_FROM.match(/<(.*)>/) || [])[1]) ||
+        process.env.SMTP_USER ||
+        "autonomaapp@gmail.com";
 
-  // Helper para converter "Nome <email@dominio>" em {name, email}
-  function parseFrom(str) {
-    const m = String(str).match(/^\s*"?([^<"]+?)"?\s*<([^>]+)>\s*$/);
-    if (m) return { name: m[1].trim(), email: m[2].trim() };
-    return { name: 'Autônoma.app', email: str.includes('@') ? str.trim() : 'no-reply@autonomaapp.com.br' };
-  }
-
-  // 1) Tenta enviar via Brevo HTTP API (porta 443)
-  if (apiKey) {
-    try {
-      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
+      const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
         headers: {
-          'accept': 'application/json',
-          'content-type': 'application/json',
-          'api-key': apiKey
+          accept: "application/json",
+          "content-type": "application/json",
+          "api-key": process.env.BREVO_API_KEY,
         },
         body: JSON.stringify({
-          sender: parseFrom(fromStr),
+          sender: { name: "Autônoma.app", email: senderEmail },
           to: [{ email: to }],
           subject,
-          textContent: text
-        })
+          textContent: text,
+        }),
       });
 
-      if (!res.ok) {
-        const body = await res.text().catch(()=>'');
-        console.error('Brevo API falhou:', res.status, body);
-      } else {
-        console.log('📧 E-mail enviado via Brevo API para:', to);
+      if (resp.ok) {
+        console.log("📧 E-mail enviado via Brevo API para:", to);
         return true;
+      } else {
+        const body = await resp.text().catch(() => "");
+        console.error("❌ Brevo API falhou:", resp.status, body);
       }
-    } catch (err) {
-      console.error('Brevo API erro de rede:', err);
-      // cai pro SMTP
     }
-  }
 
-  // 2) Fallback: SMTP Nodemailer (usa suas variáveis atuais)
-  if (process.env.SMTP_DISABLED === 'true') {
-    console.warn('SMTP desabilitado — não enviando (modo dev).');
+    // 2) Fallback: SMTP (se configurado e não estiver desabilitado)
+    if (
+      String(process.env.SMTP_DISABLED).toLowerCase() !== "true" &&
+      process.env.SMTP_HOST &&
+      process.env.SMTP_USER &&
+      process.env.SMTP_PASS
+    ) {
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: String(process.env.SMTP_SECURE).toLowerCase() === "true", // true=465, false=587
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      });
+
+      await transporter.sendMail({
+        from:
+          process.env.SMTP_FROM ||
+          `Autônoma.app <${process.env.SMTP_USER || "autonomaapp@gmail.com"}>`,
+        to,
+        subject,
+        text,
+      });
+
+      console.log("📧 E-mail enviado via SMTP para:", to);
+      return true;
+    }
+
+    console.error("❌ Nenhum método de envio disponível (API/SMTP).");
     return false;
-  }
-
-  try {
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: String(process.env.SMTP_SECURE) === 'true', // 465 -> true, 587 -> false
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-      // Opcional: aumenta tolerância TLS em hosts mais restritivos
-      tls: { rejectUnauthorized: false }
-    });
-
-    await transporter.sendMail({
-      from: fromStr,
-      to,
-      subject,
-      text,
-    });
-
-    console.log('📧 E-mail enviado via SMTP para:', to);
-    return true;
   } catch (err) {
-    console.error('❌ SMTP erro ao enviar e-mail:', err);
+    console.error("❌ Erro no sendEmail:", err);
     return false;
   }
 }
