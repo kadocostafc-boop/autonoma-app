@@ -29,76 +29,74 @@ const QRCode = require("qrcode");
 const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcryptjs");
 const cookieParser = require("cookie-parser");
-const nodemailer = require("nodemailer");
 
-// Função genérica para envio de e-mails (tenta Brevo API; se falhar, cai no SMTP)
+
+// ===== Envio de e-mail via Brevo (API) =====
+
+// helper: extrai nome e e-mail de SMTP_FROM: "Nome <email@dominio.com>"
+function parseFrom(fromStr) {
+  const m = /^(.*)<(.+)>$/.exec(fromStr || "");
+  const name = (m ? m[1] : fromStr || "Autônoma.app").trim() || "Autônoma.app";
+  const email = (m ? m[2] : (process.env.CONTACT_EMAIL || "contato@autonomaapp.com.br")).trim();
+  return { name, email };
+}
+
+/**
+ * Envia e-mail usando a API da Brevo.
+ * Precisa: BREVO_API_KEY (Railway), SMTP_FROM (opcional, mas recomendado).
+ * Honra SMTP_DISABLED=true para “modo mudo”.
+ */
 async function sendEmail(to, subject, text) {
   try {
-    // 1) Tentativa pela API do Brevo (se BREVO_API_KEY estiver setada)
-    if (process.env.BREVO_API_KEY) {
-      const senderEmail =
-        (process.env.SMTP_FROM && (process.env.SMTP_FROM.match(/<(.*)>/) || [])[1]) ||
-        process.env.SMTP_USER ||
-        "autonomaapp@gmail.com";
-
-      const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
-        method: "POST",
-        headers: {
-          accept: "application/json",
-          "content-type": "application/json",
-          "api-key": process.env.BREVO_API_KEY,
-        },
-        body: JSON.stringify({
-          sender: { name: "Autônoma.app", email: senderEmail },
-          to: [{ email: to }],
-          subject,
-          textContent: text,
-        }),
-      });
-
-      if (resp.ok) {
-        console.log("📧 E-mail enviado via Brevo API para:", to);
-        return true;
-      } else {
-        const body = await resp.text().catch(() => "");
-        console.error("❌ Brevo API falhou:", resp.status, body);
-      }
-    }
-
-    // 2) Fallback: SMTP (se configurado e não estiver desabilitado)
-    if (
-      String(process.env.SMTP_DISABLED).toLowerCase() !== "true" &&
-      process.env.SMTP_HOST &&
-      process.env.SMTP_USER &&
-      process.env.SMTP_PASS
-    ) {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT || 587),
-        secure: String(process.env.SMTP_SECURE).toLowerCase() === "true", // true=465, false=587
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      });
-
-      await transporter.sendMail({
-        from:
-          process.env.SMTP_FROM ||
-          `Autônoma.app <${process.env.SMTP_USER || "autonomaapp@gmail.com"}>`,
-        to,
-        subject,
-        text,
-      });
-
-      console.log("📧 E-mail enviado via SMTP para:", to);
+    if (String(process.env.SMTP_DISABLED) === "true") {
+      console.log("✉️  SMTP_DISABLED=true — simulando envio para:", to);
       return true;
     }
 
-    console.error("❌ Nenhum método de envio disponível (API/SMTP).");
-    return false;
+    const apiKey = process.env.BREVO_API_KEY;
+    if (!apiKey) {
+      console.error("❌ BREVO_API_KEY não configurada.");
+      return false;
+    }
+
+    const { name, email } = parseFrom(process.env.SMTP_FROM);
+
+    // Monta payload da Brevo
+    const body = {
+      sender: { name, email },
+      to: [{ email: String(to).trim() }],
+      subject: subject || "Mensagem",
+      textContent: text || "",
+      // htmlContent é opcional; se quiser, pode mandar também:
+      // htmlContent: `<p>${(text || "").replace(/\n/g, "<br>")}</p>`
+    };
+
+    // Usa fetch nativo (Node 18+). Se sua runtime não tiver, avisar nos logs.
+    if (typeof fetch !== "function") {
+      console.error("❌ fetch() não disponível na runtime Node. Atualize para Node 18+.");
+      return false;
+    }
+
+    const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "api-key": apiKey,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!resp.ok) {
+      const errTxt = await resp.text().catch(() => "");
+      console.error("❌ Brevo falhou:", resp.status, errTxt);
+      return false;
+    }
+
+    const data = await resp.json().catch(() => ({}));
+    console.log("✅ E-mail enviado via Brevo:", to, data && data.messageId ? data.messageId : "");
+    return true;
   } catch (err) {
-    console.error("❌ Erro no sendEmail:", err);
+    console.error("❌ Erro ao chamar Brevo:", err);
     return false;
   }
 }
