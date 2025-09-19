@@ -17,6 +17,7 @@
 
 require("dotenv").config();
 
+// === Dependências principais ===
 const express = require("express");
 const session = require("express-session");
 const multer = require("multer");
@@ -30,13 +31,13 @@ const bcrypt = require("bcryptjs");
 const cookieParser = require("cookie-parser");
 const nodemailer = require("nodemailer");
 
-// Função genérica para envio de e-mails
+// === Função genérica para envio de e-mails ===
 async function sendEmail(to, subject, text) {
   try {
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT) || 465,
-      secure: process.env.SMTP_SECURE === "true", // true para 465, false para 587
+      secure: process.env.SMTP_SECURE === "true", // true = 465, false = 587
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
@@ -57,8 +58,21 @@ async function sendEmail(to, subject, text) {
     return false;
   }
 }
+
+// === Inicialização do app ===
 const app = express();
 app.set("trust proxy", 1);
+
+// === Rota de teste de e-mail ===
+app.get("/test-email", async (req, res) => {
+  const to = process.env.SMTP_USER; // envia para você mesmo
+  const ok = await sendEmail(to, "Teste Autônoma.app", "Este é um e-mail de teste do servidor Autônoma.app 🚀");
+  if (ok) {
+    res.send("✅ E-mail de teste enviado para " + to);
+  } else {
+    res.status(500).send("❌ Falha ao enviar e-mail. Veja os logs do servidor.");
+  }
+});
 
 // === Boot básico / deps ===
 require('dotenv').config();
