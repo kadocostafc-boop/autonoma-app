@@ -165,7 +165,7 @@
     if(isEmail(raw)){ idPrev.textContent='E-mail: '+raw; idPrev.style.color='#334155'; return; }
     const dig = ensureBR( onlyDigits(raw) );
     if(isValidBR(dig)){ idPrev.textContent='Formato: '+formatPrettyBR(dig); idPrev.style.color='#334155'; }
-    else{ idPrev.textContent='WhatsApp inválido — use DDD+número (ex.: 21987654321)'; idPrev.style.color='#dc2626'; }
+    else{ idPrev.textContent='WhatsApp inválido — use DDD+número (ex.: 21999999999)'; idPrev.style.color='#dc2626'; }
   }
 
   toggleSenha?.addEventListener('click', ()=>{

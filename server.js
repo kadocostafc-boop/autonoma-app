@@ -34,22 +34,21 @@ const nodemailer = require("nodemailer");
 // === Função genérica para envio de e-mails ===
 async function sendEmail(to, subject, text) {
   try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 465,
-      secure: process.env.SMTP_SECURE === "true", // true = 465, false = 587
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || `Autônoma.app <${process.env.SMTP_USER}>`,
-      to,
-      subject,
-      text,
-    });
+   const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT) || 587,
+  secure: String(process.env.SMTP_SECURE) === "true", // 587 => false (STARTTLS)
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+await transporter.sendMail({
+  from: process.env.SMTP_FROM || `Autônoma.app <${process.env.SMTP_USER}>`,
+  to,
+  subject,
+  text,
+});
 
     console.log("📧 E-mail enviado para:", to);
     return true;
