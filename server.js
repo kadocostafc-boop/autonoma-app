@@ -29,6 +29,7 @@ const QRCode = require("qrcode");
 const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcryptjs");
 const cookieParser = require("cookie-parser");
+const nodemailer = require("nodemailer");
 
 
 // === Envio de e-mail: Brevo API (se houver) -> fallback SMTP ===
