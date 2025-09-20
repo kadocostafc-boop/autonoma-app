@@ -19,8 +19,6 @@ require("dotenv").config();
 
 // === Dependências principais ===
 const express = require("express");
-const app = express();              // <-- aqui criamos o app
-
 const session = require("express-session");
 const multer = require("multer");
 const path = require("path");
@@ -32,11 +30,21 @@ const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcryptjs");
 const cookieParser = require("cookie-parser");
 
-// Configuração básica do app
+const app = express(); // ✅ cria o app aqui
+
+// 🔀 Redireciona domínio raiz para WWW
+app.use((req, res, next) => {
+  const host = req.headers.host;
+  if (host === "autonomaapp.com.br") {
+    return res.redirect(301, "https://www.autonomaapp.com.br" + req.url);
+  }
+  next();
+});
+
+// =========================[ Configuração básica do app ]========================
 app.set("trust proxy", 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
 // === ENVIO DE E-MAIL (Brevo API -> fallback SMTP) ===
 // Requer: BREVO_API_KEY (opcional), SMTP_* (HOST, PORT, SECURE, USER, PASS, FROM)
 const nodemailer = require("nodemailer"); // garanta que já exista esse require
