@@ -119,21 +119,23 @@ app.get("/test-email", async (req, res) => {
     .send(ok ? `OK - e-mail enviado para ${to}` : "Falha ao enviar e-mail. Veja os logs.");
 });
 
-// === Boot básico / deps ===
+// --- Boot básico / deps ---
 require('dotenv').config();
-
 app.set('trust proxy', 1);
 
 // ==== Healthcheck deve responder SEM redirecionar ====
 app.get('/health', (_req, res) => res.type('text').send('ok'));
-app.head('/health', (_req, res) => res.type('text').send('ok')); // extra segurança
+app.head('/health', (_req, res) => res.type('text').send('ok'));
 app.get('/healthz', (_req, res) => res.type('text').send('ok'));
 app.head('/healthz', (_req, res) => res.type('text').send('ok'));
 
-// =============[ Esqueci minha senha • POST /auth/pro/forgot ]=============
-const RESET_DIR = path.join(process.env.DATA_DIR || "./data", "reset");
-const RESET_DB  = path.join(RESET_DIR, "tokens.json");
+// Servir arquivos estáticos da pasta /public (login, reset.html, etc.)
+const path = require('path');
+app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1h' }));
 
+// =============[ Esqueci minha senha - POST /auth/pro/forgot ]=============
+const RESET_DIR = path.join(process.env.DATA_DIR || './data', "reset");
+const RESET_DB = path.join(RESET_DIR, "tokens.json");
 // util: carrega/salva JSON simples
 function loadJSONSafe(file) {
   try { return JSON.parse(fs.readFileSync(file, "utf8")); }
