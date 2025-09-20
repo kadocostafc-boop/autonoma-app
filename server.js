@@ -19,6 +19,8 @@ require("dotenv").config();
 
 // === Dependências principais ===
 const express = require("express");
+const app = express();              // <-- aqui criamos o app
+
 const session = require("express-session");
 const multer = require("multer");
 const path = require("path");
@@ -30,6 +32,10 @@ const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcryptjs");
 const cookieParser = require("cookie-parser");
 
+// Configuração básica do app
+app.set("trust proxy", 1);
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // === ENVIO DE E-MAIL (Brevo API -> fallback SMTP) ===
 // Requer: BREVO_API_KEY (opcional), SMTP_* (HOST, PORT, SECURE, USER, PASS, FROM)
@@ -130,7 +136,7 @@ app.get('/healthz', (_req, res) => res.type('text').send('ok'));
 app.head('/healthz', (_req, res) => res.type('text').send('ok'));
 
 // Servir arquivos estáticos da pasta /public (login, reset.html, etc.)
-const path = require('path');
+
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1h' }));
 
 // =============[ Esqueci minha senha - POST /auth/pro/forgot ]=============
