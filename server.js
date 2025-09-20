@@ -29,97 +29,94 @@ const QRCode = require("qrcode");
 const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcryptjs");
 const cookieParser = require("cookie-parser");
-const nodemailer = require("nodemailer");
 
 
-// === Envio de e-mail: Brevo API (se houver) -> fallback SMTP ===
-async function sendEmail(to, subject, text) {
+// === ENVIO DE E-MAIL (Brevo API -> fallback SMTP) ===
+// Requer: BREVO_API_KEY (opcional), SMTP_* (HOST, PORT, SECURE, USER, PASS, FROM)
+const nodemailer = require("nodemailer"); // garanta que já exista esse require
+
+async function sendEmail(to, subject, text, html) {
+  const fromStr =
+    process.env.SMTP_FROM ||
+    `"Autônoma.app" <${process.env.SMTP_USER || "autonomaapp@gmail.com"}>`;
+
+  // Extrai nome e e-mail do FROM
+  const fromMatch = fromStr.match(/^(.*?)\s*<([^>]+)>$/);
+  const senderName = fromMatch ? fromMatch[1].trim() : "Autônoma.app";
+  const senderEmail = fromMatch ? fromMatch[2].trim() : (process.env.SMTP_USER || "").trim();
+
   try {
-    // 1) Se tiver BREVO_API_KEY, tenta enviar pela API primeiro
+    // 1) Tenta pela API da Brevo (se BREVO_API_KEY estiver definida)
     if (process.env.BREVO_API_KEY) {
-      const fromHeader = process.env.SMTP_FROM || '';
-      const fromMatch = fromHeader.match(/<(.*)>/);
-      const senderEmail =
-        (fromMatch && fromMatch[1]) ||
-        process.env.SMTP_USER ||
-        'autonomaapp@gmail.com';
-      const senderName =
-        (fromHeader && fromHeader.split('<')[0].trim()) ||
-        'Autônoma.app';
+      try {
+        const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "api-key": process.env.BREVO_API_KEY,
+          },
+          body: JSON.stringify({
+            sender: { name: senderName, email: senderEmail },
+            to: [{ email: to }],
+            subject,
+            textContent: text,
+            htmlContent: html || `<p>${text}</p>`,
+          }),
+        });
 
-      const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: {
-          'api-key': process.env.BREVO_API_KEY,
-          'content-type': 'application/json',
-          accept: 'application/json',
-        },
-        body: JSON.stringify({
-          sender: { email: senderEmail, name: senderName },
-          to: [{ email: to }],
-          subject,
-          textContent: text,
-        }),
-      });
-
-      if (resp.ok) {
-        console.log('✓ E-mail enviado via Brevo API para', to);
-        return true;
-      } else {
-        const body = await resp.text().catch(() => '');
-        console.error('✖ Brevo API falhou:', resp.status, body);
-        // segue para SMTP fallback
+        if (!resp.ok) {
+          const err = await resp.text();
+          console.error("✖ Brevo API falhou:", resp.status, err);
+          // cai para o SMTP
+        } else {
+          console.log("✔ E-mail enviado via Brevo API para:", to);
+          return true;
+        }
+      } catch (e) {
+        console.error("✖ Erro chamando Brevo API:", e);
+        // cai para o SMTP
       }
     }
 
-    // 2) SMTP fallback (se não estiver desabilitado)
-    if (String(process.env.SMTP_DISABLED).toLowerCase() === 'true') {
-      console.error('✖ SMTP_DISABLED=true — envio SMTP desativado.');
-      return false;
-    }
-
+    // 2) Fallback SMTP (Nodemailer)
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: String(process.env.SMTP_SECURE) === 'true', // true=465, false=587
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: String(process.env.SMTP_SECURE).toLowerCase() === "true",
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
     });
 
-    const fallbackFrom = process.env.SMTP_USER
-      ? `Autônoma.app <${process.env.SMTP_USER}>`
-      : undefined;
-
     await transporter.sendMail({
-      from: process.env.SMTP_FROM || fallbackFrom,
+      from: fromStr,
       to,
       subject,
       text,
+      html,
     });
 
-    console.log('✓ E-mail enviado via SMTP para', to);
+    console.log("✔ E-mail enviado via SMTP para:", to);
     return true;
   } catch (err) {
-    console.error('✖ Erro no sendEmail:', err);
+    console.error("✖ Erro no sendEmail:", err);
     return false;
   }
 }
 
-// === Inicialização do app ===
-const app = express();
-app.set("trust proxy", 1);
-
-// === Rota de teste de e-mail ===
+// === ROTA DE TESTE ===
+// GET /test-email?to=email@destino.com
 app.get("/test-email", async (req, res) => {
-  const to = process.env.SMTP_USER; // envia para você mesmo
-  const ok = await sendEmail(to, "Teste Autônoma.app", "Este é um e-mail de teste do servidor Autônoma.app 🚀");
-  if (ok) {
-    res.send("✅ E-mail de teste enviado para " + to);
-  } else {
-    res.status(500).send("❌ Falha ao enviar e-mail. Veja os logs do servidor.");
+  const to = String(req.query.to || process.env.SMTP_USER || "").trim();
+  if (!to) {
+    return res.status(400).type("text").send("Defina ?to=email ou configure SMTP_USER.");
   }
+  const ok = await sendEmail(to, "Teste Autônoma.app", "Teste de envio OK!");
+  return res
+    .status(ok ? 200 : 500)
+    .type("text")
+    .send(ok ? `OK - e-mail enviado para ${to}` : "Falha ao enviar e-mail. Veja os logs.");
 });
 
 // === Boot básico / deps ===
