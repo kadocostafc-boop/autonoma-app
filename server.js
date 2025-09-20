@@ -365,7 +365,7 @@ function toBRWith55(raw) {
 // ========== /Helpers ==========
 // ---- Helpers usados no Asaas ----
 function toBRWith55(raw) {
-  const d = onlyDigits(raw);
+
   if (!d) return "";
   if (d.startsWith("55")) return d;
   if (d.length === 10 || d.length === 11) return "55" + d; // DDD + número
@@ -458,7 +458,6 @@ const PLAN_PRICES = {
 app.post('/api/pay/asaas/subscription/create', express.json(), async (req, res) => {
   try {
     const { customerId, plan, proId } = req.body || {};
-    const PLAN_PRICES = { pro: 29.90, premium: 49.90 };
     if (!customerId || !PLAN_PRICES[plan]) {
       return res.status(400).json({ ok:false, error:'Informe customerId e plan (pro|premium).' });
     }
