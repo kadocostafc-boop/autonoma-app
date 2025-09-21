@@ -132,7 +132,49 @@ app.get("/test-email", async (req, res) => {
     .type("text")
     .send(ok ? `OK - e-mail enviado para ${to}` : "Falha ao enviar e-mail. Veja os logs.");
 });
+// ---------- Helpers de login/cadastro p/ Profissionais ----------
 
+function hashPassword(plain) {
+  return bcrypt.hashSync(plain, 10);
+}
+
+function checkPassword(plain, hashed) {
+  return bcrypt.compareSync(plain, hashed);
+}
+
+// Cadastro de profissional
+app.post("/auth/pro/register", express.json(), (req, res) => {
+  const { whatsapp, email, senha } = req.body;
+  if (!whatsapp || !email || !senha) {
+    return res.status(400).json({ ok: false, error: "Todos os campos são obrigatórios" });
+  }
+  const db = readDB();
+  if (db.profissionais.find(p => p.whatsapp === whatsapp)) {
+    return res.status(400).json({ ok: false, error: "WhatsApp já cadastrado" });
+  }
+  const novo = {
+    id: Date.now(),
+    whatsapp,
+    email,
+    senhaHash: hashPassword(senha),
+    criadoEm: new Date().toISOString()
+  };
+  db.profissionais.push(novo);
+  writeDB(db);
+  res.json({ ok: true, id: novo.id });
+});
+
+// Login de profissional
+app.post("/auth/pro/login", express.json(), (req, res) => {
+  const { whatsapp, senha } = req.body;
+  const db = readDB();
+  const pro = db.profissionais.find(p => p.whatsapp === whatsapp);
+  if (!pro || !checkPassword(senha, pro.senhaHash)) {
+    return res.status(401).json({ ok: false, error: "Credenciais inválidas" });
+  }
+  req.session.proId = pro.id;
+  res.json({ ok: true, id: pro.id });
+});
 // --- Boot básico / deps ---
 require('dotenv').config();
 app.set('trust proxy', 1);
