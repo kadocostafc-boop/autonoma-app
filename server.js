@@ -144,36 +144,87 @@ function checkPassword(plain, hashed) {
 
 // Cadastro de profissional
 app.post("/auth/pro/register", express.json(), (req, res) => {
-  const { whatsapp, email, senha } = req.body;
-  if (!whatsapp || !email || !senha) {
+  const { whatsapp: whatsappRaw, email: emailRaw, senha } = req.body || {};
+
+  // validações básicas
+  if (!whatsappRaw || !emailRaw || !senha) {
     return res.status(400).json({ ok: false, error: "Todos os campos são obrigatórios" });
   }
+
+  // normalizações
+  const email = String(emailRaw).trim().toLowerCase();
+  const dddNumero = onlyDigits(String(whatsappRaw));
+  const whatsapp = toBRWith55(dddNumero); // ex: 55 + DDD + número
+
   const db = readDB();
-  if (db.profissionais.find(p => p.whatsapp === whatsapp)) {
+
+  // evita duplicidade por whatsapp normalizado
+  if ((db.profissionais || []).find(p => toBRWith55(onlyDigits(p.whatsapp || "")) === whatsapp)) {
     return res.status(400).json({ ok: false, error: "WhatsApp já cadastrado" });
   }
+
   const novo = {
     id: Date.now(),
-    whatsapp,
+    whatsapp,          // já vai salvo normalizado
     email,
     senhaHash: hashPassword(senha),
-    criadoEm: new Date().toISOString()
+    criadoEm: new Date().toISOString(),
   };
+
   db.profissionais.push(novo);
   writeDB(db);
   res.json({ ok: true, id: novo.id });
 });
-
 // Login de profissional
-app.post("/auth/pro/login", express.json(), (req, res) => {
-  const { whatsapp, senha } = req.body;
+app.post("/auth/pro/login", express.json(), async (req, res) => {
+  const { whatsapp: userRaw, email: emailRaw, senha } = req.body || {};
+  if (!senha || (!userRaw && !emailRaw)) {
+    return res.status(400).json({ ok: false, error: "Informe usuário (WhatsApp ou e-mail) e senha" });
+  }
+
+  // decide se o usuário veio como whatsapp (números) ou e-mail
+  let alvoTelefone = null;
+  let alvoEmail = null;
+
+  if (userRaw) {
+    const soDigitos = onlyDigits(String(userRaw));
+    if (soDigitos) {
+      alvoTelefone = toBRWith55(soDigitos);
+    }
+  }
+  if (emailRaw) {
+    alvoEmail = String(emailRaw).trim().toLowerCase();
+  }
+
   const db = readDB();
-  const pro = db.profissionais.find(p => p.whatsapp === whatsapp);
-  if (!pro || !checkPassword(senha, pro.senhaHash)) {
+
+  // procura por whatsapp normalizado OU por e-mail
+  const prof = (db.profissionais || []).find(p => {
+    const pPhone = toBRWith55(onlyDigits(String(p.whatsapp || "")));
+    const pEmail = String(p.email || "").trim().toLowerCase();
+    return (alvoTelefone && pPhone === alvoTelefone) || (alvoEmail && pEmail === alvoEmail);
+  });
+
+  if (!prof) {
     return res.status(401).json({ ok: false, error: "Credenciais inválidas" });
   }
-  req.session.proId = pro.id;
-  res.json({ ok: true, id: pro.id });
+
+  // migração: se algum cadastro antigo tiver senha em texto (raro), gera hash
+  if (!prof.senhaHash && prof.senha) {
+    prof.senhaHash = hashPassword(prof.senha);
+    delete prof.senha;
+    writeDB(db);
+  }
+
+  // verifica senha
+  const ok = await checkPassword(String(senha), prof.senhaHash);
+  if (!ok) {
+    return res.status(401).json({ ok: false, error: "Credenciais inválidas" });
+  }
+
+  // sucesso
+  req.session.proId = prof.id;
+  return res.json({ ok: true });
 });
 // --- Boot básico / deps ---
 require('dotenv').config();
