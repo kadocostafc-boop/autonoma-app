@@ -200,51 +200,61 @@ app.post("/auth/pro/login", express.json(), (req, res) => {
   try {
     const { identifier, password } = req.body || {};
     if (!identifier || !password) {
-      return res.status(400).json({ ok: false, error: "Informe usuário (WhatsApp ou e-mail) e senha." });
+      return res.status(400).json({ ok: false, error: "Informe usuário e senha" });
     }
 
-    // Decide se veio e-mail ou telefone
-    const raw = String(identifier).trim();
-    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw);
+    // helpers já existentes
+    const onlyDigits = s => String(s || "").replace(/\D/g, "");
+    const toBRWith55 = d => {
+      if (!d) return "";
+      if (d.startsWith("55")) return d;
+      if (d.length === 10 || d.length === 11) return "55" + d;
+      return d;
+    };
 
-    let alvoTelefone = null;
-    let alvoEmail = null;
-    if (isEmail) {
-      alvoEmail = raw.toLowerCase();
+    const isEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").trim());
+
+    // Normaliza alvo
+    let alvoEmail = null, alvoPhone = null;
+    if (isEmail(identifier)) {
+      alvoEmail = String(identifier).trim().toLowerCase();
     } else {
-      const soDigitos = onlyDigits(raw);
-      alvoTelefone = toBRWith55(soDigitos); // "55" + DDD + número
+      const dig = toBRWith55(onlyDigits(identifier));
+      if (!/^\d{12,13}$/.test(dig)) {
+        return res.status(400).json({ ok: false, error: "WhatsApp inválido" });
+      }
+      alvoPhone = dig;
     }
 
-    // Carrega DB
     const db = readDB();
+    const lista = db.profissionais || [];
 
-    // Procura por WhatsApp normalizado OU e-mail (case-insensitive)
-    const prof = (db.profissionais || []).find(p => {
-      const pPhone = toBRWith55(onlyDigits(p.whatsapp || ""));
+    // Procura por e-mail OU whatsapp normalizado
+    const prof = lista.find(p => {
       const pEmail = String(p.email || "").trim().toLowerCase();
-      return (alvoTelefone && pPhone === alvoTelefone) || (alvoEmail && pEmail === alvoEmail);
+      const pPhone = toBRWith55(onlyDigits(p.whatsapp || ""));
+      return (alvoEmail && pEmail === alvoEmail) || (alvoPhone && pPhone === alvoPhone);
     });
 
     if (!prof) {
       return res.status(401).json({ ok: false, error: "Credenciais inválidas" });
     }
 
-    // Migração: se ainda existir p.senha em texto, gera hash e salva
+    // Migração: se antigo cadastro tiver senha em texto
     if (!prof.senhaHash && prof.senha) {
       prof.senhaHash = hashPassword(String(prof.senha));
       delete prof.senha;
       writeDB(db);
     }
 
-    // Confere senha (usa seus helpers síncronos)
     const ok = checkPassword(String(password), prof.senhaHash);
     if (!ok) {
       return res.status(401).json({ ok: false, error: "Credenciais inválidas" });
     }
 
-    // Sucesso
-    req.session.proId = prof.id;
+    // Se usa sessão/cookie:
+    if (req.session) req.session.proId = prof.id;
+
     return res.json({ ok: true, redirect: "/painel.html" });
   } catch (e) {
     console.error("[/auth/pro/login] erro:", e);
