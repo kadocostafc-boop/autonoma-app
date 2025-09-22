@@ -195,64 +195,44 @@ if (exists) {
     return res.status(500).json({ ok: false, error: "Erro interno" });
   }
 });
-
-/* ===== Login de profissional ===== */
-app.post("/auth/pro/login", express.json(), async (req, res) => {
+// === Login de profissional ===
+app.post("/auth/pro/login", express.json(), (req, res) => {
   try {
-    // Aceita: whatsapp, email ou um campo combinado "usuario"
-    let { whatsapp, email, senha, usuario } = req.body || {};
-    const senhaStr = String(senha || "");
+    // Recebe um único campo `user` (pode ser WhatsApp com DDD ou e-mail) + `senha`
+    const { user = "", senha = "" } = req.body || {};
+    const userRaw  = String(user).trim();
+    const senhaStr = String(senha);
 
-    // Se veio "usuario", decidir se é número (whatsapp) ou e-mail
-    if ((!whatsapp && !email) && usuario) {
-      const u = String(usuario).trim();
-      const digits = onlyDigits(u);
-      if (digits) {
-        whatsapp = toBRWith55(digits);      // normaliza: 55 + DDD + número
-      } else {
-        email = u.toLowerCase();            // trata como e-mail
-      }
+    if (!userRaw || !senhaStr) {
+      return res.status(400).json({ ok: false, error: "Informe usuário (WhatsApp ou e-mail) e senha" });
     }
 
-    // Validação
-    if ((!whatsapp && !email) || !senhaStr) {
-      return res
-        .status(400)
-        .json({ ok: false, error: "Informe usuário (WhatsApp ou e-mail) e senha" });
-    }
+    // Detecta se é telefone (só dígitos) ou e-mail
+    const soDigitos   = onlyDigits(userRaw);
+    const alvoTelefone = soDigitos ? toBRWith55(soDigitos) : null;      // ex: 55 + DDD + número
+    const alvoEmail    = userRaw.includes("@") ? userRaw.toLowerCase() : null;
 
-    // Carrega base
+    // Busca no "banco"
     const db = readDB();
-    const lista = db.profissionais || [];
-
-    // Busca por WhatsApp normalizado OU por e-mail
-    let pro = null;
-
-    if (whatsapp) {
-      const dddNumero = onlyDigits(String(whatsapp));
-      const whatsappNorm = toBRWith55(dddNumero);
-      pro = lista.find(p => String(p.whatsapp || "") === String(whatsappNorm));
-    }
-
-    if (!pro && email) {
-      const emailNorm = String(email).trim().toLowerCase();
-      pro = lista.find(
-        p => String(p.email || "").trim().toLowerCase() === emailNorm
-      );
-    }
+    const pro = (db.profissionais || []).find(p => {
+      const pPhone = toBRWith55(onlyDigits(p.whatsapp || ""));
+      const pEmail = String(p.email || "").trim().toLowerCase();
+      return (alvoTelefone && pPhone === alvoTelefone) || (alvoEmail && pEmail === alvoEmail);
+    });
 
     if (!pro) {
       return res.status(401).json({ ok: false, error: "Usuário não encontrado" });
     }
 
-    // Verifica senha (usa seu helper síncrono)
+    // Confere senha
     const ok = checkPassword(senhaStr, pro.senhaHash);
     if (!ok) {
       return res.status(401).json({ ok: false, error: "Senha inválida" });
     }
 
-    // Sucesso
-    req.session.proId = pro.id; // se já estiver usando sessão/cookies
+    // (opcional) sessão
+    req.session.proId = pro.id;
+
     return res.json({ ok: true, id: pro.id });
   } catch (e) {
     console.error("[/auth/pro/login] erro:", e);
