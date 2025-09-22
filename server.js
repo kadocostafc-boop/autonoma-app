@@ -142,89 +142,109 @@ function checkPassword(plain, hashed) {
   return bcrypt.compareSync(plain, hashed);
 }
 
-// Cadastro de profissional
+// ===== Cadastro de profissional =====
 app.post("/auth/pro/register", express.json(), (req, res) => {
-  const { whatsapp: whatsappRaw, email: emailRaw, senha } = req.body || {};
+  try {
+    // 1) Entrada crua
+    const { whatsapp: whatsappRaw, email: emailRaw, senha } = req.body || {};
 
-  // validações básicas
-  if (!whatsappRaw || !emailRaw || !senha) {
-    return res.status(400).json({ ok: false, error: "Todos os campos são obrigatórios" });
-  }
-
-  // normalizações
-  const email = String(emailRaw).trim().toLowerCase();
-  const dddNumero = onlyDigits(String(whatsappRaw));
-  const whatsapp = toBRWith55(dddNumero); // ex: 55 + DDD + número
-
-  const db = readDB();
-
-  // evita duplicidade por whatsapp normalizado
-  if ((db.profissionais || []).find(p => toBRWith55(onlyDigits(p.whatsapp || "")) === whatsapp)) {
-    return res.status(400).json({ ok: false, error: "WhatsApp já cadastrado" });
-  }
-
-  const novo = {
-    id: Date.now(),
-    whatsapp,          // já vai salvo normalizado
-    email,
-    senhaHash: hashPassword(senha),
-    criadoEm: new Date().toISOString(),
-  };
-
-  db.profissionais.push(novo);
-  writeDB(db);
-  res.json({ ok: true, id: novo.id });
-});
-// Login de profissional
-app.post("/auth/pro/login", express.json(), async (req, res) => {
-  const { whatsapp: userRaw, email: emailRaw, senha } = req.body || {};
-  if (!senha || (!userRaw && !emailRaw)) {
-    return res.status(400).json({ ok: false, error: "Informe usuário (WhatsApp ou e-mail) e senha" });
-  }
-
-  // decide se o usuário veio como whatsapp (números) ou e-mail
-  let alvoTelefone = null;
-  let alvoEmail = null;
-
-  if (userRaw) {
-    const soDigitos = onlyDigits(String(userRaw));
-    if (soDigitos) {
-      alvoTelefone = toBRWith55(soDigitos);
+    // 2) Validação básica
+    if (!whatsappRaw || !emailRaw || !senha) {
+      return res.status(400).json({ ok: false, error: "Todos os campos são obrigatórios" });
     }
-  }
-  if (emailRaw) {
-    alvoEmail = String(emailRaw).trim().toLowerCase();
-  }
 
-  const db = readDB();
+   // 3) Normalizações
+const emailNorm    = String(emailRaw).trim().toLowerCase();
+const dddNumero    = onlyDigits(String(whatsappRaw));
+const whatsappNorm = toBRWith55(dddNumero);
 
-  // procura por whatsapp normalizado OU por e-mail
-  const prof = (db.profissionais || []).find(p => {
-    const pPhone = toBRWith55(onlyDigits(String(p.whatsapp || "")));
-    const pEmail = String(p.email || "").trim().toLowerCase();
-    return (alvoTelefone && pPhone === alvoTelefone) || (alvoEmail && pEmail === alvoEmail);
-  });
+// 4) Carrega DB  (tem que vir ANTES de usar db)
+const db = readDB();
 
-  if (!prof) {
-    return res.status(401).json({ ok: false, error: "Credenciais inválidas" });
-  }
+// 5) Evita duplicidade (usar whatsappNorm!)
+const exists = (db.profissionais || []).some(
+  p => String(p.whatsapp) === String(whatsappNorm)
+);
+if (exists) {
+  return res.status(400).json({ ok: false, error: "WhatsApp já cadastrado" });
+}
+    // 6) Hash da senha (usa seu helper síncrono)
+    const senhaStr = typeof senha === "string" ? senha : String(senha || "");
+    if (!senhaStr) {
+      return res.status(400).json({ ok: false, error: "Senha inválida" });
+    }
+    const senhaHash = hashPassword(senhaStr); // <- usa seu helper existente
 
-  // migração: se algum cadastro antigo tiver senha em texto (raro), gera hash
-  if (!prof.senhaHash && prof.senha) {
-    prof.senhaHash = hashPassword(prof.senha);
-    delete prof.senha;
+    // 7) Monta registro e persiste
+    const novo = {
+      id: "pro_" + Date.now(),
+      email: emailNorm,
+      whatsapp: whatsappNorm,
+      senhaHash,
+      criadoEm: new Date().toISOString(),
+      ativo: true,
+    };
+    db.profissionais = db.profissionais || [];
+    db.profissionais.push(novo);
     writeDB(db);
-  }
 
-  // verifica senha
-  const ok = await checkPassword(String(senha), prof.senhaHash);
-  if (!ok) {
-    return res.status(401).json({ ok: false, error: "Credenciais inválidas" });
+    // 8) OK
+    return res.json({ ok: true, proId: novo.id });
+  } catch (e) {
+    console.error("[/auth/pro/register] erro:", e);
+    return res.status(500).json({ ok: false, error: "Erro interno" });
   }
+});
 
-  // sucesso
-  req.session.proId = prof.id;
-  return res.json({ ok: true });
+// ===== Login de profissional =====
+app.post("/auth/pro/login", express.json(), (req, res) => {
+  try {
+    // Aceita 'user' (campo único), ou whatsapp, ou email
+    const { user, whatsapp, email, senha } = req.body || {};
+
+    const userRaw  = String(user || whatsapp || email || "").trim();
+    const senhaStr = String(senha || "");
+
+    if (!userRaw || !senhaStr) {
+      return res.status(400).json({
+        ok: false,
+        error: "Informe usuário (WhatsApp ou e-mail) e senha",
+      });
+    }
+
+    const db = readDB();
+    const lista = db.profissionais || [];
+    let pro = null;
+
+    if (userRaw.includes("@")) {
+      // login por e-mail
+      const emailNorm = userRaw.toLowerCase();
+      pro = lista.find(p => String(p.email || "").toLowerCase() === emailNorm);
+    } else {
+      // login por WhatsApp (DDD+número, normalizado com 55)
+      const dddNumero    = onlyDigits(userRaw);
+      const whatsappNorm = toBRWith55(dddNumero);
+      pro = lista.find(p => String(p.whatsapp || "") === String(whatsappNorm));
+    }
+
+    if (!pro) {
+      return res.status(401).json({ ok: false, error: "Usuário não encontrado" });
+    }
+
+    // Confere senha (usa seu helper síncrono)
+    const ok = checkPassword(senhaStr, pro.senhaHash);
+    if (!ok) {
+      return res.status(401).json({ ok: false, error: "Senha inválida" });
+    }
+
+    // Se você já estiver usando sessão/cookie, pode gravar aqui:
+    // req.session.proId = pro.id;
+
+    return res.json({ ok: true, proId: pro.id });
+  } catch (e) {
+    console.error("[/auth/pro/login] erro:", e);
+    return res.status(500).json({ ok: false, error: "Erro interno" });
+  }
 });
 // --- Boot básico / deps ---
 require('dotenv').config();
