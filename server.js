@@ -195,45 +195,57 @@ if (exists) {
     return res.status(500).json({ ok: false, error: "Erro interno" });
   }
 });
-// === Login de profissional ===
+// ===== Login de profissional =====
 app.post("/auth/pro/login", express.json(), (req, res) => {
   try {
-    // Recebe um único campo `user` (pode ser WhatsApp com DDD ou e-mail) + `senha`
-    const { user = "", senha = "" } = req.body || {};
-    const userRaw  = String(user).trim();
-    const senhaStr = String(senha);
-
-    if (!userRaw || !senhaStr) {
-      return res.status(400).json({ ok: false, error: "Informe usuário (WhatsApp ou e-mail) e senha" });
+    const { identifier, password } = req.body || {};
+    if (!identifier || !password) {
+      return res.status(400).json({ ok: false, error: "Informe usuário (WhatsApp ou e-mail) e senha." });
     }
 
-    // Detecta se é telefone (só dígitos) ou e-mail
-    const soDigitos   = onlyDigits(userRaw);
-    const alvoTelefone = soDigitos ? toBRWith55(soDigitos) : null;      // ex: 55 + DDD + número
-    const alvoEmail    = userRaw.includes("@") ? userRaw.toLowerCase() : null;
+    // Decide se veio e-mail ou telefone
+    const raw = String(identifier).trim();
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw);
 
-    // Busca no "banco"
+    let alvoTelefone = null;
+    let alvoEmail = null;
+    if (isEmail) {
+      alvoEmail = raw.toLowerCase();
+    } else {
+      const soDigitos = onlyDigits(raw);
+      alvoTelefone = toBRWith55(soDigitos); // "55" + DDD + número
+    }
+
+    // Carrega DB
     const db = readDB();
-    const pro = (db.profissionais || []).find(p => {
+
+    // Procura por WhatsApp normalizado OU e-mail (case-insensitive)
+    const prof = (db.profissionais || []).find(p => {
       const pPhone = toBRWith55(onlyDigits(p.whatsapp || ""));
       const pEmail = String(p.email || "").trim().toLowerCase();
       return (alvoTelefone && pPhone === alvoTelefone) || (alvoEmail && pEmail === alvoEmail);
     });
 
-    if (!pro) {
-      return res.status(401).json({ ok: false, error: "Usuário não encontrado" });
+    if (!prof) {
+      return res.status(401).json({ ok: false, error: "Credenciais inválidas" });
     }
 
-    // Confere senha
-    const ok = checkPassword(senhaStr, pro.senhaHash);
+    // Migração: se ainda existir p.senha em texto, gera hash e salva
+    if (!prof.senhaHash && prof.senha) {
+      prof.senhaHash = hashPassword(String(prof.senha));
+      delete prof.senha;
+      writeDB(db);
+    }
+
+    // Confere senha (usa seus helpers síncronos)
+    const ok = checkPassword(String(password), prof.senhaHash);
     if (!ok) {
-      return res.status(401).json({ ok: false, error: "Senha inválida" });
+      return res.status(401).json({ ok: false, error: "Credenciais inválidas" });
     }
 
-    // (opcional) sessão
-    req.session.proId = pro.id;
-
-    return res.json({ ok: true, id: pro.id });
+    // Sucesso
+    req.session.proId = prof.id;
+    return res.json({ ok: true, redirect: "/painel.html" });
   } catch (e) {
     console.error("[/auth/pro/login] erro:", e);
     return res.status(500).json({ ok: false, error: "Erro interno" });
