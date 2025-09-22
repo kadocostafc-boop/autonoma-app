@@ -331,7 +331,8 @@
       "lng": null,
       "at": null
     },
-    "receiveViaApp": false
+    "receiveViaApp": false,
+    "senhaHash": "$2b$10$4MGrvSlBZM2yH8fhVwE4D.n.t4TobrbTefHB1AyvrdAok5I085dBK"
   },
   {
     "id": 4,
