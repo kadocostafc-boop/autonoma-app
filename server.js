@@ -29,8 +29,30 @@ const QRCode = require("qrcode");
 const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcryptjs");
 const cookieParser = require("cookie-parser");
-
 const app = express(); // ✅ cria o app aqui
+
+
+// Garante pasta e arquivo
+function ensureDataFile() {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (!fs.existsSync(PROF_PATH)) fs.writeFileSync(PROF_PATH, '[]', 'utf8');
+}
+
+// Ler/gravar o JSON (sempre array)
+function readProfs() {
+  ensureDataFile();
+  try {
+    const txt = fs.readFileSync(PROF_PATH, 'utf8');
+    const arr = JSON.parse(txt || '[]');
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+function writeProfs(arr) {
+  ensureDataFile();
+  fs.writeFileSync(PROF_PATH, JSON.stringify(arr, null, 2), 'utf8');
+}
 
 
 // ==== Helpers globais (telefone, email etc.) ====
