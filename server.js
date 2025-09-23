@@ -317,6 +317,59 @@ app.post("/auth/pro/forgot", express.json(), async (req, res) => {
     if (!isEmail(identifier)) {
       return res.status(400).json({ ok:false, error: "Digite um e-mail válido." });
     }
+// ===== Cadastro de profissional =====
+app.post("/api/profissionais", express.json(), (req, res) => {
+  try {
+    const db = readDB(); // carrega o conteúdo atual do profissionais.json
+
+    const { nome, email, whatsapp, senha } = req.body || {};
+
+    if (!nome || !email || !whatsapp || !senha) {
+      return res.status(400).json({ ok: false, error: "Todos os campos são obrigatórios." });
+    }
+
+    // normaliza email e telefone
+    const normEmail = String(email).trim().toLowerCase();
+    const normWhatsapp = toBRWith55(onlyDigits(whatsapp));
+
+    // verifica se já existe email ou whatsapp
+    const jaExiste = (db.profissionais || []).some(
+      p => p.email === normEmail || p.whatsapp === normWhatsapp
+    );
+    if (jaExiste) {
+      return res.status(400).json({ ok: false, error: "WhatsApp ou e-mail já cadastrado." });
+    }
+
+    // gera hash da senha
+    const bcrypt = require("bcryptjs");
+    const salt = bcrypt.genSaltSync(10);
+    const senhaHash = bcrypt.hashSync(senha, salt);
+
+    // cria objeto do profissional
+    const novo = {
+      id: "pro_" + Date.now(),
+      nome: nome.trim(),
+      email: normEmail,
+      whatsapp: normWhatsapp,
+      senhaHash,
+      criadoEm: new Date().toISOString(),
+      ativo: true
+    };
+
+    // adiciona no banco e salva
+    db.profissionais = db.profissionais || [];
+    db.profissionais.push(novo);
+    writeDB(db);
+
+    return res.json({
+      ok: true,
+      profissional: { id: novo.id, nome: novo.nome, email: novo.email }
+    });
+  } catch (err) {
+    console.error("Erro no cadastro:", err);
+    return res.status(500).json({ ok: false, error: "Erro interno no cadastro." });
+  }
+});
 
     // 1) gera token com expiração (2 horas)
     const token = crypto.randomBytes(24).toString("hex");
