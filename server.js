@@ -32,8 +32,43 @@ const cookieParser = require("cookie-parser");
 
 const app = express(); // ✅ cria o app aqui
 
-// 🔀 Redireciona domínio raiz para WWW
+
+// ==== Helpers globais (telefone, email etc.) ====
+// Somente dígitos
+const onlyDigits = (v) => String(v ?? "").replace(/\D/g, "");
+
+// Normaliza telefone BR para incluir 55 quando vier com 10/11 dígitos
+const toBRWith55 = (d) => {
+  if (!d) return "";
+  const s = String(d);
+  if (s.startsWith("55")) return s;
+  if (s.length === 10 || s.length === 11) return "55" + s;
+  return s;
+};
+
+// Alias usado em pontos antigos do código
+const ensureBR = toBRWith55;
+
+// Checagem simples de telefone BR com 55 (12 ou 13 dígitos)
+const isWhatsappValid = (w) => {
+  const d = onlyDigits(w);
+  const br = toBRWith55(d);
+  return /^\d{12,13}$/.test(br);
+};
+
+// Email válido
+const isEmail = (v) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v ?? "").trim());
+
+// Normaliza email (para comparar)
+const normEmail = (v) => String(v ?? "").trim().toLowerCase();
+
+
+
+
+// Redireciona domínio raiz para WWW, mas ignora /healthz
 app.use((req, res, next) => {
+  if (req.path === "/healthz") return next();   // não redireciona healthcheck
   const host = req.headers.host;
   if (host === "autonomaapp.com.br") {
     return res.redirect(301, "https://www.autonomaapp.com.br" + req.url);
@@ -196,7 +231,6 @@ app.post("/auth/pro/login", express.json(), (req, res) => {
       return res.status(400).json({ ok: false, error: "Informe usuário (WhatsApp ou e-mail) e senha" });
     }
 
-    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(identifier).trim());
     const alvoEmail = isEmail ? normEmail(identifier) : null;
     const alvoPhone = isEmail ? null : toBRWith55(onlyDigits(identifier));
 
@@ -275,8 +309,6 @@ function baseUrlFrom(req) {
   return `${proto}://${host.replace(/^https?:\/\//, "")}`;
 }
 
-// util: valida e-mail
-function isEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||"").trim()); }
 
 // ROTA: solicita link de redefinição
 app.post("/auth/pro/forgot", express.json(), async (req, res) => {
@@ -414,17 +446,6 @@ const getIP = (req) =>
   req.socket?.remoteAddress ||
   "";
 
-// dígitos e telefone BR
-
-const ensureBR = (d) =>
-  d && /^\d{10,13}$/.test(d) ? (d.startsWith("55") ? d : "55" + d) : d;
-
-const isWhatsappValid = (w) => {
-  const d = onlyDigits(w);
-  const br = ensureBR(d);
-  return !!(br && /^\d{12,13}$/.test(br));
-};
-
 // datas / período
 const nowISO = () => new Date().toISOString();
 const monthRefOf = (d) => (d || nowISO()).slice(0, 7); // "YYYY-MM"
@@ -458,24 +479,6 @@ function buildWaMessage(p) {
   const loc  = [p?.bairro, p?.cidade].filter(Boolean).join(" - ");
   const sufixo = loc ? ` (${loc})` : "";
   return `Olá${nome}, vi seu perfil na Autônoma.app${sufixo} e gostaria de saber mais sobre ${serv}.`;
-}
-
-// util do Asaas (quando o backend enviar telefone cru)
-function toBRWith55(raw) {
-  const d = onlyDigits(raw);
-  if (!d) return "";
-  if (d.startsWith("55")) return d;
-  if (d.length === 10 || d.length === 11) return "55" + d;
-  return d; // mantém como veio se fugir do esperado
-}
-// ========== /Helpers ==========
-// ---- Helpers usados no Asaas ----
-function toBRWith55(raw) {
-
-  if (!d) return "";
-  if (d.startsWith("55")) return d;
-  if (d.length === 10 || d.length === 11) return "55" + d; // DDD + número
-  return d;
 }
 
 // ===========================[ Rota: criar cliente no Asaas ]===========================
