@@ -4,13 +4,9 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Entrar no Painel • Autônoma.app</title>
-
-  <!-- (seus estilos globais continuam valendo) -->
-  <link rel="stylesheet" href="/css/app.css?v=painel-login-adminlike">
-
-  <!-- Layout responsivo, igual ao Admin -->
+  <link rel="stylesheet" href="/css/app.css?v=painel-login-2025-09-15">
   <style>
-    :root{
+    :root {
       --bg:#0b1e5b; --card:#ffffff; --text:#0f172a; --muted:#64748b;
       --primary:#2563eb; --primary-900:#1e40af;
     }
@@ -21,57 +17,47 @@
       background:var(--bg); color:var(--text);
       display:grid; place-items:center;
     }
-    .wrap{ width:min(760px, 96vw) }                     /* largura maior no desktop */
+    /* largura maior no desktop */
+    .wrap{ width:min(680px,92vw) }
     .card{
       background:var(--card); border-radius:18px;
       box-shadow:0 20px 50px rgba(0,0,0,.35);
       overflow:hidden;
     }
-    .card-head{ padding:24px 26px; border-bottom:1px solid #e5e7eb }
-    .card-body{ padding:24px 26px }
+    .card-head{padding:24px 26px; border-bottom:1px solid #e5e7eb}
+    .card-body{padding:24px 26px}
+    h1{margin:0; font-size:28px; line-height:1.15}
+    .muted{color:var(--muted)}
 
-    h1{ margin:0; font-size:28px; line-height:1.15 }
-    .muted{ color:var(--muted) }
+    .grid{display:grid; gap:14px}
+    label{display:block; font-size:14px; margin-bottom:6px; color:#334155}
 
-    .grid{ display:grid; gap:16px }
+    /* 3 colunas no desktop: identificador | senha | olho */
+    .row{display:grid; grid-template-columns: 1fr 220px 56px; gap:10px}
+    @media (max-width:720px){ .row{grid-template-columns: 1fr} }
 
-    /* linha identificador/senha/olho */
-    .row{
-      display:grid; gap:12px;
-      grid-template-columns: 1fr 260px 56px;            /* desktop */
-      align-items:end;
-    }
-    @media (max-width: 720px){
-      .row{ grid-template-columns: 1fr }                /* empilha no mobile */
-    }
-
-    label{ display:block; font-size:14px; margin-bottom:6px; color:#334155 }
     .input{
       width:100%; padding:12px 14px; border-radius:12px; border:1px solid #cbd5e1;
       background:#f8fafc; outline:none; font-size:16px;
     }
-    .input:focus{ border-color:#93c5fd; box-shadow:0 0 0 3px rgba(59,130,246,.25) }
+    .input:focus{border-color:#93c5fd; box-shadow:0 0 0 3px rgba(59,130,246,.25)}
 
-    .btn{
-      display:inline-flex; align-items:center; justify-content:center; gap:8px;
-      padding:12px 18px; border-radius:12px; font-weight:600; border:0; cursor:pointer; text-decoration:none
-    }
-    .btn-primary{ background:var(--primary); color:#fff }
-    .btn-primary:hover{ background:var(--primary-900) }
-    .btn-ghost{ background:#0f172a; color:#fff }
-    .btn-ghost:hover{ filter:brightness(1.1) }
-    .btn-light{ background:#e2e8f0; color:#0f172a }
-
-    .actions{ display:flex; gap:12px; justify-content:flex-end; margin-top:8px }
-    .remember{ display:flex; align-items:center; gap:8px; font-size:14px }
-    .tips{ font-size:12px; color:#475569 }
-    .err{ color:#dc2626; font-weight:600 }
-
-    /* modal (esqueci) */
-    .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; z-index:9998 }
-    .modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:9999 }
-    .modal .card{ width:min(520px,92vw) }
-    .modal-head{ padding:14px 18px; border-bottom:1px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between }
+    .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      padding:12px 18px; border-radius:12px; font-weight:600; border:0; cursor:pointer; text-decoration:none}
+    .btn-primary{background:var(--primary); color:#fff}
+    .btn-primary:hover{background:var(--primary-900)}
+    .btn-ghost{background:#0f172a; color:#fff}
+    .btn-ghost:hover{filter:brightness(1.1)}
+    .btn-light{background:#e2e8f0; color:#0f172a}
+    .actions{display:flex; gap:12px; justify-content:flex-end; margin-top:8px}
+    .remember{display:flex; align-items:center; gap:8px; font-size:14px}
+    .tips{font-size:12px; color:#475569}
+    .err{color:#dc2626; font-weight:600}
+    /* modal */
+    .overlay{position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; z-index:9998}
+    .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:9999}
+    .modal .card{width:min(520px,92vw)}
+    .modal-head{padding:14px 18px; border-bottom:1px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between}
   </style>
 </head>
 <body>
@@ -79,13 +65,11 @@
   <div class="card">
     <div class="card-head">
       <h1>Entrar no painel</h1>
-      <p class="muted" style="margin:8px 0 0">
-        Use seu <strong>WhatsApp ou e-mail</strong> e sua <strong>senha</strong>.
-      </p>
+      <p class="muted" style="margin:8px 0 0">Use seu <strong>WhatsApp ou e-mail</strong> e sua <strong>senha</strong>.</p>
     </div>
-
     <div class="card-body">
       <form id="loginForm" class="grid" autocomplete="on">
+        <!-- linha 1: identificador + senha + olho -->
         <div class="row">
           <div>
             <label for="whatsOrEmail">WhatsApp (com DDD) ou e-mail</label>
@@ -94,12 +78,10 @@
             <div id="idPrev" class="tips" style="margin-top:6px"></div>
             <div class="tips">Se usar WhatsApp, digite apenas dígitos (DDD+número). Nós formatamos e adicionamos +55.</div>
           </div>
-
           <div>
             <label for="senha">Senha</label>
             <input id="senha" name="password" type="password" class="input" required autocomplete="current-password" placeholder="Sua senha">
           </div>
-
           <div style="display:flex; align-items:flex-end">
             <button type="button" id="toggleSenha" class="btn btn-ghost" aria-label="Mostrar/ocultar senha">👁</button>
           </div>
@@ -123,7 +105,7 @@
   </div>
 </main>
 
-<!-- Modal de Esqueci senha -->
+<!-- ===== Modal: Esqueci minha senha ===== -->
 <div id="forgotOverlay" class="overlay"></div>
 <div id="forgotModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="forgotTitle">
   <div class="card">
@@ -148,75 +130,103 @@
     </form>
   </div>
 </div>
+<!-- ===== /Modal ===== -->
 
 <script>
 (function(){
-  const $ = (s,r=document)=>r.querySelector(s);
+  const $ = (s, r=document) => r.querySelector(s);
 
-  // Helpers front-end
-  function onlyDigits(s){ return String(s||"").replace(/\D/g,""); }
-  function ensureBR(d){ if(!d) return ""; if(d.startsWith("55")) return d; if(d.length===10||d.length===11) return "55"+d; return d; }
-  function isValidBR(d){ return /^\d{12,13}$/.test(d); }
-  function isEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
-  function formatBR(d){ if(!/^\d{12,13}$/.test(d)) return ""; const cc=d.slice(0,2), ddd=d.slice(2,4), rest=d.slice(4); return rest.length===9 ? `+${cc} (${ddd}) ${rest.slice(0,5)}-${rest.slice(5)}` : `+${cc} (${ddd}) ${rest.slice(0,4)}-${rest.slice(4)}`; }
+  // ===== Helpers iguais aos do cadastro/backend =====
+  const onlyDigits = (s) => String(s||"").replace(/\D/g,"");
+  const toBRWith55 = (d) => {
+    if(!d) return "";
+    if(d.startsWith("55")) return d;
+    if(d.length===10 || d.length===11) return "55"+d;
+    return d;
+  };
+  const isValidBR = (d) => /^\d{12,13}$/.test(String(d||""));
+  const isEmail   = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||"").trim());
 
-  // Login
-  const form = $('#loginForm'), idInput = $('#whatsOrEmail'), idPrev = $('#idPrev');
-  const senha = $('#senha'), toggleSenha = $('#toggleSenha'), remember = $('#rememberMe');
-  const errBox = $('#errLogin'), loginBtn = $('#loginBtn');
-
-  function showErr(t){ errBox.textContent=t; errBox.style.display='block'; }
-  function setLoading(on){ loginBtn.disabled=!!on; loginBtn.textContent= on ? 'Entrando…' : 'Entrar'; }
+  // ===== UI =====
+  const form = $('#loginForm');
+  const idInput = $('#whatsOrEmail');
+  const idPrev = $('#idPrev');
+  const senha = $('#senha');
+  const toggleSenha = $('#toggleSenha');
+  const remember = $('#rememberMe');
+  const errBox = $('#errLogin');
+  const loginBtn = $('#loginBtn');
 
   function updatePretty(){
-    const raw=(idInput.value||'').trim();
+    const raw = (idInput.value||'').trim();
     if(!raw){ idPrev.textContent=''; return; }
-    if(isEmail(raw)){ idPrev.textContent='E-mail: '+raw; idPrev.style.color='#334155'; return; }
-    const dig=ensureBR( onlyDigits(raw) );
-    idPrev.textContent = isValidBR(dig) ? 'Formato: '+formatBR(dig) : 'WhatsApp inválido — use DDD+número (ex.: 21999999999)';
-    idPrev.style.color = isValidBR(dig) ? '#334155' : '#dc2626';
+    if(isEmail(raw)){ idPrev.textContent='E-mail: '+raw.toLowerCase(); idPrev.style.color='#334155'; return; }
+    const dig = toBRWith55( onlyDigits(raw) );
+    if(isValidBR(dig)){ idPrev.textContent='Formato: +' + dig.slice(0,2) + ' ('+dig.slice(2,4)+') ' + (dig.length===13?dig.slice(4,9)+'-'+dig.slice(9):dig.slice(4,8)+'-'+dig.slice(8)); idPrev.style.color='#334155'; }
+    else{ idPrev.textContent='WhatsApp inválido — use DDD+número (ex.: 21999999999)'; idPrev.style.color='#dc2626'; }
   }
 
   toggleSenha?.addEventListener('click', ()=>{
-    const isPwd=senha.type==='password';
-    senha.type=isPwd?'text':'password';
-    toggleSenha.textContent=isPwd?'🙈':'👁';
+    const isPwd = senha.type === 'password';
+    senha.type = isPwd ? 'text' : 'password';
+    toggleSenha.textContent = isPwd ? '🙈' : '👁';
   });
 
   form?.addEventListener('submit', async (e)=>{
     e.preventDefault();
     errBox.style.display='none'; errBox.textContent='';
 
-    let identifier=(idInput.value||'').trim();
-    if(!identifier) return showErr('Informe seu WhatsApp ou e-mail.');
+    const rawId = (idInput.value||'').trim();
+    if(!rawId){ return showErr('Informe seu WhatsApp ou e-mail.'); }
 
-    if(!isEmail(identifier)){
-      const dig=ensureBR( onlyDigits(identifier) );
-      if(!isValidBR(dig)) return showErr('WhatsApp inválido. Digite com DDD.');
-      identifier=dig;
+    let identifier = rawId;
+    if(isEmail(rawId)){
+      identifier = rawId.toLowerCase();
+    }else{
+      const dig = toBRWith55( onlyDigits(rawId) );
+      if(!isValidBR(dig)){ return showErr('WhatsApp inválido. Digite com DDD.'); }
+      identifier = dig;
     }
 
-    const password=senha.value||'';
-    if(!password) return showErr('Informe sua senha.');
+    const password = senha.value||'';
+    if(!password){ return showErr('Informe sua senha.'); }
 
     setLoading(true);
     try{
-      const res=await fetch('/auth/pro/login', {
-        method:'POST', headers:{'Content-Type':'application/json'},
+      const res = await fetch('/auth/pro/login', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ identifier, password, rememberMe: !!remember.checked })
       });
-      const data=await res.json().catch(()=>({}));
-      if(res.ok && data.ok){ location.href = data.redirect || '/painel.html'; return; }
-      showErr( (data && (data.error||data.message)) || 'Credenciais inválidas.' );
+      const data = await res.json().catch(()=> ({}));
+      if(data && data.ok){
+        location.href = data.redirect || '/painel';
+        return;
+      }
+      showErr((data && (data.message||data.error)) || 'Credenciais inválidas.');
     }catch(_){
-      showErr('Erro interno');
-    }finally{ setLoading(false); }
+      showErr('Falha de conexão. Tente novamente.');
+    }finally{
+      setLoading(false);
+    }
   });
 
-  // Esqueci senha (abre/fecha)
+  function showErr(t){ errBox.textContent=t; errBox.style.display='block'; }
+  function setLoading(on){ if(on){ loginBtn.disabled=true; loginBtn.textContent='Entrando…'; } else { loginBtn.disabled=false; loginBtn.textContent='Entrar'; } }
+
+  // ===== Modal: Esqueci senha =====
   const openBtn=$('#forgotOpenBtn'), overlay=$('#forgotOverlay'), modal=$('#forgotModal');
   const closeBtn=$('#forgotCloseBtn'), cancelBtn=$('#forgotCancelBtn');
-  function openModal(){ overlay.style.display='block'; modal.style.display='flex'; document.addEventListener('keydown', escClose, {once:true}); }
+  const forgotForm=$('#forgotForm'), forgotEmail=$('#forgotEmail'), forgotMsg=$('#forgotMsg');
+  const devWrap=$('#forgotDev'), devBtn=$('#openResetLinkBtn'), forgotSubmitBtn=$('#forgotSubmitBtn');
+  let lastResetUrl=null;
+
+  function openModal(){
+    overlay.style.display='block'; modal.style.display='flex';
+    forgotMsg.style.display='none'; forgotMsg.textContent=''; forgotMsg.style.color='';
+    devWrap.style.display='none'; lastResetUrl=null; forgotEmail.value=''; forgotEmail.focus();
+    document.addEventListener('keydown', escClose, {once:true});
+  }
   function closeModal(){ overlay.style.display='none'; modal.style.display='none'; }
   function escClose(e){ if(e.key==='Escape') closeModal(); }
   openBtn?.addEventListener('click', openModal);
@@ -224,7 +234,31 @@
   closeBtn?.addEventListener('click', closeModal);
   cancelBtn?.addEventListener('click', closeModal);
 
-  // init
+  forgotForm?.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const email=(forgotEmail.value||'').trim().toLowerCase();
+    if(!isEmail(email)){ forgotMsg.style.display='block'; forgotMsg.style.color='#dc2626'; forgotMsg.textContent='Digite um e-mail válido.'; return; }
+    setForgotLoading(true);
+    try{
+      const res = await fetch('/auth/pro/forgot', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ identifier: email }) });
+      const data = await res.json().catch(()=> ({}));
+      if(data && data.ok){
+        forgotMsg.style.display='block'; forgotMsg.style.color='#16a34a';
+        forgotMsg.textContent='Se encontramos sua conta, enviamos um link para redefinir sua senha. Verifique seu e-mail.';
+        if(data.resetUrl){ lastResetUrl=data.resetUrl; devWrap.style.display='block'; }
+        else if(data.token){ lastResetUrl='/reset?token='+encodeURIComponent(data.token); devWrap.style.display='block'; }
+      }else{
+        const err=(data && (data.message||data.error))||'Não foi possível processar sua solicitação.';
+        forgotMsg.style.display='block'; forgotMsg.style.color='#dc2626'; forgotMsg.textContent=err;
+      }
+    }catch(_){
+      forgotMsg.style.display='block'; forgotMsg.style.color='#dc2626'; forgotMsg.textContent='Falha de conexão. Tente novamente.';
+    }finally{ setForgotLoading(false); }
+  });
+  devBtn?.addEventListener('click', ()=>{ if(lastResetUrl) location.href=lastResetUrl; });
+  function setForgotLoading(on){ if(on){ forgotSubmitBtn.disabled=true; forgotSubmitBtn.textContent='Enviando…'; } else { forgotSubmitBtn.disabled=false; forgotSubmitBtn.textContent='Enviar link'; } }
+
+  // início
   idInput?.addEventListener('input', updatePretty);
   idInput?.addEventListener('blur', updatePretty);
   updatePretty();

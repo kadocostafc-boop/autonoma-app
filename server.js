@@ -143,39 +143,28 @@ function checkPassword(plain, hashed) {
 }
 
 // ===== Cadastro de profissional =====
-app.post("/auth/pro/register", express.json(), (req, res) => {
+app.post("/auth/pro/register", express.json(), async (req, res) => {
   try {
-    // 1) Entrada crua
     const { whatsapp: whatsappRaw, email: emailRaw, senha } = req.body || {};
-
-    // 2) Validação básica
     if (!whatsappRaw || !emailRaw || !senha) {
       return res.status(400).json({ ok: false, error: "Todos os campos são obrigatórios" });
     }
 
-   // 3) Normalizações
-const emailNorm    = String(emailRaw).trim().toLowerCase();
-const dddNumero    = onlyDigits(String(whatsappRaw));
-const whatsappNorm = toBRWith55(dddNumero);
+    const emailNorm = normEmail(emailRaw);
+    const whatsappNorm = toBRWith55(onlyDigits(String(whatsappRaw)));
 
-// 4) Carrega DB  (tem que vir ANTES de usar db)
-const db = readDB();
+    const db = readDB();
 
-// 5) Evita duplicidade (usar whatsappNorm!)
-const exists = (db.profissionais || []).some(
-  p => String(p.whatsapp) === String(whatsappNorm)
-);
-if (exists) {
-  return res.status(400).json({ ok: false, error: "WhatsApp já cadastrado" });
-}
-    // 6) Hash da senha (usa seu helper síncrono)
-    const senhaStr = typeof senha === "string" ? senha : String(senha || "");
-    if (!senhaStr) {
-      return res.status(400).json({ ok: false, error: "Senha inválida" });
+    const jaExiste = (db.profissionais || []).some(p =>
+      toBRWith55(onlyDigits(String(p.whatsapp || ""))) === whatsappNorm ||
+      normEmail(p.email || "") === emailNorm
+    );
+    if (jaExiste) {
+      return res.status(400).json({ ok: false, error: "WhatsApp ou e-mail já cadastrado" });
     }
-    const senhaHash = hashPassword(senhaStr); // <- usa seu helper existente
 
-    // 7) Monta registro e persiste
+    const senhaHash = hashPassword(String(senha)); // usa seus helpers sync
+
     const novo = {
       id: "pro_" + Date.now(),
       email: emailNorm,
@@ -184,12 +173,16 @@ if (exists) {
       criadoEm: new Date().toISOString(),
       ativo: true,
     };
+
     db.profissionais = db.profissionais || [];
     db.profissionais.push(novo);
     writeDB(db);
 
-    // 8) OK
-    return res.json({ ok: true, proId: novo.id });
+    return res.json({
+      ok: true,
+      proId: novo.id,
+      redirect: `/painel_login.html?identifier=${encodeURIComponent(whatsappNorm || emailNorm)}`
+    });
   } catch (e) {
     console.error("[/auth/pro/register] erro:", e);
     return res.status(500).json({ ok: false, error: "Erro interno" });
@@ -200,62 +193,47 @@ app.post("/auth/pro/login", express.json(), (req, res) => {
   try {
     const { identifier, password } = req.body || {};
     if (!identifier || !password) {
-      return res.status(400).json({ ok: false, error: "Informe usuário e senha" });
+      return res.status(400).json({ ok: false, error: "Informe usuário (WhatsApp ou e-mail) e senha" });
     }
 
-    // helpers já existentes
-    const onlyDigits = s => String(s || "").replace(/\D/g, "");
-    const toBRWith55 = d => {
-      if (!d) return "";
-      if (d.startsWith("55")) return d;
-      if (d.length === 10 || d.length === 11) return "55" + d;
-      return d;
-    };
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(identifier).trim());
+    const alvoEmail = isEmail ? normEmail(identifier) : null;
+    const alvoPhone = isEmail ? null : toBRWith55(onlyDigits(identifier));
 
-    const isEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").trim());
-
-    // Normaliza alvo
-    let alvoEmail = null, alvoPhone = null;
-    if (isEmail(identifier)) {
-      alvoEmail = String(identifier).trim().toLowerCase();
-    } else {
-      const dig = toBRWith55(onlyDigits(identifier));
-      if (!/^\d{12,13}$/.test(dig)) {
-        return res.status(400).json({ ok: false, error: "WhatsApp inválido" });
-      }
-      alvoPhone = dig;
+    if (!isEmail && !/^\d{12,13}$/.test(alvoPhone)) {
+      return res.status(400).json({ ok: false, error: "WhatsApp inválido" });
     }
 
     const db = readDB();
     const lista = db.profissionais || [];
 
-    // Procura por e-mail OU whatsapp normalizado
-    const prof = lista.find(p => {
-      const pEmail = String(p.email || "").trim().toLowerCase();
-      const pPhone = toBRWith55(onlyDigits(p.whatsapp || ""));
-      return (alvoEmail && pEmail === alvoEmail) || (alvoPhone && pPhone === alvoPhone);
+    const pro = lista.find(p => {
+     
+      const pEmail = normEmail(p.email || "");
+      return (alvoPhone && pPhone === alvoPhone) || (alvoEmail && pEmail === alvoEmail);
     });
 
-    if (!prof) {
+    if (!pro) {
       return res.status(401).json({ ok: false, error: "Credenciais inválidas" });
     }
 
-    // Migração: se antigo cadastro tiver senha em texto
-    if (!prof.senhaHash && prof.senha) {
-      prof.senhaHash = hashPassword(String(prof.senha));
-      delete prof.senha;
+    // migração: se ainda existir senha em texto
+    if (!pro.senhaHash && pro.senha) {
+      pro.senhaHash = hashPassword(String(pro.senha));
+      delete pro.senha;
       writeDB(db);
     }
+    if (!pro.senhaHash) {
+      return res.status(401).json({ ok: false, error: "Credenciais inválidas" });
+    }
 
-    const ok = checkPassword(String(password), prof.senhaHash);
+    const ok = checkPassword(String(password), String(pro.senhaHash));
     if (!ok) {
       return res.status(401).json({ ok: false, error: "Credenciais inválidas" });
     }
 
-    // Se usa sessão/cookie:
-    if (req.session) req.session.proId = prof.id;
-
-    return res.json({ ok: true, redirect: "/painel.html" });
+    req.session.proId = pro.id;
+    return res.json({ ok: true, proId: pro.id, redirect: "/painel" });
   } catch (e) {
     console.error("[/auth/pro/login] erro:", e);
     return res.status(500).json({ ok: false, error: "Erro interno" });
@@ -370,7 +348,7 @@ app.post("/auth/pro/reset", async (req, res) => {
   }
 
   // Hash da nova senha
-  const bcrypt = require("bcryptjs");
+ 
   const hashed = await bcrypt.hash(senha, 10);
 
   user.senha = hashed;
@@ -437,7 +415,7 @@ const getIP = (req) =>
   "";
 
 // dígitos e telefone BR
-const onlyDigits = (v) => trim(v).replace(/\D/g, "");
+
 const ensureBR = (d) =>
   d && /^\d{10,13}$/.test(d) ? (d.startsWith("55") ? d : "55" + d) : d;
 

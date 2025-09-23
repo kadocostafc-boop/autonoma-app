@@ -19,6 +19,7 @@
 
   <!-- CSS global -->
   <link rel="stylesheet" href="/css/app.css?v=cadastro-2025-09-15">
+
   <style>
     .header { display:flex; align-items:center; gap:12px; padding:12px 16px }
     .header .logo { height:32px; width:auto; display:block }
@@ -35,6 +36,7 @@
   </style>
 </head>
 <body>
+
 <header class="header" role="banner">
   <a href="/" aria-label="Início">
     <img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display='none'">
@@ -53,7 +55,6 @@
 
   <div class="card" style="max-width:880px;margin:auto">
     <form id="formCad" action="/cadastrar" method="POST" enctype="multipart/form-data" novalidate>
-
       <!-- Foto (OBRIGATÓRIA) -->
       <label for="foto">Foto de perfil <strong>(obrigatória)</strong></label>
       <div class="row-wrap" style="align-items:center">
@@ -70,6 +71,7 @@
         </label>
         <span id="seloHint" class="muted">Para análise do selo, envie um documento com foto (RG, CNH, passaporte).</span>
       </div>
+
       <div id="docWrap" style="display:none; margin-top:8px">
         <label for="doc">Documento com foto <span class="muted">(obrigatório se quiser o selo)</span></label>
         <div class="row-wrap" style="align-items:center">
@@ -149,6 +151,7 @@
       <!-- Endereço / Experiência / Preço -->
       <label for="endereco">Endereço (opcional, oculto no perfil)</label>
       <input id="endereco" name="endereco" type="text" maxlength="120" placeholder="Rua/Av, número, complemento (apenas para referência interna)">
+
       <div class="row-wrap">
         <div class="field-50">
           <label for="experiencia">Experiência (opcional)</label>
@@ -205,6 +208,7 @@
         <button class="btn" type="submit">Cadastrar</button>
         <a class="btn ghost" href="/clientes.html">Cancelar</a>
       </div>
+
       <p id="err" class="meta warn" style="display:none;margin-top:8px"></p>
     </form>
   </div>
@@ -336,36 +340,37 @@
     }, {enableHighAccuracy:true,timeout:12000,maximumAge:30000});
   });
 
-  // Telefone (BR)
+  // ---- Telefone/WhatsApp helpers (ALINHADOS COM O BACKEND) ----
   function onlyDigits(s){ return String(s||"").replace(/\D/g,""); }
-  function ensureBR(dig){
-    if (!dig) return "";
-    if (dig.startsWith("55")) return dig;
-    if (dig.length===10 || dig.length===11) return "55"+dig;
-    return dig;
+  function toBRWith55(d){
+    if (!d) return "";
+    if (d.startsWith("55")) return d;
+    if (d.length===10 || d.length===11) return "55"+d;
+    return d;
   }
-  function isValidBR(digCom55){ return /^\d{12,13}$/.test(digCom55); }
-  function formatPrettyBR(digCom55){
-    if (!/^\d{12,13}$/.test(digCom55)) return "";
-    const cc = digCom55.slice(0,2), ddd = digCom55.slice(2,4), rest = digCom55.slice(4);
+  function isValidBR(d){ return /^\d{12,13}$/.test(d); }
+  function formatPrettyBR(d){
+    if (!/^\d{12,13}$/.test(d)) return "";
+    const cc=d.slice(0,2), ddd=d.slice(2,4), rest=d.slice(4);
     return rest.length===9 ? `+${cc} (${ddd}) ${rest.slice(0,5)}-${rest.slice(5)}`
                            : `+${cc} (${ddd}) ${rest.slice(0,4)}-${rest.slice(4)}`;
   }
+
   function bindPhoneInput(inputId, prevId){
     const input = $(inputId), prev = $(prevId);
     function update(){
-      const dig = onlyDigits(input.value);
-      const with55 = ensureBR(dig);
-      const pretty = formatPrettyBR(with55);
-      if (pretty){ prev.textContent = "Formato: " + pretty; prev.style.color="#334155"; }
+      const dig  = onlyDigits(input.value);
+      const br   = toBRWith55(dig);
+      const nice = formatPrettyBR(br);
+      if (nice){ prev.textContent = "Formato: " + nice; prev.style.color="#334155"; }
       else if (dig.length){ prev.textContent = "Formato inválido — digite com DDD. Ex.: (21) 98765-4321"; prev.style.color="#b91c1c"; }
       else { prev.textContent = ""; }
     }
     input.addEventListener("input", update);
     input.addEventListener("blur", ()=>{
-      const dig = onlyDigits(input.value);
-      const with55 = ensureBR(dig);
-      if (isValidBR(with55)) input.value = with55;
+      const dig=onlyDigits(input.value);
+      const br = toBRWith55(dig);
+      if (isValidBR(br)) input.value = br; // normaliza no próprio campo
       update();
     });
     update();
@@ -391,21 +396,22 @@
       e.preventDefault(); err.textContent="Para solicitar o selo verificado, envie um documento com foto."; err.style.display=""; doc.focus(); return;
     }
 
-    // WhatsApp
+    // WhatsApp (normaliza e valida)
     const wIn = $("whatsapp"), tIn = $("telefone");
-    const wWith55 = ensureBR( onlyDigits(wIn.value) );
-    if (!isValidBR(wWith55)){
+    const wBr = toBRWith55( onlyDigits(wIn.value) );
+    if (!isValidBR(wBr)){
       e.preventDefault(); err.textContent="WhatsApp inválido. Digite com DDD. Ex.: (21) 98765-4321"; err.style.display=""; wIn.focus(); return;
     }
-    wIn.value = wWith55;
+    wIn.value = wBr;
 
+    // Telefone opcional
     const tDig = onlyDigits(tIn.value);
     if (tDig){
-      const tWith55 = ensureBR(tDig);
-      if (!isValidBR(tWith55)){
+      const tBr = toBRWith55(tDig);
+      if (!isValidBR(tBr)){
         e.preventDefault(); err.textContent="Telefone inválido. Ex.: (21) 3456-7890"; err.style.display=""; tIn.focus(); return;
       }
-      tIn.value = tWith55;
+      tIn.value = tBr;
     }
 
     // Campos obrigatórios
@@ -416,11 +422,12 @@
     if (!$("descricao").value.trim()){ e.preventDefault(); err.textContent="Descreva seu trabalho em 'Sobre você'."; err.style.display=""; $("descricao").focus(); return; }
 
     // E-MAIL obrigatório e válido
-    const email = $("email").value.trim();
-    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    if (!email || !isEmail){
+    const email = $("email").value.trim().toLowerCase();
+    const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!email || !okEmail){
       e.preventDefault(); err.textContent="Informe um e-mail válido (obrigatório)."; err.style.display=""; $("email").focus(); return;
     }
+    $("email").value = email; // normaliza minúsculo
   });
 })();
 </script>
@@ -430,7 +437,6 @@
 (function () {
   const form = document.getElementById('formCad');
   if (!form) return;
-
   const err = document.getElementById('err');
   const senha = document.getElementById('senha');
   const confirma = document.getElementById('confirmaSenha');
@@ -510,5 +516,6 @@ if ('serviceWorker' in navigator){
   });
 }
 </script>
+
 </body>
 </html>
