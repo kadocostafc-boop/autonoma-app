@@ -30,31 +30,39 @@ const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcryptjs");
 const cookieParser = require("cookie-parser");
 const app = express(); // ✅ cria o app aqui
+// === Upload handler (defina UMA vez e ANTES das rotas que usam) ===
+const upload = multer({
+  storage: multer.memoryStorage(),        // simples, sem precisar de pasta
+  limits: { fileSize: 3 * 1024 * 1024 },  // 3 MB
+});
 
+// === Arquivo de dados (array simples de profissionais) ===
+const DATA_DIR  = process.env.DATA_DIR || path.join(__dirname, "data");
+const PROF_PATH = path.join(DATA_DIR, "profissionais.json");
 
-// Garante pasta e arquivo
 function ensureDataFile() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(PROF_PATH)) fs.writeFileSync(PROF_PATH, '[]', 'utf8');
+  if (!fs.existsSync(PROF_PATH)) fs.writeFileSync(PROF_PATH, "[]", "utf8");
 }
 
-// Ler/gravar o JSON (sempre array)
 function readProfs() {
   ensureDataFile();
   try {
-    const txt = fs.readFileSync(PROF_PATH, 'utf8');
-    const arr = JSON.parse(txt || '[]');
+    const txt = fs.readFileSync(PROF_PATH, "utf8");
+    const arr = JSON.parse(txt || "[]");
     return Array.isArray(arr) ? arr : [];
   } catch {
     return [];
   }
 }
+
 function writeProfs(arr) {
   ensureDataFile();
-  fs.writeFileSync(PROF_PATH, JSON.stringify(arr, null, 2), 'utf8');
+  fs.writeFileSync(PROF_PATH, JSON.stringify(arr, null, 2), "utf8");
 }
 
-
+// LOG de verificação
+console.log("[DATA] PROF_PATH =", PROF_PATH);
 // ==== Helpers globais (telefone, email etc.) ====
 // Somente dígitos
 const onlyDigits = (v) => String(v ?? "").replace(/\D/g, "");
@@ -200,27 +208,30 @@ function checkPassword(plain, hashed) {
 }
 
 // ===== Cadastro de profissional =====
-app.post("/auth/pro/register", express.json(), async (req, res) => {
+
+// ===== Cadastro de profissional =====
+app.post("/auth/pro/register", upload.fields([{ name:"foto" }, { name:"doc" }]), (req, res) => {
+  console.log("[REGISTER] body:", req.body?.email, req.body?.whatsapp);
+
   try {
     const { whatsapp: whatsappRaw, email: emailRaw, senha } = req.body || {};
     if (!whatsappRaw || !emailRaw || !senha) {
-      return res.status(400).json({ ok: false, error: "Todos os campos são obrigatórios" });
+      return res.status(400).json({ ok: false, error: "Todos os campos são obrigatórios." });
     }
 
     const emailNorm = normEmail(emailRaw);
     const whatsappNorm = toBRWith55(onlyDigits(String(whatsappRaw)));
 
     const db = readDB();
-
-    const jaExiste = (db.profissionais || []).some(p =>
-      toBRWith55(onlyDigits(String(p.whatsapp || ""))) === whatsappNorm ||
-      normEmail(p.email || "") === emailNorm
+    const jaExiste = (db.profissionais || []).some(
+      p => toBRWith55(onlyDigits(String(p.whatsapp || ""))) === whatsappNorm || normEmail(p.email || "") === emailNorm
     );
+
     if (jaExiste) {
-      return res.status(400).json({ ok: false, error: "WhatsApp ou e-mail já cadastrado" });
+      return res.status(400).json({ ok: false, error: "WhatsApp ou e-mail já cadastrado." });
     }
 
-    const senhaHash = hashPassword(String(senha)); // usa seus helpers sync
+    const senhaHash = hashPassword(String(senha));
 
     const novo = {
       id: "pro_" + Date.now(),
@@ -228,23 +239,22 @@ app.post("/auth/pro/register", express.json(), async (req, res) => {
       whatsapp: whatsappNorm,
       senhaHash,
       criadoEm: new Date().toISOString(),
-      ativo: true,
+      ativo: true
     };
 
     db.profissionais = db.profissionais || [];
     db.profissionais.push(novo);
+
+    console.log("[REGISTER] salvando em:", PROF_PATH);
     writeDB(db);
 
-    return res.json({
-      ok: true,
-      proId: novo.id,
-      redirect: `/painel_login.html?identifier=${encodeURIComponent(whatsappNorm || emailNorm)}`
-    });
+    return res.json({ ok: true, id: novo.id });
   } catch (e) {
-    console.error("[/auth/pro/register] erro:", e);
-    return res.status(500).json({ ok: false, error: "Erro interno" });
+    console.error("[REGISTER] ERRO ao salvar:", e);
+    return res.status(500).json({ ok: false, error: "Erro no servidor." });
   }
 });
+
 // ===== Login de profissional =====
 app.post("/auth/pro/login", express.json(), (req, res) => {
   try {
@@ -930,7 +940,6 @@ const CARD_ENABLED = String(process.env.CARD_ENABLED || "true") === "true";
 // Pastas/arquivos
 const ROOT = __dirname;
 const PUBLIC_DIR = path.join(ROOT, "public");
-const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(ROOT, "data");
 const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
 
 const DB_FILE = path.join(DATA_DIR, "profissionais.json");
@@ -1361,7 +1370,7 @@ const storage = multer.diskStorage({
   filename: (_req, file, cb) =>
     cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`),
 });
-const upload = multer({
+({
   storage,
   limits: { fileSize: 3 * 1024 * 1024 },
   fileFilter: (_req, file, cb) =>
