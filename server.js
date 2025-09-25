@@ -17,7 +17,6 @@
 
 require("dotenv").config();
 
-// === Dependências principais ===
 const express = require("express");
 const session = require("express-session");
 const multer = require("multer");
@@ -29,139 +28,15 @@ const QRCode = require("qrcode");
 const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcryptjs");
 const cookieParser = require("cookie-parser");
-const app = express(); // ✅ cria o app aqui
-// === Upload handler (defina UMA vez e ANTES das rotas que usam) ===
-const upload = multer({
-  storage: multer.memoryStorage(),        // simples, sem precisar de pasta
-  limits: { fileSize: 3 * 1024 * 1024 },  // 3 MB
-});
+const nodemailer = require("nodemailer");
 
-// === Arquivo de dados (array simples de profissionais) ===
-const DATA_DIR  = process.env.DATA_DIR || path.join(__dirname, "data");
-const PROF_PATH = path.join(DATA_DIR, "profissionais.json");
-
-function ensureDataFile() {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(PROF_PATH)) fs.writeFileSync(PROF_PATH, "[]", "utf8");
-}
-
-function readProfs() {
-  ensureDataFile();
+// Função genérica para envio de e-mails
+async function sendEmail(to, subject, text) {
   try {
-    const txt = fs.readFileSync(PROF_PATH, "utf8");
-    const arr = JSON.parse(txt || "[]");
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeProfs(arr) {
-  ensureDataFile();
-  fs.writeFileSync(PROF_PATH, JSON.stringify(arr, null, 2), "utf8");
-}
-
-// LOG de verificação
-console.log("[DATA] PROF_PATH =", PROF_PATH);
-// ==== Helpers globais (telefone, email etc.) ====
-// Somente dígitos
-const onlyDigits = (v) => String(v ?? "").replace(/\D/g, "");
-
-// Normaliza telefone BR para incluir 55 quando vier com 10/11 dígitos
-const toBRWith55 = (d) => {
-  if (!d) return "";
-  const s = String(d);
-  if (s.startsWith("55")) return s;
-  if (s.length === 10 || s.length === 11) return "55" + s;
-  return s;
-};
-
-// Alias usado em pontos antigos do código
-const ensureBR = toBRWith55;
-
-// Checagem simples de telefone BR com 55 (12 ou 13 dígitos)
-const isWhatsappValid = (w) => {
-  const d = onlyDigits(w);
-  const br = toBRWith55(d);
-  return /^\d{12,13}$/.test(br);
-};
-
-// Email válido
-const isEmail = (v) =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v ?? "").trim());
-
-// Normaliza email (para comparar)
-const normEmail = (v) => String(v ?? "").trim().toLowerCase();
-
-
-
-
-// Redireciona domínio raiz para WWW, mas ignora /healthz
-app.use((req, res, next) => {
-  if (req.path === "/healthz") return next();   // não redireciona healthcheck
-  const host = req.headers.host;
-  if (host === "autonomaapp.com.br") {
-    return res.redirect(301, "https://www.autonomaapp.com.br" + req.url);
-  }
-  next();
-});
-
-// =========================[ Configuração básica do app ]========================
-app.set("trust proxy", 1);
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-// === ENVIO DE E-MAIL (Brevo API -> fallback SMTP) ===
-// Requer: BREVO_API_KEY (opcional), SMTP_* (HOST, PORT, SECURE, USER, PASS, FROM)
-const nodemailer = require("nodemailer"); // garanta que já exista esse require
-
-async function sendEmail(to, subject, text, html) {
-  const fromStr =
-    process.env.SMTP_FROM ||
-    `"Autônoma.app" <${process.env.SMTP_USER || "autonomaapp@gmail.com"}>`;
-
-  // Extrai nome e e-mail do FROM
-  const fromMatch = fromStr.match(/^(.*?)\s*<([^>]+)>$/);
-  const senderName = fromMatch ? fromMatch[1].trim() : "Autônoma.app";
-  const senderEmail = fromMatch ? fromMatch[2].trim() : (process.env.SMTP_USER || "").trim();
-
-  try {
-    // 1) Tenta pela API da Brevo (se BREVO_API_KEY estiver definida)
-    if (process.env.BREVO_API_KEY) {
-      try {
-        const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "api-key": process.env.BREVO_API_KEY,
-          },
-          body: JSON.stringify({
-            sender: { name: senderName, email: senderEmail },
-            to: [{ email: to }],
-            subject,
-            textContent: text,
-            htmlContent: html || `<p>${text}</p>`,
-          }),
-        });
-
-        if (!resp.ok) {
-          const err = await resp.text();
-          console.error("✖ Brevo API falhou:", resp.status, err);
-          // cai para o SMTP
-        } else {
-          console.log("✔ E-mail enviado via Brevo API para:", to);
-          return true;
-        }
-      } catch (e) {
-        console.error("✖ Erro chamando Brevo API:", e);
-        // cai para o SMTP
-      }
-    }
-
-    // 2) Fallback SMTP (Nodemailer)
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT || 587),
-      secure: String(process.env.SMTP_SECURE).toLowerCase() === "true",
+      port: Number(process.env.SMTP_PORT) || 465,
+      secure: process.env.SMTP_SECURE === "true", // true para 465, false para 587
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
@@ -169,159 +44,37 @@ async function sendEmail(to, subject, text, html) {
     });
 
     await transporter.sendMail({
-      from: fromStr,
+      from: process.env.SMTP_FROM || `Autônoma.app <${process.env.SMTP_USER}>`,
       to,
       subject,
       text,
-      html,
     });
 
-    console.log("✔ E-mail enviado via SMTP para:", to);
+    console.log("📧 E-mail enviado para:", to);
     return true;
   } catch (err) {
-    console.error("✖ Erro no sendEmail:", err);
+    console.error("❌ Erro ao enviar e-mail:", err);
     return false;
   }
 }
+const app = express();
+app.set("trust proxy", 1);
 
-// === ROTA DE TESTE ===
-// GET /test-email?to=email@destino.com
-app.get("/test-email", async (req, res) => {
-  const to = String(req.query.to || process.env.SMTP_USER || "").trim();
-  if (!to) {
-    return res.status(400).type("text").send("Defina ?to=email ou configure SMTP_USER.");
-  }
-  const ok = await sendEmail(to, "Teste Autônoma.app", "Teste de envio OK!");
-  return res
-    .status(ok ? 200 : 500)
-    .type("text")
-    .send(ok ? `OK - e-mail enviado para ${to}` : "Falha ao enviar e-mail. Veja os logs.");
-});
-// ---------- Helpers de login/cadastro p/ Profissionais ----------
-
-function hashPassword(plain) {
-  return bcrypt.hashSync(plain, 10);
-}
-
-function checkPassword(plain, hashed) {
-  return bcrypt.compareSync(plain, hashed);
-}
-
-// ===== Cadastro de profissional =====
-
-// ===== Cadastro de profissional =====
-app.post("/auth/pro/register", upload.fields([{ name:"foto" }, { name:"doc" }]), (req, res) => {
-  console.log("[REGISTER] body:", req.body?.email, req.body?.whatsapp);
-
-  try {
-    const { whatsapp: whatsappRaw, email: emailRaw, senha } = req.body || {};
-    if (!whatsappRaw || !emailRaw || !senha) {
-      return res.status(400).json({ ok: false, error: "Todos os campos são obrigatórios." });
-    }
-
-    const emailNorm = normEmail(emailRaw);
-    const whatsappNorm = toBRWith55(onlyDigits(String(whatsappRaw)));
-
-    const db = readDB();
-    const jaExiste = (db.profissionais || []).some(
-      p => toBRWith55(onlyDigits(String(p.whatsapp || ""))) === whatsappNorm || normEmail(p.email || "") === emailNorm
-    );
-
-    if (jaExiste) {
-      return res.status(400).json({ ok: false, error: "WhatsApp ou e-mail já cadastrado." });
-    }
-
-    const senhaHash = hashPassword(String(senha));
-
-    const novo = {
-      id: "pro_" + Date.now(),
-      email: emailNorm,
-      whatsapp: whatsappNorm,
-      senhaHash,
-      criadoEm: new Date().toISOString(),
-      ativo: true
-    };
-
-    db.profissionais = db.profissionais || [];
-    db.profissionais.push(novo);
-
-    console.log("[REGISTER] salvando em:", PROF_PATH);
-    writeDB(db);
-
-    return res.json({ ok: true, id: novo.id });
-  } catch (e) {
-    console.error("[REGISTER] ERRO ao salvar:", e);
-    return res.status(500).json({ ok: false, error: "Erro no servidor." });
-  }
-});
-
-// ===== Login de profissional =====
-app.post("/auth/pro/login", express.json(), (req, res) => {
-  try {
-    const { identifier, password } = req.body || {};
-    if (!identifier || !password) {
-      return res.status(400).json({ ok: false, error: "Informe usuário (WhatsApp ou e-mail) e senha" });
-    }
-
-    const alvoEmail = isEmail ? normEmail(identifier) : null;
-    const alvoPhone = isEmail ? null : toBRWith55(onlyDigits(identifier));
-
-    if (!isEmail && !/^\d{12,13}$/.test(alvoPhone)) {
-      return res.status(400).json({ ok: false, error: "WhatsApp inválido" });
-    }
-
-    const db = readDB();
-    const lista = db.profissionais || [];
-
-    const pro = lista.find(p => {
-     
-      const pEmail = normEmail(p.email || "");
-      return (alvoPhone && pPhone === alvoPhone) || (alvoEmail && pEmail === alvoEmail);
-    });
-
-    if (!pro) {
-      return res.status(401).json({ ok: false, error: "Credenciais inválidas" });
-    }
-
-    // migração: se ainda existir senha em texto
-    if (!pro.senhaHash && pro.senha) {
-      pro.senhaHash = hashPassword(String(pro.senha));
-      delete pro.senha;
-      writeDB(db);
-    }
-    if (!pro.senhaHash) {
-      return res.status(401).json({ ok: false, error: "Credenciais inválidas" });
-    }
-
-    const ok = checkPassword(String(password), String(pro.senhaHash));
-    if (!ok) {
-      return res.status(401).json({ ok: false, error: "Credenciais inválidas" });
-    }
-
-    req.session.proId = pro.id;
-    return res.json({ ok: true, proId: pro.id, redirect: "/painel" });
-  } catch (e) {
-    console.error("[/auth/pro/login] erro:", e);
-    return res.status(500).json({ ok: false, error: "Erro interno" });
-  }
-});
-// --- Boot básico / deps ---
+// === Boot básico / deps ===
 require('dotenv').config();
+
 app.set('trust proxy', 1);
 
 // ==== Healthcheck deve responder SEM redirecionar ====
 app.get('/health', (_req, res) => res.type('text').send('ok'));
-app.head('/health', (_req, res) => res.type('text').send('ok'));
+app.head('/health', (_req, res) => res.type('text').send('ok')); // extra segurança
 app.get('/healthz', (_req, res) => res.type('text').send('ok'));
 app.head('/healthz', (_req, res) => res.type('text').send('ok'));
 
-// Servir arquivos estáticos da pasta /public (login, reset.html, etc.)
+// =============[ Esqueci minha senha • POST /auth/pro/forgot ]=============
+const RESET_DIR = path.join(process.env.DATA_DIR || "./data", "reset");
+const RESET_DB  = path.join(RESET_DIR, "tokens.json");
 
-app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1h' }));
-
-// =============[ Esqueci minha senha - POST /auth/pro/forgot ]=============
-const RESET_DIR = path.join(process.env.DATA_DIR || './data', "reset");
-const RESET_DB = path.join(RESET_DIR, "tokens.json");
 // util: carrega/salva JSON simples
 function loadJSONSafe(file) {
   try { return JSON.parse(fs.readFileSync(file, "utf8")); }
@@ -341,6 +94,8 @@ function baseUrlFrom(req) {
   return `${proto}://${host.replace(/^https?:\/\//, "")}`;
 }
 
+// util: valida e-mail
+function isEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||"").trim()); }
 
 // ROTA: solicita link de redefinição
 app.post("/auth/pro/forgot", express.json(), async (req, res) => {
@@ -349,59 +104,6 @@ app.post("/auth/pro/forgot", express.json(), async (req, res) => {
     if (!isEmail(identifier)) {
       return res.status(400).json({ ok:false, error: "Digite um e-mail válido." });
     }
-// ===== Cadastro de profissional =====
-app.post("/api/profissionais", express.json(), (req, res) => {
-  try {
-    const db = readDB(); // carrega o conteúdo atual do profissionais.json
-
-    const { nome, email, whatsapp, senha } = req.body || {};
-
-    if (!nome || !email || !whatsapp || !senha) {
-      return res.status(400).json({ ok: false, error: "Todos os campos são obrigatórios." });
-    }
-
-    // normaliza email e telefone
-    const normEmail = String(email).trim().toLowerCase();
-    const normWhatsapp = toBRWith55(onlyDigits(whatsapp));
-
-    // verifica se já existe email ou whatsapp
-    const jaExiste = (db.profissionais || []).some(
-      p => p.email === normEmail || p.whatsapp === normWhatsapp
-    );
-    if (jaExiste) {
-      return res.status(400).json({ ok: false, error: "WhatsApp ou e-mail já cadastrado." });
-    }
-
-    // gera hash da senha
-    const bcrypt = require("bcryptjs");
-    const salt = bcrypt.genSaltSync(10);
-    const senhaHash = bcrypt.hashSync(senha, salt);
-
-    // cria objeto do profissional
-    const novo = {
-      id: "pro_" + Date.now(),
-      nome: nome.trim(),
-      email: normEmail,
-      whatsapp: normWhatsapp,
-      senhaHash,
-      criadoEm: new Date().toISOString(),
-      ativo: true
-    };
-
-    // adiciona no banco e salva
-    db.profissionais = db.profissionais || [];
-    db.profissionais.push(novo);
-    writeDB(db);
-
-    return res.json({
-      ok: true,
-      profissional: { id: novo.id, nome: novo.nome, email: novo.email }
-    });
-  } catch (err) {
-    console.error("Erro no cadastro:", err);
-    return res.status(500).json({ ok: false, error: "Erro interno no cadastro." });
-  }
-});
 
     // 1) gera token com expiração (2 horas)
     const token = crypto.randomBytes(24).toString("hex");
@@ -465,7 +167,7 @@ app.post("/auth/pro/reset", async (req, res) => {
   }
 
   // Hash da nova senha
- 
+  const bcrypt = require("bcryptjs");
   const hashed = await bcrypt.hash(senha, 10);
 
   user.senha = hashed;
@@ -531,6 +233,17 @@ const getIP = (req) =>
   req.socket?.remoteAddress ||
   "";
 
+// dígitos e telefone BR
+const onlyDigits = (v) => trim(v).replace(/\D/g, "");
+const ensureBR = (d) =>
+  d && /^\d{10,13}$/.test(d) ? (d.startsWith("55") ? d : "55" + d) : d;
+
+const isWhatsappValid = (w) => {
+  const d = onlyDigits(w);
+  const br = ensureBR(d);
+  return !!(br && /^\d{12,13}$/.test(br));
+};
+
 // datas / período
 const nowISO = () => new Date().toISOString();
 const monthRefOf = (d) => (d || nowISO()).slice(0, 7); // "YYYY-MM"
@@ -564,6 +277,24 @@ function buildWaMessage(p) {
   const loc  = [p?.bairro, p?.cidade].filter(Boolean).join(" - ");
   const sufixo = loc ? ` (${loc})` : "";
   return `Olá${nome}, vi seu perfil na Autônoma.app${sufixo} e gostaria de saber mais sobre ${serv}.`;
+}
+
+// util do Asaas (quando o backend enviar telefone cru)
+function toBRWith55(raw) {
+  const d = onlyDigits(raw);
+  if (!d) return "";
+  if (d.startsWith("55")) return d;
+  if (d.length === 10 || d.length === 11) return "55" + d;
+  return d; // mantém como veio se fugir do esperado
+}
+// ========== /Helpers ==========
+// ---- Helpers usados no Asaas ----
+function toBRWith55(raw) {
+  const d = onlyDigits(raw);
+  if (!d) return "";
+  if (d.startsWith("55")) return d;
+  if (d.length === 10 || d.length === 11) return "55" + d; // DDD + número
+  return d;
 }
 
 // ===========================[ Rota: criar cliente no Asaas ]===========================
@@ -652,6 +383,7 @@ const PLAN_PRICES = {
 app.post('/api/pay/asaas/subscription/create', express.json(), async (req, res) => {
   try {
     const { customerId, plan, proId } = req.body || {};
+    const PLAN_PRICES = { pro: 29.90, premium: 49.90 };
     if (!customerId || !PLAN_PRICES[plan]) {
       return res.status(400).json({ ok:false, error:'Informe customerId e plan (pro|premium).' });
     }
@@ -940,6 +672,7 @@ const CARD_ENABLED = String(process.env.CARD_ENABLED || "true") === "true";
 // Pastas/arquivos
 const ROOT = __dirname;
 const PUBLIC_DIR = path.join(ROOT, "public");
+const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(ROOT, "data");
 const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
 
 const DB_FILE = path.join(DATA_DIR, "profissionais.json");
@@ -1370,7 +1103,7 @@ const storage = multer.diskStorage({
   filename: (_req, file, cb) =>
     cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`),
 });
-({
+const upload = multer({
   storage,
   limits: { fileSize: 3 * 1024 * 1024 },
   fileFilter: (_req, file, cb) =>

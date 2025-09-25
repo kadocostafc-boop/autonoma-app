@@ -35,8 +35,8 @@
     .muted { color:#64748b; font-size:12px }
   </style>
 </head>
-<body>
 
+<body>
 <header class="header" role="banner">
   <a href="/" aria-label="Início">
     <img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display='none'">
@@ -54,8 +54,12 @@
   </div>
 
   <div class="card" style="max-width:880px;margin:auto">
-    <form id="formCad" action="/auth/pro/register" method="POST" enctype="multipart/form-data"></form>
-      <!-- Foto (OBRIGATÓRIA) -->
+    <form id="formCad"
+          action="/cadastrar"
+          method="POST"
+          enctype="multipart/form-data"
+          novalidate>
+
       <label for="foto">Foto de perfil <strong>(obrigatória)</strong></label>
       <div class="row-wrap" style="align-items:center">
         <img id="fotoPrev" class="avatar-preview" src="/icons/icon-192.png" alt="Prévia da foto">
@@ -190,6 +194,7 @@
             <div id="senhaHint" class="muted" style="margin-top:6px;font-size:12px"></div>
           </div>
         </div>
+
         <div class="field">
           <label for="confirmaSenha" class="label">Confirmar senha <span style="color:#ef4444">*</span></label>
           <div class="input-group" style="display:flex;align-items:center;gap:8px">
@@ -205,7 +210,7 @@
       <!-- ========== [/SEGURANÇA: SENHA ] ========== -->
 
       <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">
-        <button class="btn" type="submit">Cadastrar</button>
+        <button class="btn" type="submit">/cadastrar</button>
         <a class="btn ghost" href="/clientes.html">Cancelar</a>
       </div>
 
@@ -214,6 +219,7 @@
   </div>
 </main>
 
+<!-- ====== APP SCRIPT ====== -->
 <script>
 (function(){
   const $ = (id)=> document.getElementById(id);
@@ -221,30 +227,32 @@
   const NO_STORE = { cache:'no-store' };
   const ts = ()=> 'ts='+Date.now();
 
-  // Foto preview
+  // --- Foto preview
   const foto = $("foto"), fotoPrev = $("fotoPrev");
   if (foto){
     foto.addEventListener("change", ()=>{
-      const f=foto.files?.[0];
+      const f = foto.files?.[0];
       if(!f){ fotoPrev.src="/icons/icon-192.png"; return; }
       fotoPrev.src = URL.createObjectURL(f);
     });
   }
 
-  // Selo / Documento
+  // --- Selo / Documento
   const wantSelo = $("wantSelo");
   const docWrap = $("docWrap");
   const doc = $("doc");
   const docPrev = $("docPrev");
+
   wantSelo.addEventListener("change", ()=>{
     const on = wantSelo.checked;
     docWrap.style.display = on ? "" : "none";
     doc.required = on;
     doc.setAttribute("aria-required", on ? "true" : "false");
   });
+
   if (doc){
     doc.addEventListener("change", ()=>{
-      const f=doc.files?.[0];
+      const f = doc.files?.[0];
       if(!f){ docPrev.style.display="none"; return; }
       if (f.type && f.type.startsWith("image/")){
         docPrev.style.display="";
@@ -255,12 +263,12 @@
     });
   }
 
-  // Datalists
+  // --- Datalists
   async function fillCities(){
     try{
-      const r=await fetch("/api/geo/cidades?"+ts(), NO_STORE);
+      const r = await fetch("/api/geo/cidades?"+ts(), NO_STORE);
       if(!r.ok) return;
-      const arr=await r.json();
+      const arr = await r.json();
       $("lista-cidades").innerHTML = (arr||[]).map(c=>`<option value="${escapeHtml(c)}">`).join("");
     }catch{}
   }
@@ -268,9 +276,9 @@
     const cid = $("cidade").value.trim();
     if(!cid){ $("lista-bairros").innerHTML=""; return; }
     try{
-      const r=await fetch("/api/geo/bairros?cidade="+encodeURIComponent(cid)+"&"+ts(), NO_STORE);
+      const r = await fetch("/api/geo/bairros?cidade="+encodeURIComponent(cid)+"&"+ts(), NO_STORE);
       if(!r.ok) return;
-      const arr=await r.json();
+      const arr = await r.json();
       $("lista-bairros").innerHTML = (arr||[]).map(b=>`<option value="${escapeHtml(b)}">`).join("");
     }catch{}
   }
@@ -278,18 +286,18 @@
     const cid = $("cidade").value.trim();
     if(!cid || !q) return;
     try{
-      const r=await fetch(`/api/geo/bairros/suggest?cidade=${encodeURIComponent(cid)}&q=${encodeURIComponent(q)}&${ts()}`, NO_STORE);
+      const r = await fetch(`/api/geo/bairros/suggest?cidade=${encodeURIComponent(cid)}&q=${encodeURIComponent(q)}&${ts()}`, NO_STORE);
       if(!r.ok) return;
-      const arr=await r.json();
+      const arr = await r.json();
       $("lista-bairros").innerHTML = (arr||[]).map(b=>`<option value="${escapeHtml(b)}">`).join("");
     }catch{}
   }
   async function suggestServicos(q){
     if(!q) return;
     try{
-      const r=await fetch(`/api/geo/servicos/suggest?q=${encodeURIComponent(q)}&${ts()}`, NO_STORE);
+      const r = await fetch(`/api/geo/servicos/suggest?q=${encodeURIComponent(q)}&${ts()}`, NO_STORE);
       if(!r.ok) return;
-      const arr=await r.json();
+      const arr = await r.json();
       $("lista-servicos").innerHTML = (arr||[]).map(s=>`<option value="${escapeHtml(s)}">`).join("");
     }catch{}
   }
@@ -298,17 +306,18 @@
   $("servico").addEventListener("input", e=> suggestServicos(e.target.value.trim()));
   fillCities();
 
-  // GPS
+  // --- GPS
   const btnGPS = $("btnGPS");
   const gpsStatus = $("gpsStatus");
+
   function isSecureForGeo(){
     return location.hostname==='localhost' || location.hostname==='127.0.0.1' || (window.isSecureContext===true);
   }
   async function resolveCityByGPS(lat,lng){
     try{
-      const r=await fetch(`/api/geo/closest-city?lat=${lat}&lng=${lng}&${ts()}`, NO_STORE);
-      const js=await r.json();
-      if(js&&js.ok&&js.cidade){
+      const r = await fetch(`/api/geo/closest-city?lat=${lat}&lng=${lng}&${ts()}`, NO_STORE);
+      const js = await r.json();
+      if(js && js.ok && js.cidade){
         $("cidade").value = js.cidade;
         await refreshBairros();
         gpsStatus.textContent = `Localização detectada: ${js.cidade}`;
@@ -355,7 +364,6 @@
     return rest.length===9 ? `+${cc} (${ddd}) ${rest.slice(0,5)}-${rest.slice(5)}`
                            : `+${cc} (${ddd}) ${rest.slice(0,4)}-${rest.slice(4)}`;
   }
-
   function bindPhoneInput(inputId, prevId){
     const input = $(inputId), prev = $(prevId);
     function update(){
@@ -379,11 +387,47 @@
   bindPhoneInput("telefone","telPrev");
 
   // Escape HTML
-  function escapeHtml(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+  function escapeHtml(s){
+    return String(s||"")
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  }
 
-  // Validação final no submit (inclui E-MAIL obrigatório)
+  // ===== Password helpers =====
+  const senha = $("senha"), confirma = $("confirmaSenha");
+  const meterFill = $("senhaMeterFill"), senhaHint = $("senhaHint"), matchMsg = $("matchMsg");
+  $("toggleSenha").addEventListener("click", ()=>{
+    senha.type = senha.type==="password" ? "text" : "password";
+  });
+  $("toggleConfirma").addEventListener("click", ()=>{
+    confirma.type = confirma.type==="password" ? "text" : "password";
+  });
+  function scorePwd(p){
+    let s = 0;
+    if (p.length>=8) s++;
+    if (/[a-z]/i.test(p) && /\d/.test(p)) s++;
+    if (/[^a-z0-9]/i.test(p)) s++;
+    if (p.length>=12) s++;
+    return Math.min(s,4);
+  }
+  function updatePwd(){
+    const v = senha.value||"";
+    const sc = scorePwd(v);
+    const w = ["0%","30%","55%","80%","100%"][sc];
+    meterFill.style.width = w;
+    senhaHint.textContent = ["Muito fraca","Fraca","Ok","Boa","Excelente"][sc] || "";
+    matchMsg.textContent = (confirma.value && confirma.value!==v) ? "As senhas não coincidem." : "";
+  }
+  senha.addEventListener("input", updatePwd);
+  confirma.addEventListener("input", updatePwd);
+
+  // ===== Validação final no submit =====
   const form = $("formCad");
+  const VALIDATE_FRONT = true; // mude para false se quiser desativar as validações do front
+
   form.addEventListener("submit", (e)=>{
+    if (!VALIDATE_FRONT) return; // deixa enviar sem validar no front
+
     err.style.display="none"; err.textContent="";
 
     // Foto
@@ -421,90 +465,26 @@
     if (!($("servico").value.trim() || $("profissao").value.trim())){ e.preventDefault(); err.textContent="Informe Categoria/Serviço ou Profissão."; err.style.display=""; $("servico").focus(); return; }
     if (!$("descricao").value.trim()){ e.preventDefault(); err.textContent="Descreva seu trabalho em 'Sobre você'."; err.style.display=""; $("descricao").focus(); return; }
 
-    // E-MAIL obrigatório e válido
+    // E-mail obrigatório e válido
     const email = $("email").value.trim().toLowerCase();
     const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     if (!email || !okEmail){
       e.preventDefault(); err.textContent="Informe um e-mail válido (obrigatório)."; err.style.display=""; $("email").focus(); return;
     }
-    $("email").value = email; // normaliza minúsculo
+    $("email").value = email;
+
+    // Senhas
+    if (senha.value.length < 8){
+      e.preventDefault(); err.textContent="A senha deve ter pelo menos 8 caracteres."; err.style.display=""; senha.focus(); return;
+    }
+    if (senha.value !== confirma.value){
+      e.preventDefault(); err.textContent="As senhas não coincidem."; err.style.display=""; confirma.focus(); return;
+    }
   });
 })();
 </script>
 
-<!-- Script de senha (medidor + confirmação) -->
-<script>
-(function () {
-  const form = document.getElementById('formCad');
-  if (!form) return;
-  const err = document.getElementById('err');
-  const senha = document.getElementById('senha');
-  const confirma = document.getElementById('confirmaSenha');
-  const toggleSenha = document.getElementById('toggleSenha');
-  const toggleConfirma = document.getElementById('toggleConfirma');
-  const meterFill = document.getElementById('senhaMeterFill');
-  const senhaHint = document.getElementById('senhaHint');
-  const matchMsg = document.getElementById('matchMsg');
-
-  function bindToggle(btn, input){
-    if (!btn || !input) return;
-    btn.addEventListener('click', ()=>{
-      const isPwd = input.type === 'password';
-      input.type = isPwd ? 'text' : 'password';
-      btn.textContent = isPwd ? '🙈' : '👁';
-    });
-  }
-  bindToggle(toggleSenha, senha);
-  bindToggle(toggleConfirma, confirma);
-
-  function scorePwd(v){
-    let s=0; if(!v) return 0;
-    if (v.length>=8) s++;
-    if (/[A-Za-z]/.test(v) && /\d/.test(v)) s++;
-    if (/[^A-Za-z0-9]/.test(v)) s++;
-    if (v.length>=12) s++;
-    return Math.min(s,4);
-  }
-  function updateMeter(){
-    const v = senha?.value || '';
-    const s = scorePwd(v);
-    const pct = [0,25,50,75,100][s];
-    if (meterFill){
-      meterFill.style.width = pct + '%';
-      const colors = ['#e5e7eb','#fca5a5','#fbbf24','#60a5fa','#22c55e'];
-      meterFill.style.background = colors[s];
-    }
-    if (senhaHint){
-      const msgs = ['Crie uma senha com letras e números.','Fraca — aumente o tamanho.','Ok — adicione mais variedade.','Boa — considere 12+ caracteres.','Forte ✔'];
-      senhaHint.textContent = msgs[s];
-    }
-  }
-  senha?.addEventListener('input', updateMeter);
-  updateMeter();
-
-  function updateMatch(){
-    if (!matchMsg) return;
-    const ok = (confirma.value && confirma.value === senha.value);
-    matchMsg.textContent = confirma.value ? (ok ? 'As senhas conferem ✔' : 'As senhas não conferem') : '';
-    matchMsg.style.color = ok ? '#16a34a' : '#ef4444';
-  }
-  confirma?.addEventListener('input', updateMatch);
-  senha?.addEventListener('input', updateMatch);
-
-  form.addEventListener('submit', (e)=>{
-    const v = senha?.value || '', v2 = confirma?.value || '';
-    const minOk = v.length>=8, mixOk=/[A-Za-z]/.test(v)&&/\d/.test(v), matchOk=v&&v===v2;
-    if (!minOk || !mixOk || !matchOk){
-      e.preventDefault();
-      if (err){ err.style.display=''; err.textContent = !minOk ? 'Senha muito curta (mín. 8).' : !mixOk ? 'A senha precisa ter letras e números.' : 'As senhas não conferem.'; }
-      else { alert(!minOk ? 'Senha muito curta (mín. 8).' : !mixOk ? 'A senha precisa ter letras e números.' : 'As senhas não conferem.'); }
-      return false;
-    }
-  }, true);
-})();
-</script>
-
-<!-- SW -->
+<!-- ====== SERVICE WORKER ====== -->
 <script>
 if ('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
