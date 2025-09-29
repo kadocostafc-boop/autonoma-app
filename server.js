@@ -1522,67 +1522,9 @@ function isRecent(iso, mins = 15) {
   return Date.now() - t <= mins * 60 * 1000;
 }
 
-// ===== [ Perfil (API) robusto ] =====
-app.get("/api/profissionais/:id", (req, res) => {
-  try {
-    const rawId = String(req.params.id || "").trim();
-    if (!rawId) return res.status(400).json({ ok: false, error: "missing_id" });
+// ===== [Perfil APIs — UNIFICADO e robusto] =====
 
-    // Lê o DB com fallback seguro
-    const db = (typeof readDB === "function" ? readDB() : readJSONSafe(DB_FILE, [])) || [];
-    if (!Array.isArray(db)) return res.status(500).json({ ok: false, error: "db_invalid" });
-
-    // Procura por id como string OU number
-    const prof =
-      db.find(p => String(p.id) === rawId) ||
-      db.find(p => Number(p.id) === Number(rawId));
-
-    if (!prof) return res.status(404).json({ ok: false, error: "not_found" });
-
-    // Aliases/Normalização
-    const foto = prof.foto || prof.fotoUrl || null;
-    const descricao = prof.descricao || prof.bio || "";
-    const experiencia = prof.experienciaTempo || prof.experiencia || "";
-    const servico = prof.servico || prof.profissao || "";
-    const cidade = prof.cidade || "";
-    const bairro = prof.bairro || "";
-    const site = prof.site || "";
-    const whatsapp = prof.whatsapp || "";
-    const telefone = prof.telefone || "";
-    const precoBase = prof.precoBase || "";
-
-    // Monta a resposta amigável para o front
-    return res.json({
-      ok: true,
-      item: {
-        id: String(prof.id),
-        nome: prof.nome || "",
-        foto,                          // <- /uploads/arquivo.ext
-        descricao,                     // <- alias de bio
-        experiencia,                   // <- alias de experienciaTempo
-        servico,
-        servicoSlug: prof.servicoSlug || null,
-        cidade,
-        bairro,
-        lat: Number.isFinite(Number(prof.lat)) ? Number(prof.lat) : null,
-        lng: Number.isFinite(Number(prof.lng)) ? Number(prof.lng) : null,
-        email: prof.email || "",
-        whatsapp,
-        telefone,
-        site,
-        precoBase,
-        verificado: !!prof.verificado,
-        mediaAvaliacao: Number(prof.mediaAvaliacao || 0),
-        totalAvaliacoes: Number(prof.totalAvaliacoes || 0),
-        criadoEm: prof.criadoEm || null
-      }
-    });
-  } catch (e) {
-    console.error("[ERR /api/profissionais/:id]", e);
-    return res.status(500).json({ ok: false, error: "server_error" });
-  }
-});
-// DEBUG: ver o último profissional salvo (não exige auth)
+// DEBUG opcional: último profissional salvo
 app.get('/api/debug/ultimo-prof', (req, res) => {
   try {
     const db = (typeof readDB === 'function' ? readDB() : readJSONSafe(DB_FILE, []));
@@ -1594,93 +1536,158 @@ app.get('/api/debug/ultimo-prof', (req, res) => {
       ok: true,
       id: p.id,
       nome: p.nome,
-      foto: p.foto || p.fotoUrl,
+      foto: p.foto || p.fotoUrl || null,
       temFotoArquivo: !!(p.foto || p.fotoUrl)?.startsWith?.('/uploads/'),
-      descricao: p.descricao || p.bio,
-      experiencia: p.experienciaTempo || p.experiencia,
-      cidade: p.cidade,
-      bairro: p.bairro,
-      servico: p.servico
+      descricao: p.descricao || p.bio || "",
+      experiencia: p.experienciaTempo || p.experiencia || "",
+      cidade: p.cidade || "",
+      bairro: p.bairro || "",
+      servico: p.servico || p.profissao || ""
     });
   } catch (e) {
     console.error('[debug ultimo-prof]', e);
     res.status(500).json({ ok: false, erro: String(e) });
   }
 });
-// =========================[ Perfil (APIs) ]====================
+
+// Principal: /api/profissionais/:id  (com aliases + distância opcional)
 app.get("/api/profissionais/:id", (req, res) => {
-  const id = Number(req.params.id || "0");
-  if (!Number.isFinite(id) || id <= 0) return res.status(400).json({ ok: false, error: "id inválido" });
+  try {
+    const rawId = String(req.params.id || "").trim();
+    if (!rawId) return res.status(400).json({ ok: false, error: "missing_id" });
 
-  const db = readDB();
-  const p = db.find((x) => Number(x.id) === id && !x.excluido);
-  if (!p) return res.status(404).json({ ok: false });
+    const db = (typeof readDB === "function" ? readDB() : readJSONSafe(DB_FILE, [])) || [];
+    if (!Array.isArray(db)) return res.status(500).json({ ok: false, error: "db_invalid" });
 
-  const notas = (p.avaliacoes || []).map((a) => Number(a.nota)).filter((n) => n >= 1 && n <= 5);
-  const rating = notas.length ? notas.reduce((a, b) => a + b, 0) / notas.length : 0;
+    // acha por string ou number
+    const prof =
+      db.find(p => String(p.id) === rawId) ||
+      db.find(p => Number(p.id) === Number(rawId));
 
-  res.json({
-    ok: true,
-    id: p.id,
-    nome: p.nome,
-    foto: p.foto || "",
-    servico: p.servico || p.profissao || "",
-    cidade: p.cidade || "",
-    bairro: p.bairro || "",
-    descricao: p.descricao || "",
-    whatsapp: p.whatsapp || "",
-    site: p.site || "",
-    atendimentos: p.atendimentos || 0,
-    avaliacoes: p.avaliacoes || [],
-    rating,
-    verificado: !!p.verificado,
-    suspenso: !!p.suspenso,
-    plano: p.plano || "free",
-    badge: p.plano === "premium" ? "PREMIUM" : p.plano === "pro" ? "PRO" : "",
-    distanceKm: typeof p.distanceKm === "number" ? p.distanceKm : null,
-  });
+    if (!prof) return res.status(404).json({ ok: false, error: "not_found" });
+
+    // campos/aliases
+    const foto        = prof.foto || prof.fotoUrl || null;
+    const descricao   = (prof.descricao ?? prof.bio ?? "").toString();
+    const experiencia = (prof.experienciaTempo ?? prof.experiencia ?? "").toString();
+    const servico     = (prof.servico ?? prof.profissao ?? "").toString();
+    const cidade      = (prof.cidade ?? "").toString();
+    const bairro      = (prof.bairro ?? "").toString();
+    const site        = (prof.site ?? "").toString();
+    const whatsapp    = (prof.whatsapp ?? "").toString();
+    const telefone    = (prof.telefone ?? "").toString();
+    const precoBase   = (prof.precoBase ?? "").toString();
+    const pLat        = Number(prof.lat);
+    const pLng        = Number(prof.lng);
+
+    // distância opcional (?userLat=&userLng=)
+    const userLat = Number(req.query.userLat);
+    const userLng = Number(req.query.userLng);
+    let distanceKm = null;
+    if (Number.isFinite(userLat) && Number.isFinite(userLng) && Number.isFinite(pLat) && Number.isFinite(pLng)) {
+      const R = 6371, toRad = d => d * Math.PI / 180;
+      const dLat = toRad(pLat - userLat);
+      const dLng = toRad(pLng - userLng);
+      const a = Math.sin(dLat/2)**2 + Math.cos(toRad(userLat)) * Math.cos(toRad(pLat)) * Math.sin(dLng/2)**2;
+      distanceKm = Math.round(R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))));
+    }
+
+    // rating (se houver avaliacoes)
+    const notas = (prof.avaliacoes || []).map(a => Number(a?.nota)).filter(n => n >= 1 && n <= 5);
+    const rating = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length) : 0;
+
+    return res.json({
+      ok: true,
+      item: {
+        id: String(prof.id),
+        nome: prof.nome || "",
+
+        // foto - ambos
+        foto,
+        fotoUrl: foto,
+
+        // descrição - ambos
+        descricao,
+        bio: descricao,
+
+        // experiência - ambos
+        experiencia,
+        experienciaTempo: experiencia,
+
+        servico,
+        servicoSlug: prof.servicoSlug || null,
+        cidade,
+        bairro,
+
+        lat: Number.isFinite(pLat) ? pLat : null,
+        lng: Number.isFinite(pLng) ? pLng : null,
+        distanceKm,
+
+        email: prof.email || "",
+        whatsapp,
+        telefone,
+        site,
+        precoBase,
+
+        verificado: !!prof.verificado,
+        mediaAvaliacao: Number(prof.mediaAvaliacao || rating || 0),
+        totalAvaliacoes: Number(prof.totalAvaliacoes || (prof.avaliacoes?.length || 0)),
+        criadoEm: prof.criadoEm || null
+      }
+    });
+  } catch (e) {
+    console.error("[ERR /api/profissionais/:id]", e);
+    return res.status(500).json({ ok: false, error: "server_error" });
+  }
 });
 
-// Compat
+// Compat: /api/profissional/:id  (mantém formato legado)
 app.get("/api/profissional/:id", (req, res) => {
-  const id = Number(req.params.id || "0");
-  if (!Number.isFinite(id) || id <= 0) {
-    return res.status(400).json({ ok: false, error: "id inválido" });
-  }
-  const db = readDB();
-  const p = db.find((x) => Number(x.id) === id && !x.excluido);
-  if (!p) return res.status(404).json({ ok: false });
+  try {
+    const raw = String(req.params.id || "").trim();
+    if (!raw) return res.status(400).json({ ok: false, error: "id inválido" });
 
-  const notas = (p.avaliacoes || []).map((a) => Number(a.nota)).filter((n) => n >= 1 && n <= 5);
-  const rating = notas.length ? notas.reduce((a, b) => a + b, 0) / notas.length : 0;
+    const db = (typeof readDB === "function" ? readDB() : readJSONSafe(DB_FILE, [])) || [];
+    if (!Array.isArray(db)) return res.status(500).json({ ok: false });
 
-  const experiencia =
-    typeof p.experiencia === "number"
+    const p =
+      db.find(x => String(x.id) === raw) ||
+      db.find(x => Number(x.id) === Number(raw));
+    if (!p) return res.status(404).json({ ok: false });
+
+    const notas = (p.avaliacoes || []).map(a => Number(a.nota)).filter(n => n >= 1 && n <= 5);
+    const rating = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length) : 0;
+
+    const experienciaNum = typeof p.experiencia === "number"
       ? p.experiencia
       : Number(String(p.experiencia || "").replace(/\D/g, "")) || null;
 
-  res.json({
-    ok: true,
-    id: p.id,
-    nome: p.nome,
-    foto: p.foto || "",
-    servico: p.servico || p.profissao || "",
-    cidade: p.cidade || "",
-    bairro: p.bairro || "",
-    descricao: p.descricao || "",
-    whatsapp: p.whatsapp || "",
-    site: p.site || "",
-    atendimentos: p.atendimentos || 0,
-    avaliacoes: p.avaliacoes || [],
-    rating,
-    verificado: !!p.verificado,
-    suspenso: !!p.suspenso,
-    plano: p.plano || "free",
-    badge: p.plano === "premium" ? "PREMIUM" : p.plano === "pro" ? "PRO" : "",
-    canEvaluate: true,
-    experiencia,
-    distanceKm: typeof p.distanceKm === "number" ? p.distanceKm : null,
-  });
+    res.json({
+      ok: true,
+      id: p.id,
+      nome: p.nome,
+      foto: p.foto || p.fotoUrl || "",
+      servico: p.servico || p.profissao || "",
+      cidade: p.cidade || "",
+      bairro: p.bairro || "",
+      descricao: p.descricao || p.bio || "",
+      whatsapp: p.whatsapp || "",
+      site: p.site || "",
+      atendimentos: p.atendimentos || 0,
+      avaliacoes: p.avaliacoes || [],
+      rating,
+      verificado: !!p.verificado,
+      suspenso: !!p.suspenso,
+      plano: p.plano || "free",
+      badge: p.plano === "premium" ? "PREMIUM" : (p.plano === "pro" ? "PRO" : ""),
+      canEvaluate: true,
+      experiencia: experienciaNum,
+      distanceKm: typeof p.distanceKm === "number" ? p.distanceKm : null
+    });
+  } catch (e) {
+    console.error("[ERR /api/profissional/:id]", e);
+    return res.status(500).json({ ok: false });
+  }
 });
 
 // =========================[ Avaliações ]=======================
