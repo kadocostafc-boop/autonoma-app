@@ -1475,7 +1475,16 @@ function ensureFileReady(filePath) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   if (!fs.existsSync(filePath)) fs.writeFileSync(filePath, '[]', 'utf8');
 }
-
+// Helper para escapar HTML em mensagens de erro
+function escapeHTML(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 function readJSONSafe(filePath, fallback = []) {
   try {
     ensureFileReady(filePath);
