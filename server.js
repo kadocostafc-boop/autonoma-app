@@ -1304,83 +1304,83 @@ function isDuplicate(db, novo) {
 app.post(
   '/cadastro',
 
-  // (L1304) 1) middleware de upload (foto obrigatória)
+  // (1) middleware do upload (reaproveita seu `upload.single('foto')`)
   (req, res, next) => {
     upload.single('foto')(req, res, (err) => {
       if (err) {
-        console.error('[UPLOAD /cadastro]', err);
-        return res
-          .status(400)
-          .send(htmlMsg('Erro no upload', String(err.message || err), '/cadastro.html'));
-      }
-      if (!req.file) {
-        return res
-          .status(400)
-          .send(htmlMsg('Foto obrigatória', 'Envie uma foto de perfil (JPG/PNG até 3MB).', '/cadastro.html'));
+        console.error('[upload foto] erro:', err);
+        return res.status(400).send(htmlMsg('Erro no upload', err.message || 'Falha ao enviar a foto', '/cadastro.html'));
       }
       next();
     });
   },
 
-  // (L1319) 2) handler principal
+  // (2) handler principal
   (req, res) => {
     try {
-      const values = { ...req.body };
-
-      // helpers rápidos
+      // ===== normalizações básicas =====
       const onlyDigits = (s) => String(s || '').replace(/\D/g, '');
-      const toBR55 = (d) => (!d ? '' : d.startsWith('55') ? d : (d.length === 10 || d.length === 11) ? '55' + d : d);
+      const norm = (s) => String(s || '').trim();
 
-      // caminho público da foto enviada
+      // foto (se enviada)
       const fotoUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
-      // normaliza contatos
-      values.whatsapp = toBR55(onlyDigits(values.whatsapp));
-      values.telefone = values.telefone ? toBR55(onlyDigits(values.telefone)) : '';
+      // normaliza telefone/whatsapp
+      const wDig = onlyDigits(req.body.whatsapp);
+      const whatsapp = wDig.startsWith('55') ? wDig : (wDig.length === 10 || wDig.length === 11 ? '55' + wDig : wDig);
 
-      // ==== monta registro final =====
+      const tDig = onlyDigits(req.body.telefone);
+      const telefone = tDig ? (tDig.startsWith('55') ? tDig : ((tDig.length === 10 || tDig.length === 11) ? '55' + tDig : tDig)) : '';
+
+      // descrição/experiência (mantém aliases)
+      const _descricao = norm(req.body.descricao || req.body.bio || '');
+      const _experiencia = norm(req.body.experiencia || req.body.experienciaTempo || '');
+
+      // slug de serviço
+      const makeSlug = (s) => norm(s).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      const servico = norm(req.body.servico || req.body.profissao || '');
+      const servicoSlug = servico ? makeSlug(servico) : null;
+
+      // id
       const id = Date.now().toString();
 
-      // normalizações para aliases
-      const _descricao   = String((values.descricao ?? values.bio ?? '')).trim();
-      const _experiencia = String((values.experiencia ?? '')).trim();
-
+      // ===== monta registro final =====
       const novo = {
         id,
 
         // identificação
-        nome: String(values.nome || '').trim(),
-        fotoUrl,
-        foto: fotoUrl || null, // alias p/ compatibilidade
+        nome: norm(req.body.nome),
+        foto: fotoUrl,         // algumas telas usam `foto`
+        fotoUrl,               // outras usam `fotoUrl`
 
         // contatos
-        whatsapp: String(values.whatsapp || '').trim(),
-        telefone: String(values.telefone || '').trim(),
-        email: String(values.email || '').trim().toLowerCase(),
-        site: String(values.site || '').trim(),
+        whatsapp,
+        telefone,
+        email: norm((req.body.email || '').toLowerCase()),
+        site: norm(req.body.site),
 
         // localização
-        cidade: String(values.cidade || '').trim(),
-        estado: values.estado || null,
-        bairro: String(values.bairro || '').trim(),
-        lat: values.lat ? Number(values.lat) : null,
-        lng: values.lng ? Number(values.lng) : null,
+        cidade: norm(req.body.cidade),
+        estado: req.body.estado || null,
+        bairro: norm(req.body.bairro),
+        lat: Number.isFinite(Number(req.body.lat)) ? Number(req.body.lat) : null,
+        lng: Number.isFinite(Number(req.body.lng)) ? Number(req.body.lng) : null,
 
         // profissional
-        servico: values.servico ? String(values.servico).trim() : '',
-        servicoSlug: values.servicoSlug || null,
-        profissao: String(values.profissao || '').trim(),
+        servico,
+        servicoSlug,
+        profissao: norm(req.body.profissao),
 
-        // descrição/bio (aliases)
+        // descrição/bio (mantém ambos)
         descricao: _descricao,
         bio: _descricao,
 
-        // experiência (aliases)
+        // experiência (mantém ambos)
         experiencia: _experiencia,
         experienciaTempo: _experiencia,
 
-        precoBase: String(values.precoBase || '').trim(),
-        endereco: String(values.endereco || '').trim(),
+        precoBase: norm(req.body.precoBase),
+        endereco: norm(req.body.endereco),
 
         // sistema
         criadoEm: new Date().toISOString(),
@@ -1390,100 +1390,96 @@ app.post(
         visitas: 0,
 
         // segurança
-        passwordHash: values.passwordHash || null
+        passwordHash: null, // se você já preenche em outro ponto, pode trocar aqui
       };
 
-   // ==== salva no DB ====
-// lê o banco atual (fallback seguro)
-let db = readJSON(DB_FILE, []);
-if (!Array.isArray(db)) db = [];
-
-// adiciona o novo registro
-db.push(novo);
-
-// persiste (usa writeDB se existir; senão, writeJSON)
-if (typeof writeDB === 'function') {
-  try {
-    writeDB(db);
-  } catch (e) {
-    console.error('[writeDB] falhou, usando writeJSON', e);
-    writeJSON(DB_FILE, db);
-  }
-} else {
-  writeJSON(DB_FILE, db);
-}
-
-// ==== atualiza lista de serviços (string[] OU [{nome,slug}]) ====
-try {
-  if (novo.servico) {
-    let listaServicos = readJSON(SERVICOS_FILE, []);
-    if (!Array.isArray(listaServicos)) listaServicos = [];
-
-    const exists = listaServicos.some(s =>
-      (typeof s === 'string' ? s : String(s?.nome || ''))
-        .toLowerCase() === String(novo.servico).toLowerCase()
-    );
-
-    if (!exists) {
-      if (listaServicos.length && typeof listaServicos[0] === 'object') {
-        // formato objetos
-        listaServicos.push({
-          nome: novo.servico,
-          slug: (novo.servicoSlug || String(novo.servico).toLowerCase().replace(/\s+/g, '-'))
-        });
-      } else {
-        // formato string[]
-        listaServicos.push(novo.servico);
+      // se veio senha, gera hash (se seu projeto já tem hashPassword)
+      if (req.body.senha) {
+        try {
+          novo.passwordHash = hashPassword(String(req.body.senha));
+        } catch (e) {
+          console.warn('[hashPassword] falhou, ignorando hash:', e);
+        }
       }
 
-      listaServicos.sort((a, b) =>
-        (typeof a === 'string' ? a : a.nome)
-          .localeCompare(typeof b === 'string' ? b : b.nome, 'pt-BR')
+      // ===== salva no DB =====
+      let db = readJSON(DB_FILE, []);
+      if (!Array.isArray(db)) db = [];
+      // regra simples anti-duplicado por (cidade+bairro+whatsapp)
+      const dup = db.find(p =>
+        String(p.cidade || '').toLowerCase() === String(novo.cidade).toLowerCase() &&
+        String(p.bairro || '').toLowerCase() === String(novo.bairro).toLowerCase() &&
+        String(p.whatsapp || '') === String(novo.whatsapp)
       );
+      if (dup) {
+        return res.status(400).send(htmlMsg('Cadastro duplicado', 'Já existe um profissional com o mesmo WhatsApp neste bairro/cidade.', '/cadastro.html'));
+      }
 
-      writeJSON(SERVICOS_FILE, listaServicos);
+      db.push(novo);
+      try { writeDB ? writeDB(db) : writeJSON(DB_FILE, db); }
+      catch (e) { console.error('[writeDB] falhou, usando writeJSON', e); writeJSON(DB_FILE, db); }
+
+      // ===== mantém catálogos (serviços / cidades / bairros) =====
+      try {
+        // serviços: string[] ou [{nome,slug}]
+        if (novo.servico) {
+          let servs = readJSON(SERVICOS_FILE, []);
+          if (!Array.isArray(servs)) servs = [];
+          const exists = servs.some(s =>
+            (typeof s === 'string' ? s : String(s?.nome || ''))
+              .toLowerCase() === novo.servico.toLowerCase()
+          );
+          if (!exists) {
+            if (servs.length && typeof servs[0] === 'object') {
+              servs.push({ nome: novo.servico, slug: novo.servicoSlug || makeSlug(novo.servico) });
+            } else {
+              servs.push(novo.servico);
+            }
+            servs.sort((a, b) =>
+              (typeof a === 'string' ? a : a.nome).localeCompare(typeof b === 'string' ? b : b.nome, 'pt-BR')
+            );
+            writeJSON(SERVICOS_FILE, servs);
+          }
+        }
+
+        // cidades: string[]
+        if (novo.cidade) {
+          let cidades = readJSON(CIDADES_FILE, []);
+          if (!Array.isArray(cidades)) cidades = [];
+          if (!cidades.some(c => String(c).toLowerCase() === novo.cidade.toLowerCase())) {
+            cidades.push(novo.cidade);
+            cidades.sort((a, b) => String(a).localeCompare(String(b), 'pt-BR'));
+            writeJSON(CIDADES_FILE, cidades);
+          }
+        }
+
+        // bairros: { [cidade]: string[] }
+        if (novo.cidade && novo.bairro) {
+          let bairrosMap = readJSON(BAIRROS_FILE, {});
+          if (!bairrosMap || typeof bairrosMap !== 'object') bairrosMap = {};
+          const key = novo.cidade;
+          const arr = Array.isArray(bairrosMap[key]) ? bairrosMap[key] : [];
+          if (!arr.some(b => String(b).toLowerCase() === novo.bairro.toLowerCase())) {
+            arr.push(novo.bairro);
+            arr.sort((a, b) => String(a).localeCompare(String(b), 'pt-BR'));
+            bairrosMap[key] = arr;
+            writeJSON(BAIRROS_FILE, bairrosMap);
+          }
+        }
+      } catch (e) {
+        console.warn('[catálogos] não foi possível atualizar (ignorado):', e?.message || e);
+      }
+
+      // ===== redireciona para o perfil =====
+      console.log('[CADASTRO] redirect ->', `/perfil.html?id=${id}`);
+      return res.redirect(`/perfil.html?id=${id}`);
+
+    } catch (e) {
+      console.error('[ERRO /cadastro]', e);
+      return res.status(500).send(htmlMsg('Erro interno', String(e?.message || e), '/cadastro.html'));
     }
   }
-} catch (e) {
-  console.warn('[SERVICOS_FILE] não foi possível atualizar (ignorado):', e.message || e);
-}
-
-// ==== atualiza cidades e bairros (geo) ====
-try {
-  // cidades.json: string[]
-  if (novo.cidade) {
-    let cidades = readJSON(CIDADES_FILE, []);
-    if (!Array.isArray(cidades)) cidades = [];
-    if (!cidades.some(c => String(c).toLowerCase() === String(novo.cidade).toLowerCase())) {
-      cidades.push(novo.cidade);
-      cidades.sort((a, b) => String(a).localeCompare(String(b), 'pt-BR'));
-      writeJSON(CIDADES_FILE, cidades);
-    }
-  }
-
-  // bairros.json: { [cidade]: string[] }
-  if (novo.cidade && novo.bairro) {
-    let bairrosMap = readJSON(BAIRROS_FILE, {});
-    if (!bairrosMap || typeof bairrosMap !== 'object') bairrosMap = {};
-    const key = String(novo.cidade);
-    const arr = Array.isArray(bairrosMap[key]) ? bairrosMap[key] : [];
-    if (!arr.some(b => String(b).toLowerCase() === String(novo.bairro).toLowerCase())) {
-      arr.push(novo.bairro);
-      arr.sort((a, b) => String(a).localeCompare(String(b), 'pt-BR'));
-      bairrosMap[key] = arr;
-      writeJSON(BAIRROS_FILE, bairrosMap);
-    }
-  }
-} catch (e) {
-  console.warn('[GEO_FILES] não foi possível atualizar (ignorado):', e.message || e);
-}
-
-} catch (e) {
-  // <-- ESTE catch fecha o try do INÍCIO do handler (não mexa no "try" lá em cima!)
-  console.error('[ERRO /cadastro]', e);
-  return res.status(500).send(htmlMsg('Erro interno', String(e?.message || e), '/cadastro.html'));
-}
-}); // fecha app.post('/cadastro', ...)
+);
 
 
 // Lê o banco atual com fallback
@@ -1506,15 +1502,7 @@ if (typeof writeDB === 'function') {
   writeJSON(DB_FILE, banco);
 }
 
-// atualiza lista de cidades
-if (novo.cidade) {
-  let cidades = readJSON(CIDADES_FILE, {});
-  if (!cidades[novo.cidade]) cidades[novo.cidade] = [];
-  if (novo.bairro && !cidades[novo.cidade].includes(novo.bairro)) {
-    cidades[novo.cidade].push(novo.bairro);
-  }
-  writeJSON(CIDADES_FILE, cidades);
-}
+
 // ====== [Helpers de leitura/escrita do DB] ======
 function ensureFileReady(filePath) {
   const dir = path.dirname(filePath);
