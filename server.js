@@ -1300,177 +1300,210 @@ function isDuplicate(db, novo) {
   );
 }
 
-// ====== [ AUTONOMA • POST /cadastro ] ======
+// ===== [ AUTONOMA • POST /cadastro ] =====
 app.post(
   '/cadastro',
-  // 1) middleware do upload (REAPROVEITA seu "upload")
+
+  // (L1304) 1) middleware de upload (foto obrigatória)
   (req, res, next) => {
     upload.single('foto')(req, res, (err) => {
       if (err) {
+        console.error('[UPLOAD /cadastro]', err);
         return res
           .status(400)
-          .send(htmlMsg('Erro no upload', err.message || 'Falha ao enviar a imagem.', '/cadastro.html'));
+          .send(htmlMsg('Erro no upload', String(err.message || err), '/cadastro.html'));
+      }
+      if (!req.file) {
+        return res
+          .status(400)
+          .send(htmlMsg('Foto obrigatória', 'Envie uma foto de perfil (JPG/PNG até 3MB).', '/cadastro.html'));
       }
       next();
     });
   },
-  // 2) handler principal
+
+  // (L1319) 2) handler principal
   (req, res) => {
     try {
-      // ===== helpers locais (não conflitam com suas globais) =====
+      const values = { ...req.body };
+
+      // helpers rápidos
       const onlyDigits = (s) => String(s || '').replace(/\D/g, '');
-      const toTitle = (s='') => String(s).toLowerCase().replace(/(^|\s)\S/g, m => m.toUpperCase());
-      const slugify = (str='') => String(str)
-        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-        .toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
-      const readJSON = (f, fb) => { try { return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f,'utf8')||'[]') : fb; } catch { return fb; } };
-      const writeJSON = (f, d) => fs.writeFileSync(f, JSON.stringify(d, null, 2), 'utf8');
-      const hashPassword = (plain) => {
-        const salt = crypto.randomBytes(16).toString('hex');
-        const hash = crypto.scryptSync(String(plain), salt, 64).toString('hex');
-        return `${salt}:${hash}`;
-      };
+      const toBR55 = (d) => (!d ? '' : d.startsWith('55') ? d : (d.length === 10 || d.length === 11) ? '55' + d : d);
 
-      // ===== validação que você já tinha =====
-      const { ok, errors, values } = validateCadastro(req.body);
-      if (!req.file?.filename) errors.push('Foto de perfil é obrigatória.');
-      if (!ok || errors.length) {
-        return res.status(400).send(htmlErros('Dados inválidos', errors, '/cadastro.html'));
-      }
-
-      // ===== duplicidade que você já tinha =====
-      const db = readDB(); // deve devolver array de profissionais
-      if (isDuplicate(db, values)) {
-        return res
-          .status(400)
-          .send(htmlMsg(
-            'Cadastro duplicado',
-            'Já existe um profissional com o mesmo WhatsApp neste bairro/cidade.',
-            '/cadastro.html'
-          ));
-      }
-
-      // ===== serviço: cria automaticamente em servicos.json se não existir =====
-      let servicos = readJSON(SERVICOS_FILE, []);
-      const servicoBase = values.servico || values.profissao;
-      const servNome = toTitle(servicoBase || '');
-      const servSlug = slugify(servicoBase || '');
-      const existeServico = servicos.some(s =>
-        (typeof s === 'string' ? s.toLowerCase() : String(s?.nome||'').toLowerCase()) === servNome.toLowerCase()
-      );
-      if (!existeServico && servNome) {
-        if (servicos.length && typeof servicos[0] === 'object') {
-          servicos.push({ nome: servNome, slug: servSlug });
-        } else {
-          servicos.push(servNome);
-        }
-        writeJSON(SERVICOS_FILE, servicos);
-      }
-
-      // padroniza no cadastro final
-      values.servico = servNome || values.servico || values.profissao || '';
-      values.servicoSlug = servSlug || (values.servico ? slugify(values.servico) : '');
-
-      // ===== geo: usar lat/lng do form; se faltar, buscar por cidade em cidades.json =====
-      let latNum = values.lat ? Number(values.lat) : (req.body.lat ? Number(req.body.lat) : NaN);
-      let lngNum = values.lng ? Number(values.lng) : (req.body.lng ? Number(req.body.lng) : NaN);
-      if (!isFinite(latNum) || !isFinite(lngNum)) {
-        const cidades = readJSON(CIDADES_FILE, []);
-        const norm = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
-        const alvo = norm(values.cidade);
-        const found = Array.isArray(cidades) && (cidades.find(c => norm(c.nome) === alvo)
-                   || cidades.find(c => norm(c.nome).includes(alvo) || alvo.includes(norm(c.nome))));
-        if (found && typeof found.lat === 'number' && typeof found.lng === 'number') {
-          latNum = found.lat; lngNum = found.lng;
-          values.cidade = found.nome || values.cidade; // padroniza nome
-          values.estado = found.estado || null;
-        }
-      }
-      values.lat = (latNum === null || Number.isNaN(latNum)) ? null : latNum;
-      values.lng = (lngNum === null || Number.isNaN(lngNum)) ? null : lngNum;
-
-      // ===== foto =====
+      // caminho público da foto enviada
       const fotoUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
-      // ===== segurança: hash da senha =====
-      if (values.senha) {
-        values.passwordHash = hashPassword(values.senha);
-        delete values.senha;
-        delete values.confirmaSenha;
-      }
+      // normaliza contatos
+      values.whatsapp = toBR55(onlyDigits(values.whatsapp));
+      values.telefone = values.telefone ? toBR55(onlyDigits(values.telefone)) : '';
 
-      // ===== monta registro final =====
-const id = Date.now().toString();
+      // ==== monta registro final =====
+      const id = Date.now().toString();
 
-// normalizações (evita undefined)
-const _descricao   = String((values.descricao ?? values.bio ?? "").trim());
-const _experiencia = String((values.experiencia ?? "").trim());
+      // normalizações para aliases
+      const _descricao   = String((values.descricao ?? values.bio ?? '')).trim();
+      const _experiencia = String((values.experiencia ?? '')).trim();
 
-const novo = {
-  id,
+      const novo = {
+        id,
 
-  // identificação
-  nome: String(values.nome || '').trim(),
-  fotoUrl,                    // URL pública do upload
-  foto: fotoUrl || null,      // alias p/ compatibilidade com o perfil
+        // identificação
+        nome: String(values.nome || '').trim(),
+        fotoUrl,
+        foto: fotoUrl || null, // alias p/ compatibilidade
 
-  // contatos
-  whatsapp: String(values.whatsapp || '').trim(),
-  telefone: String(values.telefone || '').trim(),
-  email: String(values.email || '').trim().toLowerCase(),
-  site: String(values.site || '').trim(),
+        // contatos
+        whatsapp: String(values.whatsapp || '').trim(),
+        telefone: String(values.telefone || '').trim(),
+        email: String(values.email || '').trim().toLowerCase(),
+        site: String(values.site || '').trim(),
 
-  // localização
-  cidade: String(values.cidade || '').trim(),
-  estado: values.estado || null,
-  bairro: String(values.bairro || '').trim(),
-  lat: values.lat,
-  lng: values.lng,
+        // localização
+        cidade: String(values.cidade || '').trim(),
+        estado: values.estado || null,
+        bairro: String(values.bairro || '').trim(),
+        lat: values.lat ? Number(values.lat) : null,
+        lng: values.lng ? Number(values.lng) : null,
 
-  // profissional
-  servico: values.servico,
-  servicoSlug: values.servicoSlug,
-  profissao: String(values.profissao || '').trim(),
+        // profissional
+        servico: values.servico ? String(values.servico).trim() : '',
+        servicoSlug: values.servicoSlug || null,
+        profissao: String(values.profissao || '').trim(),
 
-  // descrição/bio — manter ambos os campos
-  descricao: _descricao,
-  bio: _descricao,
+        // descrição/bio (aliases)
+        descricao: _descricao,
+        bio: _descricao,
 
-  // experiência — manter ambos os campos
-  experiencia: _experiencia,
-  experienciaTempo: _experiencia,
+        // experiência (aliases)
+        experiencia: _experiencia,
+        experienciaTempo: _experiencia,
 
-  precoBase: String(values.precoBase || '').trim(),
-  endereco: String(values.endereco || '').trim(),
+        precoBase: String(values.precoBase || '').trim(),
+        endereco: String(values.endereco || '').trim(),
 
-  // sistema
-  criadoEm: new Date().toISOString(),
-  verificado: false,
-  mediaAvaliacao: 0,
-  totalAvaliacoes: 0,
-  visitas: 0,
+        // sistema
+        criadoEm: new Date().toISOString(),
+        verificado: false,
+        mediaAvaliacao: 0,
+        totalAvaliacoes: 0,
+        visitas: 0,
 
-  // segurança
-  passwordHash: values.passwordHash || null
-};
-      // ===== salva no DB =====
+        // segurança
+        passwordHash: values.passwordHash || null
+      };
+
+   // ==== salva no DB ====
+// lê o banco atual (fallback seguro)
+let db = readJSON(DB_FILE, []);
+if (!Array.isArray(db)) db = [];
+
+// adiciona o novo registro
 db.push(novo);
 
-// salva no arquivo de profissionais
+// persiste (usa writeDB se existir; senão, writeJSON)
 if (typeof writeDB === 'function') {
-  writeDB(db);
+  try {
+    writeDB(db);
+  } catch (e) {
+    console.error('[writeDB] falhou, usando writeJSON', e);
+    writeJSON(DB_FILE, db);
+  }
 } else {
   writeJSON(DB_FILE, db);
 }
 
-// atualiza lista de serviços, se for novo
-if (novo.servico) {
-  let listaServicos = readJSON(SERVICOS_FILE, []);
-  if (!listaServicos.includes(novo.servico)) {
-    listaServicos.push(novo.servico);
-    listaServicos.sort((a, b) => a.localeCompare(b, "pt-BR"));
-    writeJSON(SERVICOS_FILE, listaServicos);
+// ==== atualiza lista de serviços (string[] OU [{nome,slug}]) ====
+try {
+  if (novo.servico) {
+    let listaServicos = readJSON(SERVICOS_FILE, []);
+    if (!Array.isArray(listaServicos)) listaServicos = [];
+
+    const exists = listaServicos.some(s =>
+      (typeof s === 'string' ? s : String(s?.nome || ''))
+        .toLowerCase() === String(novo.servico).toLowerCase()
+    );
+
+    if (!exists) {
+      if (listaServicos.length && typeof listaServicos[0] === 'object') {
+        // formato objetos
+        listaServicos.push({
+          nome: novo.servico,
+          slug: (novo.servicoSlug || String(novo.servico).toLowerCase().replace(/\s+/g, '-'))
+        });
+      } else {
+        // formato string[]
+        listaServicos.push(novo.servico);
+      }
+
+      listaServicos.sort((a, b) =>
+        (typeof a === 'string' ? a : a.nome)
+          .localeCompare(typeof b === 'string' ? b : b.nome, 'pt-BR')
+      );
+
+      writeJSON(SERVICOS_FILE, listaServicos);
+    }
   }
+} catch (e) {
+  console.warn('[SERVICOS_FILE] não foi possível atualizar (ignorado):', e.message || e);
+}
+
+// ==== atualiza cidades e bairros (geo) ====
+try {
+  // cidades.json: string[]
+  if (novo.cidade) {
+    let cidades = readJSON(CIDADES_FILE, []);
+    if (!Array.isArray(cidades)) cidades = [];
+    if (!cidades.some(c => String(c).toLowerCase() === String(novo.cidade).toLowerCase())) {
+      cidades.push(novo.cidade);
+      cidades.sort((a, b) => String(a).localeCompare(String(b), 'pt-BR'));
+      writeJSON(CIDADES_FILE, cidades);
+    }
+  }
+
+  // bairros.json: { [cidade]: string[] }
+  if (novo.cidade && novo.bairro) {
+    let bairrosMap = readJSON(BAIRROS_FILE, {});
+    if (!bairrosMap || typeof bairrosMap !== 'object') bairrosMap = {};
+    const key = String(novo.cidade);
+    const arr = Array.isArray(bairrosMap[key]) ? bairrosMap[key] : [];
+    if (!arr.some(b => String(b).toLowerCase() === String(novo.bairro).toLowerCase())) {
+      arr.push(novo.bairro);
+      arr.sort((a, b) => String(a).localeCompare(String(b), 'pt-BR'));
+      bairrosMap[key] = arr;
+      writeJSON(BAIRROS_FILE, bairrosMap);
+    }
+  }
+} catch (e) {
+  console.warn('[GEO_FILES] não foi possível atualizar (ignorado):', e.message || e);
+}
+
+} catch (e) {
+  // <-- ESTE catch fecha o try do INÍCIO do handler (não mexa no "try" lá em cima!)
+  console.error('[ERRO /cadastro]', e);
+  return res.status(500).send(htmlMsg('Erro interno', String(e?.message || e), '/cadastro.html'));
+}
+}); // fecha app.post('/cadastro', ...)
+
+
+// Lê o banco atual com fallback
+const current = (typeof readDB === 'function'
+  ? readDB()
+  : readJSON(DB_FILE, []));
+const banco = Array.isArray(current) ? current : [];
+
+
+
+// persiste (usa writeDB se existir; senão, writeJSON)
+if (typeof writeDB === 'function') {
+  try {
+    writeDB(banco);
+  } catch (e) {
+    console.error('[writeDB] falhou, usando fallback', e);
+    writeJSON(DB_FILE, banco);
+  }
+} else {
+  writeJSON(DB_FILE, banco);
 }
 
 // atualiza lista de cidades
@@ -1518,21 +1551,6 @@ function writeJSONSafe(filePath, data) {
     console.error('[writeJSONSafe] erro escrevendo', filePath, e);
     return false;
   }
-}
-      // ===== redireciona para o perfil público =====
-      return res.redirect(`/profissional/${id}`);
-    } catch (e) {
-      console.error('[ERRO /cadastro]', e);
-      return res.status(500).send('Internal Server Error');
-    }
-  }
-);
-// =========================[ Busca pública ]====================
-function isRecent(iso, mins = 15) {
-  if (!iso) return false;
-  const t = new Date(iso).getTime();
-  if (!Number.isFinite(t)) return false;
-  return Date.now() - t <= mins * 60 * 1000;
 }
 
 // ===== [Perfil APIs — UNIFICADO e robusto] =====
