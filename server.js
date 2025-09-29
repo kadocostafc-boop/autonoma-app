@@ -1522,124 +1522,64 @@ function isRecent(iso, mins = 15) {
   return Date.now() - t <= mins * 60 * 1000;
 }
 
-app.get("/api/profissionais", (req, res) => {
+// ===== [ Perfil (API) robusto ] =====
+app.get("/api/profissionais/:id", (req, res) => {
   try {
-   const db = (typeof readDB === 'function' ? readDB() : readJSONSafe(DB_FILE, []))
-  .filter((p) => !p.excluido && !p.suspenso);
-    const cidade = trim(req.query.cidade || "");
-    const bairro = trim(req.query.bairro || "");
-    const servicoQ = trim(req.query.servico || "");
-    const minRating = Number(req.query.minRating || 0);
-    const featured = String(req.query.featured || "").trim() === "1";
-    const photoOnly = String(req.query.photoOnly || "").trim() === "1";
+    const rawId = String(req.params.id || "").trim();
+    if (!rawId) return res.status(400).json({ ok: false, error: "missing_id" });
 
-    const userLat = Number(req.query.userLat);
-    const userLng = Number(req.query.userLng);
-    const hasUserPos = Number.isFinite(userLat) && Number.isFinite(userLng);
+    // Lê o DB com fallback seguro
+    const db = (typeof readDB === "function" ? readDB() : readJSONSafe(DB_FILE, [])) || [];
+    if (!Array.isArray(db)) return res.status(500).json({ ok: false, error: "db_invalid" });
 
-    let items = db;
+    // Procura por id como string OU number
+    const prof =
+      db.find(p => String(p.id) === rawId) ||
+      db.find(p => Number(p.id) === Number(rawId));
 
-    if (featured) items = items.filter((p) => p.verificado || (p.plano && p.plano !== "free"));
+    if (!prof) return res.status(404).json({ ok: false, error: "not_found" });
 
-    if (cidade) {
-      const alvo = normalizeCidadeUF(cidade);
-      const N = norm(alvo);
-      items = items.filter((p) => norm(p.cidade || "") === N || norm(p.cidade || "").includes(N));
-    }
+    // Aliases/Normalização
+    const foto = prof.foto || prof.fotoUrl || null;
+    const descricao = prof.descricao || prof.bio || "";
+    const experiencia = prof.experienciaTempo || prof.experiencia || "";
+    const servico = prof.servico || prof.profissao || "";
+    const cidade = prof.cidade || "";
+    const bairro = prof.bairro || "";
+    const site = prof.site || "";
+    const whatsapp = prof.whatsapp || "";
+    const telefone = prof.telefone || "";
+    const precoBase = prof.precoBase || "";
 
-    if (bairro) {
-      const NB = norm(bairro);
-      items = items.filter((p) => norm(p.bairro || "").includes(NB));
-    }
-
-    if (servicoQ) {
-      const NS = norm(servicoQ);
-      items = items.filter((p) => norm(p.servico || p.profissao || "").includes(NS));
-    }
-
-    if (minRating) {
-      items = items.filter((p) => {
-        const notas = (p.avaliacoes || [])
-          .map((a) => Number(a.nota))
-          .filter((n) => n >= 1 && n <= 5);
-        const rating = notas.length ? notas.reduce((a, b) => a + b, 0) / notas.length : 0;
-        return rating >= minRating;
-      });
-    }
-
-    if (photoOnly) items = items.filter((p) => !!p.foto);
-
-    for (const p of items) {
-      const notas = (p.avaliacoes || []).map((a) => Number(a.nota)).filter((n) => n >= 1 && n <= 5);
-      p._rating = notas.length ? notas.reduce((a, b) => a + b, 0) / notas.length : 0;
-
-      let plat = Number(p.lat);
-      let plng = Number(p.lng);
-      if (!Number.isFinite(plat) || !Number.isFinite(plng)) {
-        if (p.lastPos && Number.isFinite(p.lastPos.lat) && Number.isFinite(p.lastPos.lng)) {
-          plat = Number(p.lastPos.lat);
-          plng = Number(p.lastPos.lng);
-        } else {
-          plat = null;
-          plng = null;
-        }
+    // Monta a resposta amigável para o front
+    return res.json({
+      ok: true,
+      item: {
+        id: String(prof.id),
+        nome: prof.nome || "",
+        foto,                          // <- /uploads/arquivo.ext
+        descricao,                     // <- alias de bio
+        experiencia,                   // <- alias de experienciaTempo
+        servico,
+        servicoSlug: prof.servicoSlug || null,
+        cidade,
+        bairro,
+        lat: Number.isFinite(Number(prof.lat)) ? Number(prof.lat) : null,
+        lng: Number.isFinite(Number(prof.lng)) ? Number(prof.lng) : null,
+        email: prof.email || "",
+        whatsapp,
+        telefone,
+        site,
+        precoBase,
+        verificado: !!prof.verificado,
+        mediaAvaliacao: Number(prof.mediaAvaliacao || 0),
+        totalAvaliacoes: Number(prof.totalAvaliacoes || 0),
+        criadoEm: prof.criadoEm || null
       }
-
-      let dist = null;
-      if (hasUserPos && Number.isFinite(plat) && Number.isFinite(plng)) {
-        dist = haversineKm(userLat, userLng, plat, plng);
-      }
-      p._distKm = dist;
-
-      const planoW = p.plano === "premium" ? 3 : p.plano === "pro" ? 2 : 1;
-      const distW = dist == null ? 0 : dist < 2 ? 1.2 : dist < 5 ? 1.0 : 0.8;
-      const verifW = p.verificado ? 0.4 : 0;
-
-      p._score = planoW * 2.5 + p._rating * 1.5 + distW + verifW;
-    }
-
-    const sort = String(req.query.sort || "score");
-    const dir = String(req.query.dir || "desc").toLowerCase() === "asc" ? 1 : -1;
-
-    items.sort((a, b) => {
-      if (sort === "dist") {
-        const da = a._distKm == null ? Infinity : a._distKm;
-        const dbb = b._distKm == null ? Infinity : b._distKm;
-        return (da - dbb) * dir;
-      }
-      return ((a._score || 0) - (b._score || 0)) * dir;
     });
-
-    const page = Math.max(1, Number(req.query.page || 1));
-    const limit = Math.max(1, Math.min(50, Number(req.query.limit || 20)));
-    const total = items.length;
-    const start = (page - 1) * limit;
-    const end = start + limit;
-
-    const out = items.slice(start, end).map((p) => ({
-      id: p.id,
-      nome: p.nome,
-      servico: p.servico || p.profissao || "",
-      cidade: p.cidade || "",
-      bairro: p.bairro || "",
-      foto: p.foto || "",
-      whatsapp: p.whatsapp || "",
-      rating: Number(p._rating || 0),
-      avaliacoes: Array.isArray(p.avaliacoes) ? p.avaliacoes.length : Number(p.avaliacoes || 0),
-      atendimentos: Number(p.atendimentos || 0),
-      precoBase: p.precoBase || p.preco || "",
-      lat: p.lat ?? p.lastPos?.lat ?? null,
-      lng: p.lng ?? p.lastPos?.lng ?? null,
-      distanceKm:
-        p._distKm != null && isFinite(p._distKm) ? Math.round(p._distKm * 10) / 10 : null,
-      plano: p.plano || "free",
-      verificado: !!p.verificado,
-    }));
-
-    res.json({ ok: true, total, items: out });
   } catch (e) {
-    console.error("ERR /api/profissionais", e);
-    res.status(500).json({ ok: false, error: "server_error" });
+    console.error("[ERR /api/profissionais/:id]", e);
+    return res.status(500).json({ ok: false, error: "server_error" });
   }
 });
 // DEBUG: ver o último profissional salvo (não exige auth)
