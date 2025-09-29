@@ -30,6 +30,40 @@ const bcrypt = require("bcryptjs");
 const cookieParser = require("cookie-parser");
 const nodemailer = require("nodemailer");
 
+// ====== [ AUTONOMA • Helpers de Arquivo/Texto ] ======
+// Pastas/arquivos base
+
+
+function readJSON(file, fallback) {
+  try {
+    if (!fs.existsSync(file)) return fallback;
+    const txt = fs.readFileSync(file, 'utf8');
+    return txt ? JSON.parse(txt) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function writeJSON(file, data) {
+  fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
+}
+function slugify(str='') {
+  return String(str)
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g,'-')
+    .replace(/^-+|-+$/g,'');
+}
+function titleCase(str='') {
+  return String(str).toLowerCase().replace(/(^|\s)\S/g, s => s.toUpperCase());
+}
+
+// Hash seguro de senha com scrypt (usa seu crypto já importado)
+function hashPassword(plain) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(String(plain), salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
+
 // Função genérica para envio de e-mails
 async function sendEmail(to, subject, text) {
   try {
@@ -1266,72 +1300,162 @@ function isDuplicate(db, novo) {
   );
 }
 
+// ====== [ AUTONOMA • POST /cadastro ] ======
 app.post(
-  "/cadastrar",
-  (req, res, next) =>
-    upload.single("foto")(req, res, (err) => {
-      if (err) return res.status(400).send(htmlMsg("Erro no upload", err.message, "/cadastro.html"));
+  '/cadastro',
+  // 1) middleware do upload (REAPROVEITA seu "upload")
+  (req, res, next) => {
+    upload.single('foto')(req, res, (err) => {
+      if (err) {
+        return res
+          .status(400)
+          .send(htmlMsg('Erro no upload', err.message || 'Falha ao enviar a imagem.', '/cadastro.html'));
+      }
       next();
-    }),
+    });
+  },
+  // 2) handler principal
   (req, res) => {
     try {
-      const { ok, errors, values } = validateCadastro(req.body);
-      if (!req.file?.filename) errors.push("Foto é obrigatória.");
-      if (!ok || errors.length)
-        return res.status(400).send(htmlErrors("Dados inválidos", errors, "/cadastro.html"));
+      // ===== helpers locais (não conflitam com suas globais) =====
+      const onlyDigits = (s) => String(s || '').replace(/\D/g, '');
+      const toTitle = (s='') => String(s).toLowerCase().replace(/(^|\s)\S/g, m => m.toUpperCase());
+      const slugify = (str='') => String(str)
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+      const readJSON = (f, fb) => { try { return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f,'utf8')||'[]') : fb; } catch { return fb; } };
+      const writeJSON = (f, d) => fs.writeFileSync(f, JSON.stringify(d, null, 2), 'utf8');
+      const hashPassword = (plain) => {
+        const salt = crypto.randomBytes(16).toString('hex');
+        const hash = crypto.scryptSync(String(plain), salt, 64).toString('hex');
+        return `${salt}:${hash}`;
+      };
 
-      const db = readDB();
+      // ===== validação que você já tinha =====
+      const { ok, errors, values } = validateCadastro(req.body);
+      if (!req.file?.filename) errors.push('Foto de perfil é obrigatória.');
+      if (!ok || errors.length) {
+        return res.status(400).send(htmlErros('Dados inválidos', errors, '/cadastro.html'));
+      }
+
+      // ===== duplicidade que você já tinha =====
+      const db = readDB(); // deve devolver array de profissionais
       if (isDuplicate(db, values)) {
         return res
           .status(400)
-          .send(
-            htmlMsg(
-              "Cadastro duplicado",
-              "Já existe um profissional com o mesmo WhatsApp neste bairro/cidade.",
-              "/cadastro.html"
-            )
-          );
+          .send(htmlMsg(
+            'Cadastro duplicado',
+            'Já existe um profissional com o mesmo WhatsApp neste bairro/cidade.',
+            '/cadastro.html'
+          ));
       }
 
-      const foto = `/uploads/${req.file.filename}`;
+      // ===== serviço: cria automaticamente em servicos.json se não existir =====
+      let servicos = readJSON(SERVICOS_FILE, []);
+      const servicoBase = values.servico || values.profissao;
+      const servNome = toTitle(servicoBase || '');
+      const servSlug = slugify(servicoBase || '');
+      const existeServico = servicos.some(s =>
+        (typeof s === 'string' ? s.toLowerCase() : String(s?.nome||'').toLowerCase()) === servNome.toLowerCase()
+      );
+      if (!existeServico && servNome) {
+        if (servicos.length && typeof servicos[0] === 'object') {
+          servicos.push({ nome: servNome, slug: servSlug });
+        } else {
+          servicos.push(servNome);
+        }
+        writeJSON(SERVICOS_FILE, servicos);
+      }
+
+      // padroniza no cadastro final
+      values.servico = servNome || values.servico || values.profissao || '';
+      values.servicoSlug = servSlug || (values.servico ? slugify(values.servico) : '');
+
+      // ===== geo: usar lat/lng do form; se faltar, buscar por cidade em cidades.json =====
+      let latNum = values.lat ? Number(values.lat) : (req.body.lat ? Number(req.body.lat) : NaN);
+      let lngNum = values.lng ? Number(values.lng) : (req.body.lng ? Number(req.body.lng) : NaN);
+      if (!isFinite(latNum) || !isFinite(lngNum)) {
+        const cidades = readJSON(CIDADES_FILE, []);
+        const norm = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+        const alvo = norm(values.cidade);
+        const found = Array.isArray(cidades) && (cidades.find(c => norm(c.nome) === alvo)
+                   || cidades.find(c => norm(c.nome).includes(alvo) || alvo.includes(norm(c.nome))));
+        if (found && typeof found.lat === 'number' && typeof found.lng === 'number') {
+          latNum = found.lat; lngNum = found.lng;
+          values.cidade = found.nome || values.cidade; // padroniza nome
+          values.estado = found.estado || null;
+        }
+      }
+      values.lat = (latNum === null || Number.isNaN(latNum)) ? null : latNum;
+      values.lng = (lngNum === null || Number.isNaN(lngNum)) ? null : lngNum;
+
+      // ===== foto =====
+      const fotoUrl = req.file ? `/uploads/${req.file.filename}` : null;
+
+      // ===== segurança: hash da senha =====
+      if (values.senha) {
+        values.passwordHash = hashPassword(values.senha);
+        delete values.senha;
+        delete values.confirmaSenha;
+      }
+
+      // ===== monta registro final =====
+      const id = Date.now().toString();
       const novo = {
-        id: db.length ? db[db.length - 1].id + 1 : 1,
-        createdAt: nowISO(),
-        ...values,
-        foto,
-        atendimentos: 0,
-        avaliacoes: [],
+        id,
+        // identificação
+        nome: String(values.nome || '').trim(),
+        fotoUrl,
+
+        // contatos
+        whatsapp: String(values.whatsapp || '').trim(),
+        telefone: String(values.telefone || '').trim(),
+        email: String(values.email || '').trim().toLowerCase(),
+        site: String(values.site || '').trim(),
+
+        // localização
+        cidade: String(values.cidade || '').trim(),
+        estado: values.estado || null,
+        bairro: String(values.bairro || '').trim(),
+        lat: values.lat,
+        lng: values.lng,
+
+        // profissional
+        servico: values.servico,
+        servicoSlug: values.servicoSlug,
+        profissao: String(values.profissao || '').trim(),
+        bio: String(values.bio || '').trim(),
+        experiencia: String(values.experiencia || '').trim(),
+        precoBase: String(values.precoBase || '').trim(),
+        endereco: String(values.endereco || '').trim(),
+
+        // sistema
+        criadoEm: new Date().toISOString(),
+        verificado: false,
+        mediaAvaliacao: 0,
+        totalAvaliacoes: 0,
         visitas: 0,
-        chamadas: 0,
-        visitsLog: [],
-        callsLog: [],
-        qrLog: [],
-        suspenso: false,
-        suspensoMotivo: "",
-        suspensoEm: null,
-        excluido: false,
-        excluidoEm: null,
-        plano: "free",
-        raioKm: 0,
-        cidadesExtras: [],
-        radar: { on: false, until: null, lastOnAt: null, monthlyUsed: 0, monthRef: monthRefOf() },
-        lastPos: { lat: null, lng: null, at: null },
-        receiveViaApp: false,
+
+        // segurança
+        passwordHash: values.passwordHash || null
       };
 
-      novo.verificado = computeVerified(novo);
-
+      // ===== salva no DB =====
       db.push(novo);
-      writeDB(db);
+      if (typeof writeDB === 'function') {
+        writeDB(db);                // se você tem writeDB, usa ele
+      } else {
+        writeJSON(DB_FILE, db);     // fallback
+      }
 
-      req.session.lastCreatedProId = novo.id;
-      res.redirect(`/profissional/${novo.id}`);
-    } catch (err) {
-      res.status(500).send(htmlMsg("Erro", err.message || String(err), "/cadastro.html"));
+      // ===== redireciona para o perfil público =====
+      return res.redirect(`/profissional/${id}`);
+    } catch (e) {
+      console.error('[ERRO /cadastro]', e);
+      return res.status(500).send('Internal Server Error');
     }
   }
 );
-
 // =========================[ Busca pública ]====================
 function isRecent(iso, mins = 15) {
   if (!iso) return false;

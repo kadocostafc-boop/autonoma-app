@@ -1,24 +1,24 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Cadastro de Profissional • Autônoma.app</title>
 
   <!-- Canonical + SEO -->
-  <link rel="canonical" href="https://autonomaapp.com.br/cadastro.html">
-  <meta name="description" content="Cadastre seu perfil no Autônoma: informe seus dados, cidade, bairro e WhatsApp para receber clientes pelo app.">
+  <link rel="canonical" href="https://autonomaapp.com.br/cadastro.html" />
+  <meta name="description" content="Cadastre seu perfil no Autônoma: informe seus dados, cidade, bairro e WhatsApp para receber clientes pelo app." />
 
   <!-- PWA / Favicons -->
-  <link rel="manifest" href="/manifest.webmanifest">
-  <meta name="theme-color" content="#2d6cdf">
-  <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="icon" href="/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#2d6cdf" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
 
   <!-- CSS global -->
-  <link rel="stylesheet" href="/css/app.css?v=cadastro-2025-09-15">
+  <link rel="stylesheet" href="/css/app.css?v=cadastro-2025-09-15" />
 
   <style>
     .header { display:flex; align-items:center; gap:12px; padding:12px 16px }
@@ -27,475 +27,661 @@
     .preview { font-size:12px; color:#334155; margin-top:4px }
     .row-wrap { display:flex; gap:10px; flex-wrap:wrap }
     .field-50 { flex:1 1 220px }
-    .avatar-preview{ width:84px;height:84px;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb;background:#f8fafc }
-    .doc-preview{ width:120px;height:84px;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb;background:#f8fafc }
+    /* Preview da foto em círculo (pedido anterior) */
+    .avatar-preview{ width:84px; height:84px; object-fit:cover; border-radius:50%; border:1px solid #e5e7eb; background:#f8fafc }
+    .doc-preview{ width:120px; height:84px; object-fit:cover; border-radius:10px; border:1px solid #e5e7eb; background:#f8fafc }
     .warn { color:#b91c1c }
     .gps-pill { display:inline-flex; align-items:center; gap:8px; background:#eef2ff; border:1px solid #c7d2fe; color:#0b1f63; padding:6px 10px; border-radius:12px }
     .btn.small { padding:8px 12px; font-size:14px }
     .muted { color:#64748b; font-size:12px }
   </style>
 </head>
-
 <body>
-<header class="header" role="banner">
-  <a href="/" aria-label="Início">
-    <img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display='none'">
-  </a>
-  <div style="margin-left:auto;display:flex;gap:8px">
-    <a class="btn ghost" href="/">Início</a>
-    <a class="btn outline" href="/clientes.html">Ver profissionais</a>
-  </div>
-</header>
+  <header class="header" role="banner">
+    <a href="/" aria-label="Início">
+      <img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display='none'">
+    </a>
+    <div style="margin-left:auto; display:flex; gap:8px">
+      <a class="btn ghost" href="/">Início</a>
+      <a class="btn outline" href="/clientes.html">Ver profissionais</a>
+    </div>
+  </header>
 
-<main class="wrap" role="main">
-  <div class="card">
-    <h1 style="margin:0">Cadastre seu perfil</h1>
-    <p class="meta">É rápido e gratuito. Você recebe contatos pelo <strong>WhatsApp</strong>.</p>
-  </div>
+  <main class="wrap" role="main">
+    <div class="card">
+      <h1 style="margin:0">Cadastre seu perfil</h1>
+      <p class="meta">É rápido e gratuito. Você recebe contatos pelo <strong>WhatsApp</strong>.</p>
+    </div>
 
-  <div class="card" style="max-width:880px;margin:auto">
-    <form id="formCad"
-          action="/cadastrar"
-          method="POST"
-          enctype="multipart/form-data"
-          novalidate>
-
-      <label for="foto">Foto de perfil <strong>(obrigatória)</strong></label>
-      <div class="row-wrap" style="align-items:center">
-        <img id="fotoPrev" class="avatar-preview" src="/icons/icon-192.png" alt="Prévia da foto">
-        <input id="foto" name="foto" type="file" accept="image/*" required aria-required="true">
-      </div>
-      <p class="help">Formatos: JPG ou PNG, até 3MB. A foto é necessária para dar mais confiança ao cliente.</p>
-
-      <!-- Selo verificado -->
-      <div class="row-wrap" style="align-items:flex-start">
-        <label class="gps-pill" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534">
-          <input id="wantSelo" type="checkbox" style="transform:translateY(1px)">
-          Quero selo verificado
-        </label>
-        <span id="seloHint" class="muted">Para análise do selo, envie um documento com foto (RG, CNH, passaporte).</span>
-      </div>
-
-      <div id="docWrap" style="display:none; margin-top:8px">
-        <label for="doc">Documento com foto <span class="muted">(obrigatório se quiser o selo)</span></label>
+    <div class="card" style="max-width:880px; margin:auto">
+      <!-- IMPORTANTE: action /cadastro, enctype multipart, names exatos -->
+      <form
+        id="formCad"
+        action="/cadastro"
+        method="POST"
+        enctype="multipart/form-data"
+        novalidate
+      >
+        <!-- Foto -->
+        <label for="foto">Foto de perfil <strong>(obrigatória)</strong></label>
         <div class="row-wrap" style="align-items:center">
-          <img id="docPrev" class="doc-preview" src="/img/doc-placeholder.png" alt="Prévia do documento" onerror="this.style.display='none'">
-          <input id="doc" name="doc" type="file" accept="image/*,application/pdf">
+          <img id="fotoPrev" class="avatar-preview" src="/icons/icon-192.png" alt="Prévia da foto">
+          <input id="foto" name="foto" type="file" accept="image/*" required aria-required="true">
         </div>
-        <p class="help">Foto legível do documento. Aceitamos imagem (JPG/PNG) ou PDF.</p>
-      </div>
+        <p class="help">
+          Formatos: JPG/PNG/WEBP, até 3MB. A foto aumenta a confiança do cliente.
+        </p>
 
-      <!-- Nome -->
-      <label for="nome">Seu nome completo *</label>
-      <input id="nome" name="nome" type="text" maxlength="80" required placeholder="Ex.: Ana Souza">
-
-      <!-- GPS / Cidade / Bairro -->
-      <div class="row-wrap" style="align-items:center; gap:10px; margin-top:4px">
-        <button type="button" id="btnGPS" class="btn small" aria-describedby="gpsStatus">Usar minha localização</button>
-        <span id="gpsStatus" class="muted">GPS desativado.</span>
-      </div>
-
-      <div class="row-wrap">
-        <div class="field-50">
-          <label for="cidade">Cidade *</label>
-          <input id="cidade" name="cidade" type="text" list="lista-cidades" required placeholder="Ex.: Rio de Janeiro/RJ" autocomplete="off">
-          <datalist id="lista-cidades"></datalist>
-          <p class="help">Digite e escolha na lista. Aceitamos “Cidade/UF” ou só “Cidade”.</p>
+        <!-- Selo verificado -->
+        <div class="row-wrap" style="align-items:flex-start">
+          <label class="gps-pill" style="background:#f0fdf4; border-color:#bbf7d0; color:#166534">
+            <input id="wantSelo" type="checkbox" style="transform:translateY(1px)">
+            Quero selo verificado
+          </label>
+          <span id="seloHint" class="muted">
+            Para análise do selo, envie um documento com foto (RG, CNH, passaporte).
+          </span>
         </div>
-        <div class="field-50">
-          <label for="bairro">Bairro *</label>
-          <input id="bairro" name="bairro" type="text" list="lista-bairros" required placeholder="Ex.: Copacabana" autocomplete="off">
-          <datalist id="lista-bairros"></datalist>
-          <p class="help">Depois de escolher a cidade, este campo sugere bairros automaticamente.</p>
-        </div>
-      </div>
 
-      <!-- Serviço / Profissão -->
-      <div class="row-wrap">
-        <div class="field-50">
-          <label for="servico">Categoria/Serviço (recomendado)</label>
-          <input id="servico" name="servico" type="text" list="lista-servicos" placeholder="Ex.: Eletricista" autocomplete="off">
-          <datalist id="lista-servicos"></datalist>
-        </div>
-        <div class="field-50">
-          <label for="profissao">Profissão (alternativa)</label>
-          <input id="profissao" name="profissao" type="text" maxlength="60" placeholder="Ex.: Técnico em elétrica">
-        </div>
-      </div>
-      <p class="help">Preencha pelo menos <strong>Serviço</strong> ou <strong>Profissão</strong>.</p>
-
-      <!-- Contatos -->
-      <div class="row-wrap">
-        <div class="field-50">
-          <label for="whatsapp">WhatsApp (com DDD) *</label>
-          <input id="whatsapp" name="whatsapp" type="tel" required inputmode="tel" placeholder="Ex.: (21) 98765-4321">
-          <div id="whatsPrev" class="preview"></div>
-          <p class="help">Pode colar com espaços/parênteses/traços. Formatamos automaticamente e adicionamos o +55.</p>
-        </div>
-        <div class="field-50">
-          <label for="telefone">Telefone (opcional)</label>
-          <input id="telefone" name="telefone" type="tel" inputmode="tel" placeholder="Ex.: (21) 3456-7890">
-          <div id="telPrev" class="preview"></div>
-        </div>
-      </div>
-
-      <!-- E-mail / Site -->
-      <div class="row-wrap">
-        <div class="field-50">
-          <label for="email">E-mail *</label>
-          <input id="email" name="email" type="email" required autocomplete="email" placeholder="Ex.: voce@email.com">
-          <p class="help">Obrigatório — usado para redefinir senha.</p>
-        </div>
-        <div class="field-50">
-          <label for="site">Site/Catálogo (opcional)</label>
-          <input id="site" name="site" type="url" placeholder="Ex.: https://meuportfolio.com">
-        </div>
-      </div>
-
-      <!-- Endereço / Experiência / Preço -->
-      <label for="endereco">Endereço (opcional, oculto no perfil)</label>
-      <input id="endereco" name="endereco" type="text" maxlength="120" placeholder="Rua/Av, número, complemento (apenas para referência interna)">
-
-      <div class="row-wrap">
-        <div class="field-50">
-          <label for="experiencia">Experiência (opcional)</label>
-          <input id="experiencia" name="experiencia" type="text" maxlength="80" placeholder="Ex.: 5 anos">
-        </div>
-        <div class="field-50">
-          <label for="precoBase">Preço base (opcional)</label>
-          <input id="precoBase" name="precoBase" type="text" maxlength="40" placeholder="Ex.: R$ 100/hora">
-        </div>
-      </div>
-
-      <!-- Descrição -->
-      <label for="descricao">Sobre você *</label>
-      <textarea id="descricao" name="descricao" maxlength="600" required placeholder="Descreva seu trabalho, diferenciais e área de atendimento."></textarea>
-
-      <!-- Lat/Lng (ocultos, preenchidos via GPS) -->
-      <input type="hidden" id="lat" name="lat">
-      <input type="hidden" id="lng" name="lng">
-
-      <!-- ========== [ SEGURANÇA: SENHA ] ========== -->
-      <div class="grid" style="gap:12px;margin-top:16px">
-        <div class="field">
-          <label for="senha" class="label">Senha <span style="color:#ef4444">*</span></label>
-          <div class="input-group" style="display:flex;align-items:center;gap:8px">
-            <input type="password" id="senha" name="senha" required
-                   minlength="8" autocomplete="new-password"
-                   placeholder="Mínimo 8 caracteres, letras e números"
-                   class="input" style="flex:1">
-            <button type="button" id="toggleSenha" class="btn btn-light" aria-label="Mostrar/ocultar senha">👁</button>
+        <div id="docWrap" style="display:none; margin-top:8px">
+          <label for="doc">Documento com foto <span class="muted">(obrigatório se quiser o selo)</span></label>
+          <div class="row-wrap" style="align-items:center">
+            <img id="docPrev" class="doc-preview" src="/img/doc-placeholder.png" alt="Prévia do documento" onerror="this.style.display='none'">
+            <input id="doc" name="doc" type="file" accept="image/*,application/pdf">
           </div>
-          <small class="muted">Use ao menos 1 letra e 1 número.</small>
-          <div id="senhaMeterWrap" style="margin-top:8px">
-            <div id="senhaMeter" style="height:8px;border-radius:6px;background:#e5e7eb;overflow:hidden">
-              <div id="senhaMeterFill" style="height:100%;width:0%"></div>
+          <p class="help">Foto legível do documento (JPG/PNG) ou PDF.</p>
+        </div>
+
+        <!-- Nome -->
+        <label for="nome">Seu nome completo *</label>
+        <input id="nome" name="nome" type="text" maxlength="80" required placeholder="Ex.: Ana Souza">
+
+        <!-- GPS / Cidade / Bairro -->
+        <div class="row-wrap" style="align-items:center; gap:10px; margin-top:4px">
+          <button type="button" id="btnGPS" class="btn small" aria-describedby="gpsStatus">Usar minha localização</button>
+          <span id="gpsStatus" class="muted">GPS desativado.</span>
+        </div>
+
+        <div class="row-wrap">
+          <div class="field-50">
+            <label for="cidade">Cidade *</label>
+            <input
+              id="cidade"
+              name="cidade"
+              type="text"
+              list="lista-cidades"
+              required
+              placeholder="Ex.: Rio de Janeiro/RJ"
+              autocomplete="off"
+            >
+            <datalist id="lista-cidades"></datalist>
+            <p class="help">Digite e escolha na lista. Aceitamos “Cidade/UF” ou só “Cidade”.</p>
+          </div>
+
+          <div class="field-50">
+            <label for="bairro">Bairro *</label>
+            <input
+              id="bairro"
+              name="bairro"
+              type="text"
+              list="lista-bairros"
+              required
+              placeholder="Ex.: Copacabana"
+              autocomplete="off"
+            >
+            <datalist id="lista-bairros"></datalist>
+            <p class="help">Depois de escolher a cidade, este campo sugere bairros automaticamente.</p>
+          </div>
+        </div>
+
+        <!-- Serviço / Profissão -->
+        <div class="row-wrap">
+          <div class="field-50">
+            <label for="servico">Categoria/Serviço (recomendado)</label>
+            <input
+              id="servico"
+              name="servico"
+              type="text"
+              list="lista-servicos"
+              placeholder="Ex.: Eletricista"
+              autocomplete="off"
+            >
+            <datalist id="lista-servicos"></datalist>
+          </div>
+
+          <div class="field-50">
+            <label for="profissao">Profissão (alternativa)</label>
+            <input
+              id="profissao"
+              name="profissao"
+              type="text"
+              maxlength="60"
+              placeholder="Ex.: Técnico em elétrica"
+            >
+          </div>
+        </div>
+
+        <p class="help">
+          Preencha pelo menos <strong>Serviço</strong> ou <strong>Profissão</strong>.
+          Se o serviço não existir na lista, ele será adicionado automaticamente após o envio.
+        </p>
+
+        <!-- Contatos -->
+        <div class="row-wrap">
+          <div class="field-50">
+            <label for="whatsapp">WhatsApp (com DDD) *</label>
+            <input
+              id="whatsapp"
+              name="whatsapp"
+              type="tel"
+              required
+              inputmode="tel"
+              placeholder="Ex.: (21) 98765-4321"
+            >
+            <div id="whatsPrev" class="preview"></div>
+            <p class="help">Pode colar com espaços/parênteses/traços. Formatamos automaticamente e adicionamos o +55.</p>
+          </div>
+
+          <div class="field-50">
+            <label for="telefone">Telefone (opcional)</label>
+            <input
+              id="telefone"
+              name="telefone"
+              type="tel"
+              inputmode="tel"
+              placeholder="Ex.: (21) 3456-7890"
+            >
+            <div id="telPrev" class="preview"></div>
+          </div>
+        </div>
+
+        <!-- E-mail / Site -->
+        <div class="row-wrap">
+          <div class="field-50">
+            <label for="email">E-mail *</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              autocomplete="email"
+              placeholder="Ex.: voce@email.com"
+            >
+            <p class="help">Obrigatório — usado para redefinir senha.</p>
+          </div>
+
+          <div class="field-50">
+            <label for="site">Site/Catálogo (opcional)</label>
+            <input
+              id="site"
+              name="site"
+              type="url"
+              placeholder="Ex.: https://meuportfolio.com"
+            >
+          </div>
+        </div>
+
+        <!-- Endereço / Experiência / Preço -->
+        <label for="endereco">Endereço (opcional, oculto no perfil)</label>
+        <input
+          id="endereco"
+          name="endereco"
+          type="text"
+          maxlength="120"
+          placeholder="Rua/Av, número, complemento (apenas para referência interna)"
+        >
+
+        <div class="row-wrap">
+          <div class="field-50">
+            <label for="experiencia">Experiência (opcional)</label>
+            <input
+              id="experiencia"
+              name="experiencia"
+              type="text"
+              maxlength="80"
+              placeholder="Ex.: 5 anos"
+            >
+          </div>
+
+          <div class="field-50">
+            <label for="precoBase">Preço base (opcional)</label>
+            <input
+              id="precoBase"
+              name="precoBase"
+              type="text"
+              maxlength="40"
+              placeholder="Ex.: R$ 100/hora"
+            >
+          </div>
+        </div>
+
+        <!-- Sobre você (BIO) -->
+        <label for="bio">Sobre você *</label>
+        <textarea
+          id="bio"
+          name="bio"
+          maxlength="600"
+          required
+          placeholder="Descreva seu trabalho, diferenciais e área de atendimento."
+        ></textarea>
+
+        <!-- Lat/Lng (ocultos, preenchidos via GPS e/ou no backend por cidades.json) -->
+        <input type="hidden" id="lat" name="lat" />
+        <input type="hidden" id="lng" name="lng" />
+
+        <!-- ========== [ SEGURANÇA: SENHA ] ========== -->
+        <div class="grid" style="gap:12px; margin-top:16px">
+          <div class="field">
+            <label for="senha" class="label">Senha <span style="color:#ef4444">*</span></label>
+            <div class="input-group" style="display:flex; align-items:center; gap:8px">
+              <input
+                type="password"
+                id="senha"
+                name="senha"
+                required
+                minlength="8"
+                autocomplete="new-password"
+                placeholder="Mínimo 8 caracteres, letras e números"
+                class="input"
+                style="flex:1"
+              >
+              <button type="button" id="toggleSenha" class="btn btn-light" aria-label="Mostrar/ocultar senha">👁</button>
             </div>
-            <div id="senhaHint" class="muted" style="margin-top:6px;font-size:12px"></div>
+            <small class="muted">Use ao menos 1 letra e 1 número.</small>
+            <div id="senhaMeterWrap" style="margin-top:8px">
+              <div id="senhaMeter" style="height:8px; border-radius:6px; background:#e5e7eb; overflow:hidden">
+                <div id="senhaMeterFill" style="height:100%; width:0%"></div>
+              </div>
+              <div id="senhaHint" class="muted" style="margin-top:6px; font-size:12px"></div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="confirmaSenha" class="label">Confirmar senha <span style="color:#ef4444">*</span></label>
+            <div class="input-group" style="display:flex; align-items:center; gap:8px">
+              <input
+                type="password"
+                id="confirmaSenha"
+                name="confirmaSenha"
+                required
+                minlength="8"
+                autocomplete="new-password"
+                placeholder="Repita a senha"
+                class="input"
+                style="flex:1"
+              >
+              <button type="button" id="toggleConfirma" class="btn btn-light" aria-label="Mostrar/ocultar senha">👁</button>
+            </div>
+            <small id="matchMsg" class="muted" style="display:block; margin-top:6px"></small>
           </div>
         </div>
+        <!-- ========== [/SEGURANÇA: SENHA ] ========== -->
 
-        <div class="field">
-          <label for="confirmaSenha" class="label">Confirmar senha <span style="color:#ef4444">*</span></label>
-          <div class="input-group" style="display:flex;align-items:center;gap:8px">
-            <input type="password" id="confirmaSenha" name="confirmaSenha" required
-                   minlength="8" autocomplete="new-password"
-                   placeholder="Repita a senha"
-                   class="input" style="flex:1">
-            <button type="button" id="toggleConfirma" class="btn btn-light" aria-label="Mostrar/ocultar senha">👁</button>
-          </div>
-          <small id="matchMsg" class="muted" style="display:block;margin-top:6px"></small>
+        <!-- Ações -->
+        <div class="row" style="margin-top:12px; gap:8px; flex-wrap:wrap">
+          <button class="btn" type="submit">Cadastrar</button>
+          <a class="btn ghost" href="/clientes.html">Cancelar</a>
         </div>
-      </div>
-      <!-- ========== [/SEGURANÇA: SENHA ] ========== -->
 
-      <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">
-        <button class="btn" type="submit">/cadastrar</button>
-        <a class="btn ghost" href="/clientes.html">Cancelar</a>
-      </div>
+        <!-- Erro -->
+        <p id="err" class="meta warn" style="display:none; margin-top:8px"></p>
+      </form>
+    </div>
+  </main>
 
-      <p id="err" class="meta warn" style="display:none;margin-top:8px"></p>
-    </form>
-  </div>
-</main>
+  <!-- ====== APP SCRIPT ====== -->
+  <script>
+    (function () {
+      const $ = (id) => document.getElementById(id);
+      const err = $("err");
+      const NO_STORE = { cache: "no-store" };
+      const ts = () => "ts=" + Date.now();
 
-<!-- ====== APP SCRIPT ====== -->
-<script>
-(function(){
-  const $ = (id)=> document.getElementById(id);
-  const err = $("err");
-  const NO_STORE = { cache:'no-store' };
-  const ts = ()=> 'ts='+Date.now();
-
-  // --- Foto preview
-  const foto = $("foto"), fotoPrev = $("fotoPrev");
-  if (foto){
-    foto.addEventListener("change", ()=>{
-      const f = foto.files?.[0];
-      if(!f){ fotoPrev.src="/icons/icon-192.png"; return; }
-      fotoPrev.src = URL.createObjectURL(f);
-    });
-  }
-
-  // --- Selo / Documento
-  const wantSelo = $("wantSelo");
-  const docWrap = $("docWrap");
-  const doc = $("doc");
-  const docPrev = $("docPrev");
-
-  wantSelo.addEventListener("change", ()=>{
-    const on = wantSelo.checked;
-    docWrap.style.display = on ? "" : "none";
-    doc.required = on;
-    doc.setAttribute("aria-required", on ? "true" : "false");
-  });
-
-  if (doc){
-    doc.addEventListener("change", ()=>{
-      const f = doc.files?.[0];
-      if(!f){ docPrev.style.display="none"; return; }
-      if (f.type && f.type.startsWith("image/")){
-        docPrev.style.display="";
-        docPrev.src = URL.createObjectURL(f);
-      } else {
-        docPrev.style.display="none";
+      // --- Foto preview
+      const foto = $("foto"), fotoPrev = $("fotoPrev");
+      if (foto) {
+        foto.addEventListener("change", () => {
+          const f = foto.files?.[0];
+          if (!f) { fotoPrev.src = "/icons/icon-192.png"; return; }
+          const ok = /image\/(jpeg|jpg|png|webp)/i.test(f.type);
+          if (!ok) { alert("Escolha JPG/PNG/WEBP."); foto.value = ""; return; }
+          if (f.size > 3 * 1024 * 1024) { alert("Imagem até 3MB."); foto.value = ""; return; }
+          fotoPrev.src = URL.createObjectURL(f);
+        });
       }
-    });
-  }
 
-  // --- Datalists
-  async function fillCities(){
-    try{
-      const r = await fetch("/api/geo/cidades?"+ts(), NO_STORE);
-      if(!r.ok) return;
-      const arr = await r.json();
-      $("lista-cidades").innerHTML = (arr||[]).map(c=>`<option value="${escapeHtml(c)}">`).join("");
-    }catch{}
-  }
-  async function refreshBairros(){
-    const cid = $("cidade").value.trim();
-    if(!cid){ $("lista-bairros").innerHTML=""; return; }
-    try{
-      const r = await fetch("/api/geo/bairros?cidade="+encodeURIComponent(cid)+"&"+ts(), NO_STORE);
-      if(!r.ok) return;
-      const arr = await r.json();
-      $("lista-bairros").innerHTML = (arr||[]).map(b=>`<option value="${escapeHtml(b)}">`).join("");
-    }catch{}
-  }
-  async function suggestBairros(q){
-    const cid = $("cidade").value.trim();
-    if(!cid || !q) return;
-    try{
-      const r = await fetch(`/api/geo/bairros/suggest?cidade=${encodeURIComponent(cid)}&q=${encodeURIComponent(q)}&${ts()}`, NO_STORE);
-      if(!r.ok) return;
-      const arr = await r.json();
-      $("lista-bairros").innerHTML = (arr||[]).map(b=>`<option value="${escapeHtml(b)}">`).join("");
-    }catch{}
-  }
-  async function suggestServicos(q){
-    if(!q) return;
-    try{
-      const r = await fetch(`/api/geo/servicos/suggest?q=${encodeURIComponent(q)}&${ts()}`, NO_STORE);
-      if(!r.ok) return;
-      const arr = await r.json();
-      $("lista-servicos").innerHTML = (arr||[]).map(s=>`<option value="${escapeHtml(s)}">`).join("");
-    }catch{}
-  }
-  $("cidade").addEventListener("change", refreshBairros);
-  $("bairro").addEventListener("input", e=> suggestBairros(e.target.value.trim()));
-  $("servico").addEventListener("input", e=> suggestServicos(e.target.value.trim()));
-  fillCities();
+      // --- Selo / Documento
+      const wantSelo = $("wantSelo");
+      const docWrap = $("docWrap");
+      const doc = $("doc");
+      const docPrev = $("docPrev");
 
-  // --- GPS
-  const btnGPS = $("btnGPS");
-  const gpsStatus = $("gpsStatus");
+      wantSelo.addEventListener("change", () => {
+        const on = wantSelo.checked;
+        docWrap.style.display = on ? "" : "none";
+        doc.required = on;
+        doc.setAttribute("aria-required", on ? "true" : "false");
+      });
 
-  function isSecureForGeo(){
-    return location.hostname==='localhost' || location.hostname==='127.0.0.1' || (window.isSecureContext===true);
-  }
-  async function resolveCityByGPS(lat,lng){
-    try{
-      const r = await fetch(`/api/geo/closest-city?lat=${lat}&lng=${lng}&${ts()}`, NO_STORE);
-      const js = await r.json();
-      if(js && js.ok && js.cidade){
-        $("cidade").value = js.cidade;
-        await refreshBairros();
-        gpsStatus.textContent = `Localização detectada: ${js.cidade}`;
-      }else{
-        gpsStatus.textContent = "Não foi possível identificar sua cidade.";
+      if (doc) {
+        doc.addEventListener("change", () => {
+          const f = doc.files?.[0];
+          if (!f) { docPrev.style.display = "none"; return; }
+          if (f.type && f.type.startsWith("image/")) {
+            docPrev.style.display = "";
+            docPrev.src = URL.createObjectURL(f);
+          } else {
+            docPrev.style.display = "none";
+          }
+        });
       }
-    }catch{
-      gpsStatus.textContent = "Falha ao consultar a cidade.";
-    }
-  }
-  btnGPS.addEventListener("click", ()=>{
-    if(!isSecureForGeo()){
-      gpsStatus.textContent = "Para usar GPS, acesse via HTTPS ou localhost.";
-      return;
-    }
-    if(!('geolocation' in navigator)){
-      gpsStatus.textContent = "Seu navegador não suporta geolocalização.";
-      return;
-    }
-    gpsStatus.textContent = "Solicitando localização…";
-    navigator.geolocation.getCurrentPosition(async pos=>{
-      const lat = pos.coords.latitude, lng = pos.coords.longitude;
-      $("lat").value = String(lat);
-      $("lng").value = String(lng);
-      gpsStatus.textContent = "Localização obtida.";
-      if(!$("cidade").value.trim()) await resolveCityByGPS(lat,lng);
-    }, _=>{
-      gpsStatus.textContent = "Não foi possível obter a localização.";
-    }, {enableHighAccuracy:true,timeout:12000,maximumAge:30000});
-  });
 
-  // ---- Telefone/WhatsApp helpers (ALINHADOS COM O BACKEND) ----
-  function onlyDigits(s){ return String(s||"").replace(/\D/g,""); }
-  function toBRWith55(d){
-    if (!d) return "";
-    if (d.startsWith("55")) return d;
-    if (d.length===10 || d.length===11) return "55"+d;
-    return d;
-  }
-  function isValidBR(d){ return /^\d{12,13}$/.test(d); }
-  function formatPrettyBR(d){
-    if (!/^\d{12,13}$/.test(d)) return "";
-    const cc=d.slice(0,2), ddd=d.slice(2,4), rest=d.slice(4);
-    return rest.length===9 ? `+${cc} (${ddd}) ${rest.slice(0,5)}-${rest.slice(5)}`
-                           : `+${cc} (${ddd}) ${rest.slice(0,4)}-${rest.slice(4)}`;
-  }
-  function bindPhoneInput(inputId, prevId){
-    const input = $(inputId), prev = $(prevId);
-    function update(){
-      const dig  = onlyDigits(input.value);
-      const br   = toBRWith55(dig);
-      const nice = formatPrettyBR(br);
-      if (nice){ prev.textContent = "Formato: " + nice; prev.style.color="#334155"; }
-      else if (dig.length){ prev.textContent = "Formato inválido — digite com DDD. Ex.: (21) 98765-4321"; prev.style.color="#b91c1c"; }
-      else { prev.textContent = ""; }
-    }
-    input.addEventListener("input", update);
-    input.addEventListener("blur", ()=>{
-      const dig=onlyDigits(input.value);
-      const br = toBRWith55(dig);
-      if (isValidBR(br)) input.value = br; // normaliza no próprio campo
-      update();
-    });
-    update();
-  }
-  bindPhoneInput("whatsapp","whatsPrev");
-  bindPhoneInput("telefone","telPrev");
-
-  // Escape HTML
-  function escapeHtml(s){
-    return String(s||"")
-      .replace(/&/g,"&amp;").replace(/</g,"&lt;")
-      .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-  }
-
-  // ===== Password helpers =====
-  const senha = $("senha"), confirma = $("confirmaSenha");
-  const meterFill = $("senhaMeterFill"), senhaHint = $("senhaHint"), matchMsg = $("matchMsg");
-  $("toggleSenha").addEventListener("click", ()=>{
-    senha.type = senha.type==="password" ? "text" : "password";
-  });
-  $("toggleConfirma").addEventListener("click", ()=>{
-    confirma.type = confirma.type==="password" ? "text" : "password";
-  });
-  function scorePwd(p){
-    let s = 0;
-    if (p.length>=8) s++;
-    if (/[a-z]/i.test(p) && /\d/.test(p)) s++;
-    if (/[^a-z0-9]/i.test(p)) s++;
-    if (p.length>=12) s++;
-    return Math.min(s,4);
-  }
-  function updatePwd(){
-    const v = senha.value||"";
-    const sc = scorePwd(v);
-    const w = ["0%","30%","55%","80%","100%"][sc];
-    meterFill.style.width = w;
-    senhaHint.textContent = ["Muito fraca","Fraca","Ok","Boa","Excelente"][sc] || "";
-    matchMsg.textContent = (confirma.value && confirma.value!==v) ? "As senhas não coincidem." : "";
-  }
-  senha.addEventListener("input", updatePwd);
-  confirma.addEventListener("input", updatePwd);
-
-  // ===== Validação final no submit =====
-  const form = $("formCad");
-  const VALIDATE_FRONT = true; // mude para false se quiser desativar as validações do front
-
-  form.addEventListener("submit", (e)=>{
-    if (!VALIDATE_FRONT) return; // deixa enviar sem validar no front
-
-    err.style.display="none"; err.textContent="";
-
-    // Foto
-    if (!foto.files || !foto.files[0]){
-      e.preventDefault(); err.textContent="Envie uma foto de perfil (JPG/PNG até 3MB)."; err.style.display=""; foto.focus(); return;
-    }
-
-    // Selo
-    if (wantSelo.checked && (!doc.files || !doc.files[0])){
-      e.preventDefault(); err.textContent="Para solicitar o selo verificado, envie um documento com foto."; err.style.display=""; doc.focus(); return;
-    }
-
-    // WhatsApp (normaliza e valida)
-    const wIn = $("whatsapp"), tIn = $("telefone");
-    const wBr = toBRWith55( onlyDigits(wIn.value) );
-    if (!isValidBR(wBr)){
-      e.preventDefault(); err.textContent="WhatsApp inválido. Digite com DDD. Ex.: (21) 98765-4321"; err.style.display=""; wIn.focus(); return;
-    }
-    wIn.value = wBr;
-
-    // Telefone opcional
-    const tDig = onlyDigits(tIn.value);
-    if (tDig){
-      const tBr = toBRWith55(tDig);
-      if (!isValidBR(tBr)){
-        e.preventDefault(); err.textContent="Telefone inválido. Ex.: (21) 3456-7890"; err.style.display=""; tIn.focus(); return;
+      // --- Datalists (cidades / bairros / serviços)
+      async function fillCities() {
+        try {
+          const r = await fetch("/api/geo/cidades?" + ts(), NO_STORE);
+          if (!r.ok) return;
+          const arr = await r.json();
+          $("lista-cidades").innerHTML = (arr || [])
+            .map((c) => `<option value="${escapeHtml(c)}">`)
+            .join("");
+        } catch {}
       }
-      tIn.value = tBr;
+
+      async function refreshBairros() {
+        const cid = $("cidade").value.trim();
+        if (!cid) { $("lista-bairros").innerHTML = ""; return; }
+        try {
+          const r = await fetch(
+            "/api/geo/bairros?cidade=" + encodeURIComponent(cid) + "&" + ts(),
+            NO_STORE
+          );
+          if (!r.ok) return;
+          const arr = await r.json();
+          $("lista-bairros").innerHTML = (arr || [])
+            .map((b) => `<option value="${escapeHtml(b)}">`)
+            .join("");
+        } catch {}
+      }
+
+      async function suggestBairros(q) {
+        const cid = $("cidade").value.trim();
+        if (!cid || !q) return;
+        try {
+          const r = await fetch(
+            `/api/geo/bairros/suggest?cidade=${encodeURIComponent(cid)}&q=${encodeURIComponent(q)}&${ts()}`,
+            NO_STORE
+          );
+          if (!r.ok) return;
+          const arr = await r.json();
+          $("lista-bairros").innerHTML = (arr || [])
+            .map((b) => `<option value="${escapeHtml(b)}">`)
+            .join("");
+        } catch {}
+      }
+
+      async function suggestServicos(q) {
+        if (!q) return;
+        try {
+          const r = await fetch(`/api/geo/servicos/suggest?q=${encodeURIComponent(q)}&${ts()}`, NO_STORE);
+          if (!r.ok) return;
+          const arr = await r.json();
+          $("lista-servicos").innerHTML = (arr || [])
+            .map((s) => `<option value="${escapeHtml(s)}">`)
+            .join("");
+        } catch {}
+      }
+
+      $("cidade").addEventListener("change", refreshBairros);
+      $("bairro").addEventListener("input", (e) => suggestBairros(e.target.value.trim()));
+      $("servico").addEventListener("input", (e) => suggestServicos(e.target.value.trim()));
+      fillCities();
+
+      // --- GPS
+      const btnGPS = $("btnGPS");
+      const gpsStatus = $("gpsStatus");
+
+      function isSecureForGeo() {
+        return (
+          location.hostname === "localhost" ||
+          location.hostname === "127.0.0.1" ||
+          window.isSecureContext === true
+        );
+      }
+
+      async function resolveCityByGPS(lat, lng) {
+        try {
+          const r = await fetch(`/api/geo/closest-city?lat=${lat}&lng=${lng}&${ts()}`, NO_STORE);
+          const js = await r.json();
+          if (js && js.ok && js.cidade) {
+            $("cidade").value = js.cidade;
+            await refreshBairros();
+            gpsStatus.textContent = `Localização detectada: ${js.cidade}`;
+          } else {
+            gpsStatus.textContent = "Não foi possível identificar sua cidade.";
+          }
+        } catch {
+          gpsStatus.textContent = "Falha ao consultar a cidade.";
+        }
+      }
+
+      btnGPS.addEventListener("click", () => {
+        if (!isSecureForGeo()) {
+          gpsStatus.textContent = "Para usar GPS, acesse via HTTPS ou localhost.";
+          return;
+        }
+        if (!("geolocation" in navigator)) {
+          gpsStatus.textContent = "Seu navegador não suporta geolocalização.";
+          return;
+        }
+        gpsStatus.textContent = "Solicitando localização…";
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            const lat = pos.coords.latitude,
+              lng = pos.coords.longitude;
+            $("lat").value = String(lat);
+            $("lng").value = String(lng);
+            gpsStatus.textContent = "Localização obtida.";
+            if (!$("cidade").value.trim()) await resolveCityByGPS(lat, lng);
+          },
+          (_) => {
+            gpsStatus.textContent = "Não foi possível obter a localização.";
+          },
+          { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
+        );
+      });
+
+      // ---- Telefone/WhatsApp helpers (alinhados com backend)
+      function onlyDigits(s) { return String(s || "").replace(/\D/g, ""); }
+      function toBRWith55(d) {
+        if (!d) return "";
+        if (d.startsWith("55")) return d;
+        if (d.length === 10 || d.length === 11) return "55" + d;
+        return d;
+      }
+      function isValidBR(d) { return /^\d{12,13}$/.test(d); }
+      function formatPrettyBR(d) {
+        if (!/^\d{12,13}$/.test(d)) return "";
+        const cc = d.slice(0, 2), ddd = d.slice(2, 4), rest = d.slice(4);
+        return rest.length === 9
+          ? `+${cc} (${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`
+          : `+${cc} (${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
+      }
+      function bindPhoneInput(inputId, prevId) {
+        const input = $(inputId), prev = $(prevId);
+        function update() {
+          const dig = onlyDigits(input.value);
+          const br = toBRWith55(dig);
+          const nice = formatPrettyBR(br);
+          if (nice) {
+            prev.textContent = "Formato: " + nice;
+            prev.style.color = "#334155";
+          } else if (dig.length) {
+            prev.textContent = "Formato inválido — digite com DDD. Ex.: (21) 98765-4321";
+            prev.style.color = "#b91c1c";
+          } else {
+            prev.textContent = "";
+          }
+        }
+        input.addEventListener("input", update);
+        input.addEventListener("blur", () => {
+          const dig = onlyDigits(input.value);
+          const br = toBRWith55(dig);
+          if (isValidBR(br)) input.value = br; // normaliza no próprio campo
+          update();
+        });
+        update();
+      }
+      bindPhoneInput("whatsapp", "whatsPrev");
+      bindPhoneInput("telefone", "telPrev");
+
+      // Escape HTML
+      function escapeHtml(s) {
+        return String(s || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      // ===== Password helpers =====
+      const senha = $("senha"),
+        confirma = $("confirmaSenha");
+      const meterFill = $("senhaMeterFill"),
+        senhaHint = $("senhaHint"),
+        matchMsg = $("matchMsg");
+
+      $("toggleSenha").addEventListener("click", () => {
+        senha.type = senha.type === "password" ? "text" : "password";
+      });
+
+      $("toggleConfirma").addEventListener("click", () => {
+        confirma.type = confirma.type === "password" ? "text" : "password";
+      });
+
+      function scorePwd(p) {
+        let s = 0;
+        if (p.length >= 8) s++;
+        if (/[a-z]/i.test(p) && /\d/.test(p)) s++;
+        if (/[^a-z0-9]/i.test(p)) s++;
+        if (p.length >= 12) s++;
+        return Math.min(s, 4);
+      }
+
+      function updatePwd() {
+        const v = senha.value || "";
+        const sc = scorePwd(v);
+        const w = ["0%", "30%", "55%", "80%", "100%"][sc];
+        meterFill.style.width = w;
+        senhaHint.textContent = ["Muito fraca", "Fraca", "Ok", "Boa", "Excelente"][sc] || "";
+        matchMsg.textContent = (confirma.value && confirma.value !== v) ? "As senhas não coincidem." : "";
+      }
+
+      senha.addEventListener("input", updatePwd);
+      confirma.addEventListener("input", updatePwd);
+
+      // ===== Validação final no submit =====
+      const form = $("formCad");
+      const VALIDATE_FRONT = true;
+
+      form.addEventListener("submit", (e) => {
+        if (!VALIDATE_FRONT) return;
+
+        err.style.display = "none";
+        err.textContent = "";
+
+        // Foto obrigatória
+        if (!foto.files || !foto.files[0]) {
+          e.preventDefault();
+          err.textContent = "Envie uma foto de perfil (JPG/PNG/WEBP até 3MB).";
+          err.style.display = "";
+          foto.focus();
+          return;
+        }
+
+        // Selo: exige documento
+        if (wantSelo.checked && (!doc.files || !doc.files[0])) {
+          e.preventDefault();
+          err.textContent = "Para solicitar o selo verificado, envie um documento com foto.";
+          err.style.display = "";
+          doc.focus();
+          return;
+        }
+
+        // WhatsApp
+        const wIn = $("whatsapp"), tIn = $("telefone");
+        const wBr = toBRWith55(onlyDigits(wIn.value));
+        if (!isValidBR(wBr)) {
+          e.preventDefault();
+          err.textContent = "WhatsApp inválido. Digite com DDD. Ex.: (21) 98765-4321";
+          err.style.display = "";
+          wIn.focus();
+          return;
+        }
+        wIn.value = wBr;
+
+        // Telefone opcional
+        const tDig = onlyDigits(tIn.value);
+        if (tDig) {
+          const tBr = toBRWith55(tDig);
+          if (!isValidBR(tBr)) {
+            e.preventDefault();
+            err.textContent = "Telefone inválido. Ex.: (21) 3456-7890";
+            err.style.display = "";
+            tIn.focus();
+            return;
+          }
+          tIn.value = tBr;
+        }
+
+        // Campos obrigatórios
+        if (!$("nome").value.trim()) {
+          e.preventDefault(); err.textContent = "Informe seu nome."; err.style.display = ""; $("nome").focus(); return;
+        }
+        if (!$("cidade").value.trim()) {
+          e.preventDefault(); err.textContent = "Informe sua cidade."; err.style.display = ""; $("cidade").focus(); return;
+        }
+        if (!$("bairro").value.trim()) {
+          e.preventDefault(); err.textContent = "Informe seu bairro."; err.style.display = ""; $("bairro").focus(); return;
+        }
+        if (!($("servico").value.trim() || $("profissao").value.trim())) {
+          e.preventDefault(); err.textContent = "Informe Categoria/Serviço ou Profissão."; err.style.display = ""; $("servico").focus(); return;
+        }
+        if (!$("bio").value.trim()) {
+          e.preventDefault(); err.textContent = "Descreva seu trabalho em 'Sobre você'."; err.style.display = ""; $("bio").focus(); return;
+        }
+
+        // E-mail válido
+        const email = $("email").value.trim().toLowerCase();
+        const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!email || !okEmail) {
+          e.preventDefault(); err.textContent = "Informe um e-mail válido (obrigatório)."; err.style.display = ""; $("email").focus(); return;
+        }
+        $("email").value = email;
+
+        // Senhas
+        if (senha.value.length < 8) {
+          e.preventDefault(); err.textContent = "A senha deve ter pelo menos 8 caracteres."; err.style.display = ""; senha.focus(); return;
+        }
+        if (senha.value !== confirma.value) {
+          e.preventDefault(); err.textContent = "As senhas não coincidem."; err.style.display = ""; confirma.focus(); return;
+        }
+      });
+    })();
+  </script>
+
+  <!-- ====== SERVICE WORKER ====== -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js?v=cadastro-2025-09-15").catch(() => {});
+      });
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (!reloaded) { reloaded = true; location.reload(); }
+      });
     }
-
-    // Campos obrigatórios
-    if (!$("nome").value.trim()){ e.preventDefault(); err.textContent="Informe seu nome."; err.style.display=""; $("nome").focus(); return; }
-    if (!$("cidade").value.trim()){ e.preventDefault(); err.textContent="Informe sua cidade."; err.style.display=""; $("cidade").focus(); return; }
-    if (!$("bairro").value.trim()){ e.preventDefault(); err.textContent="Informe seu bairro."; err.style.display=""; $("bairro").focus(); return; }
-    if (!($("servico").value.trim() || $("profissao").value.trim())){ e.preventDefault(); err.textContent="Informe Categoria/Serviço ou Profissão."; err.style.display=""; $("servico").focus(); return; }
-    if (!$("descricao").value.trim()){ e.preventDefault(); err.textContent="Descreva seu trabalho em 'Sobre você'."; err.style.display=""; $("descricao").focus(); return; }
-
-    // E-mail obrigatório e válido
-    const email = $("email").value.trim().toLowerCase();
-    const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    if (!email || !okEmail){
-      e.preventDefault(); err.textContent="Informe um e-mail válido (obrigatório)."; err.style.display=""; $("email").focus(); return;
-    }
-    $("email").value = email;
-
-    // Senhas
-    if (senha.value.length < 8){
-      e.preventDefault(); err.textContent="A senha deve ter pelo menos 8 caracteres."; err.style.display=""; senha.focus(); return;
-    }
-    if (senha.value !== confirma.value){
-      e.preventDefault(); err.textContent="As senhas não coincidem."; err.style.display=""; confirma.focus(); return;
-    }
-  });
-})();
-</script>
-
-<!-- ====== SERVICE WORKER ====== -->
-<script>
-if ('serviceWorker' in navigator){
-  window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=cadastro-2025-09-15').catch(()=>{});
-  });
-  let reloaded=false;
-  navigator.serviceWorker.addEventListener('controllerchange', ()=>{
-    if(!reloaded){ reloaded=true; location.reload(); }
-  });
-}
-</script>
-
+  </script>
 </body>
 </html>
