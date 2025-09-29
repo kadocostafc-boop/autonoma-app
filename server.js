@@ -1400,46 +1400,59 @@ app.post(
       }
 
       // ===== monta registro final =====
-      const id = Date.now().toString();
-      const novo = {
-        id,
-        // identificação
-        nome: String(values.nome || '').trim(),
-        fotoUrl,
+const id = Date.now().toString();
 
-        // contatos
-        whatsapp: String(values.whatsapp || '').trim(),
-        telefone: String(values.telefone || '').trim(),
-        email: String(values.email || '').trim().toLowerCase(),
-        site: String(values.site || '').trim(),
+// normalizações (evita undefined)
+const _descricao   = String((values.descricao ?? values.bio ?? "").trim());
+const _experiencia = String((values.experiencia ?? "").trim());
 
-        // localização
-        cidade: String(values.cidade || '').trim(),
-        estado: values.estado || null,
-        bairro: String(values.bairro || '').trim(),
-        lat: values.lat,
-        lng: values.lng,
+const novo = {
+  id,
 
-        // profissional
-        servico: values.servico,
-        servicoSlug: values.servicoSlug,
-        profissao: String(values.profissao || '').trim(),
-        bio: String(values.bio || '').trim(),
-        experiencia: String(values.experiencia || '').trim(),
-        precoBase: String(values.precoBase || '').trim(),
-        endereco: String(values.endereco || '').trim(),
+  // identificação
+  nome: String(values.nome || '').trim(),
+  fotoUrl,                    // URL pública do upload
+  foto: fotoUrl || null,      // alias p/ compatibilidade com o perfil
 
-        // sistema
-        criadoEm: new Date().toISOString(),
-        verificado: false,
-        mediaAvaliacao: 0,
-        totalAvaliacoes: 0,
-        visitas: 0,
+  // contatos
+  whatsapp: String(values.whatsapp || '').trim(),
+  telefone: String(values.telefone || '').trim(),
+  email: String(values.email || '').trim().toLowerCase(),
+  site: String(values.site || '').trim(),
 
-        // segurança
-        passwordHash: values.passwordHash || null
-      };
+  // localização
+  cidade: String(values.cidade || '').trim(),
+  estado: values.estado || null,
+  bairro: String(values.bairro || '').trim(),
+  lat: values.lat,
+  lng: values.lng,
 
+  // profissional
+  servico: values.servico,
+  servicoSlug: values.servicoSlug,
+  profissao: String(values.profissao || '').trim(),
+
+  // descrição/bio — manter ambos os campos
+  descricao: _descricao,
+  bio: _descricao,
+
+  // experiência — manter ambos os campos
+  experiencia: _experiencia,
+  experienciaTempo: _experiencia,
+
+  precoBase: String(values.precoBase || '').trim(),
+  endereco: String(values.endereco || '').trim(),
+
+  // sistema
+  criadoEm: new Date().toISOString(),
+  verificado: false,
+  mediaAvaliacao: 0,
+  totalAvaliacoes: 0,
+  visitas: 0,
+
+  // segurança
+  passwordHash: values.passwordHash || null
+};
       // ===== salva no DB =====
 db.push(novo);
 
