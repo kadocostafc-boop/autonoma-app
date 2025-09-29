@@ -1441,13 +1441,62 @@ app.post(
       };
 
       // ===== salva no DB =====
-      db.push(novo);
-      if (typeof writeDB === 'function') {
-        writeDB(db);                // se você tem writeDB, usa ele
-      } else {
-        writeJSON(DB_FILE, db);     // fallback
-      }
+db.push(novo);
 
+// salva no arquivo de profissionais
+if (typeof writeDB === 'function') {
+  writeDB(db);
+} else {
+  writeJSON(DB_FILE, db);
+}
+
+// atualiza lista de serviços, se for novo
+if (novo.servico) {
+  let listaServicos = readJSON(SERVICOS_FILE, []);
+  if (!listaServicos.includes(novo.servico)) {
+    listaServicos.push(novo.servico);
+    listaServicos.sort((a, b) => a.localeCompare(b, "pt-BR"));
+    writeJSON(SERVICOS_FILE, listaServicos);
+  }
+}
+
+// atualiza lista de cidades
+if (novo.cidade) {
+  let cidades = readJSON(CIDADES_FILE, {});
+  if (!cidades[novo.cidade]) cidades[novo.cidade] = [];
+  if (novo.bairro && !cidades[novo.cidade].includes(novo.bairro)) {
+    cidades[novo.cidade].push(novo.bairro);
+  }
+  writeJSON(CIDADES_FILE, cidades);
+}
+// ====== [Helpers de leitura/escrita do DB] ======
+function ensureFileReady(filePath) {
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  if (!fs.existsSync(filePath)) fs.writeFileSync(filePath, '[]', 'utf8');
+}
+
+function readJSONSafe(filePath, fallback = []) {
+  try {
+    ensureFileReady(filePath);
+    const txt = fs.readFileSync(filePath, 'utf8');
+    return txt ? JSON.parse(txt) : fallback;
+  } catch (e) {
+    console.error('[readJSONSafe] erro lendo', filePath, e);
+    return fallback;
+  }
+}
+
+function writeJSONSafe(filePath, data) {
+  try {
+    ensureFileReady(filePath);
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+    return true;
+  } catch (e) {
+    console.error('[writeJSONSafe] erro escrevendo', filePath, e);
+    return false;
+  }
+}
       // ===== redireciona para o perfil público =====
       return res.redirect(`/profissional/${id}`);
     } catch (e) {
@@ -1466,8 +1515,8 @@ function isRecent(iso, mins = 15) {
 
 app.get("/api/profissionais", (req, res) => {
   try {
-    const db = readDB().filter((p) => !p.excluido && !p.suspenso);
-
+   const db = (typeof readDB === 'function' ? readDB() : readJSONSafe(DB_FILE, []))
+  .filter((p) => !p.excluido && !p.suspenso);
     const cidade = trim(req.query.cidade || "");
     const bairro = trim(req.query.bairro || "");
     const servicoQ = trim(req.query.servico || "");
@@ -1582,6 +1631,31 @@ app.get("/api/profissionais", (req, res) => {
   } catch (e) {
     console.error("ERR /api/profissionais", e);
     res.status(500).json({ ok: false, error: "server_error" });
+  }
+});
+// DEBUG: ver o último profissional salvo (não exige auth)
+app.get('/api/debug/ultimo-prof', (req, res) => {
+  try {
+    const db = (typeof readDB === 'function' ? readDB() : readJSONSafe(DB_FILE, []));
+    if (!Array.isArray(db) || db.length === 0) {
+      return res.json({ ok: true, vazio: true });
+    }
+    const p = db[db.length - 1];
+    res.json({
+      ok: true,
+      id: p.id,
+      nome: p.nome,
+      foto: p.foto || p.fotoUrl,
+      temFotoArquivo: !!(p.foto || p.fotoUrl)?.startsWith?.('/uploads/'),
+      descricao: p.descricao || p.bio,
+      experiencia: p.experienciaTempo || p.experiencia,
+      cidade: p.cidade,
+      bairro: p.bairro,
+      servico: p.servico
+    });
+  } catch (e) {
+    console.error('[debug ultimo-prof]', e);
+    res.status(500).json({ ok: false, erro: String(e) });
   }
 });
 // =========================[ Perfil (APIs) ]====================
