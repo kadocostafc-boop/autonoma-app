@@ -33,19 +33,6 @@ const nodemailer = require("nodemailer");
 // ====== [ AUTONOMA • Helpers de Arquivo/Texto ] ======
 // Pastas/arquivos base
 
-
-function readJSON(file, fallback) {
-  try {
-    if (!fs.existsSync(file)) return fallback;
-    const txt = fs.readFileSync(file, 'utf8');
-    return txt ? JSON.parse(txt) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-function writeJSON(file, data) {
-  fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
-}
 function slugify(str='') {
   return String(str)
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
@@ -721,17 +708,29 @@ const METRICS_FILE = path.join(DATA_DIR, "metrics.json");
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
 });
 
+// === Helpers de JSON (robustos) ===
 function readJSON(file, fallback) {
   try {
-    return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : fallback;
-  } catch {
+    if (!fs.existsSync(file)) return fallback;
+    const txt = fs.readFileSync(file, 'utf8');
+    return txt ? JSON.parse(txt) : fallback;
+  } catch (e) {
+    console.warn('[readJSON]', file, e.message || e);
     return fallback;
   }
 }
-function writeJSON(file, data) {
-  fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf8");
-}
 
+function writeJSON(file, data) {
+  try {
+    // garante a pasta antes de gravar
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
+    return true;
+  } catch (e) {
+    console.error('[writeJSON]', file, e);
+    return false;
+  }
+}
 // Inicia arquivos essenciais
 if (!fs.existsSync(DB_FILE)) writeJSON(DB_FILE, []);
 if (!fs.existsSync(DENUNCIAS_FILE)) writeJSON(DENUNCIAS_FILE, []);
@@ -1395,30 +1394,53 @@ app.post(
 
       // se veio senha, gera hash (se seu projeto já tem hashPassword)
       if (req.body.senha) {
-        try {
-          novo.passwordHash = hashPassword(String(req.body.senha));
-        } catch (e) {
-          console.warn('[hashPassword] falhou, ignorando hash:', e);
-        }
-      }
+  try {
+    const bcrypt = require("bcryptjs");
+    const salt = bcrypt.genSaltSync(10);
+    novo.passwordHash = bcrypt.hashSync(String(req.body.senha), salt);
+  } catch (e) {
+    console.warn("[password] falhou, ignorando hash:", e);
+    novo.passwordHash = null;
+  }
+}
+     // ==== salva no DB ====
+// Lê o banco atual com fallback
+const current = (typeof readDB === 'function'
+  ? readDB()
+  : readJSON(DB_FILE, []));
+const banco = Array.isArray(current) ? current : [];
 
-      // ===== salva no DB =====
-      let db = readJSON(DB_FILE, []);
-      if (!Array.isArray(db)) db = [];
-      // regra simples anti-duplicado por (cidade+bairro+whatsapp)
-      const dup = db.find(p =>
-        String(p.cidade || '').toLowerCase() === String(novo.cidade).toLowerCase() &&
-        String(p.bairro || '').toLowerCase() === String(novo.bairro).toLowerCase() &&
-        String(p.whatsapp || '') === String(novo.whatsapp)
-      );
-      if (dup) {
-        return res.status(400).send(htmlMsg('Cadastro duplicado', 'Já existe um profissional com o mesmo WhatsApp neste bairro/cidade.', '/cadastro.html'));
-      }
+// regra simples anti-duplicado por (cidade + bairro + whatsapp)
+const dup = banco.find(p =>
+  String(p.cidade || '').toLowerCase() === String(novo.cidade || '').toLowerCase() &&
+  String(p.bairro  || '').toLowerCase() === String(novo.bairro  || '').toLowerCase() &&
+  String(p.whatsapp || '') === String(novo.whatsapp || '')
+);
 
-      db.push(novo);
-      try { writeDB ? writeDB(db) : writeJSON(DB_FILE, db); }
-      catch (e) { console.error('[writeDB] falhou, usando writeJSON', e); writeJSON(DB_FILE, db); }
+if (dup) {
+  return res
+    .status(400)
+    .send(htmlMsg(
+      'Cadastro duplicado',
+      'Já existe um profissional com o mesmo WhatsApp neste bairro/cidade.',
+      '/cadastro.html'
+    ));
+}
 
+// adiciona o novo registro
+banco.push(novo);
+
+// persiste (usa writeDB se existir; senão, writeJSON)
+try {
+  if (typeof writeDB === 'function') {
+    writeDB(banco);
+  } else {
+    writeJSON(DB_FILE, banco);
+  }
+} catch (e) {
+  console.error('[writeDB] falhou, usando fallback writeJSON', e);
+  writeJSON(DB_FILE, banco);
+}
       // ===== mantém catálogos (serviços / cidades / bairros) =====
       try {
         // serviços: string[] ou [{nome,slug}]
@@ -1519,27 +1541,7 @@ function escapeHTML(str) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
-function readJSONSafe(filePath, fallback = []) {
-  try {
-    ensureFileReady(filePath);
-    const txt = fs.readFileSync(filePath, 'utf8');
-    return txt ? JSON.parse(txt) : fallback;
-  } catch (e) {
-    console.error('[readJSONSafe] erro lendo', filePath, e);
-    return fallback;
-  }
-}
 
-function writeJSONSafe(filePath, data) {
-  try {
-    ensureFileReady(filePath);
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
-    return true;
-  } catch (e) {
-    console.error('[writeJSONSafe] erro escrevendo', filePath, e);
-    return false;
-  }
-}
 
 // ===== [Perfil APIs — UNIFICADO e robusto] =====
 
