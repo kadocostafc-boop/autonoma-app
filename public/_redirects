@@ -1,3 +1,6 @@
-# força sempre para HTTPS + www
-http://autonomaapp.com.br/* https://www.autonomaapp.com.br/:splat 301!
-https://autonomaapp.com.br/* https://www.autonomaapp.com.br/:splat 301!
+# força sempre HTTPS + www
+http://autonomaapp.com.br/*     https://www.autonomaapp.com.br/:splat   301!
+https://autonomaapp.com.br/*    https://www.autonomaapp.com.br/:splat   301!
+
+# garante que tudo funcione direto no www
+/*    /index.html   200
