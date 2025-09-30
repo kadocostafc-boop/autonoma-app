@@ -1,0 +1,28 @@
+# =====================================
+# Redirecionamentos principais
+# =====================================
+
+# força usar www (com https)
+http://autonomaapp.com.br/*     https://www.autonomaapp.com.br/:splat   301!
+https://autonomaapp.com.br/*    https://www.autonomaapp.com.br/:splat   301!
+
+# =====================================
+# Proxy para backend no Railway
+# =====================================
+
+# rota de cadastro
+/cadastro            https://autonoma-app-production.up.railway.app/cadastro              200
+
+# API pública
+/api/*               https://autonoma-app-production.up.railway.app/api/:splat            200
+
+# perfis
+/profissional/*      https://autonoma-app-production.up.railway.app/profissional/:splat   200
+
+# uploads de imagens
+/uploads/*           https://autonoma-app-production.up.railway.app/uploads/:splat        200
+
+# =====================================
+# SPA fallback (para React/HTML5 history API)
+# =====================================
+/*                   /index.html   200
