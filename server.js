@@ -1308,7 +1308,15 @@ app.post(
     upload.single('foto')(req, res, (err) => {
       if (err) {
         console.error('[upload foto] erro:', err);
-        return res.status(400).send(htmlMsg('Erro no upload', err.message || 'Falha ao enviar a foto', '/cadastro.html'));
+        return res
+          .status(400)
+          .send(
+            htmlMsg(
+              'Erro no upload',
+              err.message || 'Falha ao enviar a foto',
+              '/cadastro.html'
+            )
+          );
       }
       next();
     });
@@ -1326,18 +1334,25 @@ app.post(
 
       // normaliza telefone/whatsapp
       const wDig = onlyDigits(req.body.whatsapp);
-      const whatsapp = wDig.startsWith('55') ? wDig : (wDig.length === 10 || wDig.length === 11 ? '55' + wDig : wDig);
+      const whatsapp =
+        wDig.startsWith('55')
+          ? wDig
+          : (wDig.length === 10 || wDig.length === 11 ? '55' + wDig : wDig);
 
       const tDig = onlyDigits(req.body.telefone);
-      const telefone = tDig ? (tDig.startsWith('55') ? tDig : ((tDig.length === 10 || tDig.length === 11) ? '55' + tDig : tDig)) : '';
+      const telefone = tDig
+        ? (tDig.startsWith('55')
+            ? tDig
+            : (tDig.length === 10 || tDig.length === 11 ? '55' + tDig : tDig))
+        : '';
 
       // descrição/experiência (mantém aliases)
-      const _descricao = norm(req.body.descricao || req.body.bio || '');
-      const _experiencia = norm(req.body.experiencia || req.body.experienciaTempo || '');
+      const _descricao    = norm(req.body.descricao || req.body.bio || '');
+      const _experiencia  = norm(req.body.experiencia || req.body.experienciaTempo || '');
 
       // slug de serviço
-      const makeSlug = (s) => norm(s).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-      const servico = norm(req.body.servico || req.body.profissao || '');
+      const makeSlug   = (s) => norm(s).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      const servico    = norm(req.body.servico || req.body.profissao || '');
       const servicoSlug = servico ? makeSlug(servico) : null;
 
       // id
@@ -1349,8 +1364,8 @@ app.post(
 
         // identificação
         nome: norm(req.body.nome),
-        foto: fotoUrl,         // algumas telas usam `foto`
-        fotoUrl,               // outras usam `fotoUrl`
+        foto: fotoUrl, // algumas telas usam `foto`
+        fotoUrl,       // outras usam `fotoUrl`
 
         // contatos
         whatsapp,
@@ -1392,65 +1407,68 @@ app.post(
         passwordHash: null, // se você já preenche em outro ponto, pode trocar aqui
       };
 
-      // se veio senha, gera hash (se seu projeto já tem hashPassword)
+      // se veio senha, gera hash
       if (req.body.senha) {
-  try {
-    const bcrypt = require("bcryptjs");
-    const salt = bcrypt.genSaltSync(10);
-    novo.passwordHash = bcrypt.hashSync(String(req.body.senha), salt);
-  } catch (e) {
-    console.warn("[password] falhou, ignorando hash:", e);
-    novo.passwordHash = null;
-  }
-}
-     // ==== salva no DB ====
-// Lê o banco atual com fallback
-const current = (typeof readDB === 'function'
-  ? readDB()
-  : readJSON(DB_FILE, []));
-const banco = Array.isArray(current) ? current : [];
+        try {
+          const bcrypt = require('bcryptjs');
+          const salt = bcrypt.genSaltSync(10);
+          novo.passwordHash = bcrypt.hashSync(String(req.body.senha), salt);
+        } catch (e) {
+          console.warn('[password] falhou, ignorando hash:', e);
+          novo.passwordHash = null;
+        }
+      }
 
-// regra simples anti-duplicado por (cidade + bairro + whatsapp)
-const dup = banco.find(p =>
-  String(p.cidade || '').toLowerCase() === String(novo.cidade || '').toLowerCase() &&
-  String(p.bairro  || '').toLowerCase() === String(novo.bairro  || '').toLowerCase() &&
-  String(p.whatsapp || '') === String(novo.whatsapp || '')
-);
+      // ==== salva no DB ====
+      // Lê o banco atual com fallback
+      const current = (typeof readDB === 'function' ? readDB() : readJSON(DB_FILE, []));
+      const banco = Array.isArray(current) ? current : [];
 
-if (dup) {
-  return res
-    .status(400)
-    .send(htmlMsg(
-      'Cadastro duplicado',
-      'Já existe um profissional com o mesmo WhatsApp neste bairro/cidade.',
-      '/cadastro.html'
-    ));
-}
+      // regra simples anti-duplicado por (cidade + bairro + whatsapp)
+      const dup = banco.find(p =>
+        String(p.cidade || '').toLowerCase() === String(novo.cidade || '').toLowerCase() &&
+        String(p.bairro  || '').toLowerCase() === String(novo.bairro  || '').toLowerCase() &&
+        String(p.whatsapp || '') === String(novo.whatsapp || '')
+      );
+      if (dup) {
+        return res
+          .status(400)
+          .send(
+            htmlMsg(
+              'Cadastro duplicado',
+              'Já existe um profissional com o mesmo WhatsApp neste bairro/cidade.',
+              '/cadastro.html'
+            )
+          );
+      }
 
-// adiciona o novo registro
-banco.push(novo);
+      // adiciona o novo registro
+      banco.push(novo);
 
-// persiste (usa writeDB se existir; senão, writeJSON)
-try {
-  if (typeof writeDB === 'function') {
-    writeDB(banco);
-  } else {
-    writeJSON(DB_FILE, banco);
-  }
-} catch (e) {
-  console.error('[writeDB] falhou, usando fallback writeJSON', e);
-  writeJSON(DB_FILE, banco);
-}
+      // persiste (usa writeDB se existir; senão, writeJSON)
+      try {
+        if (typeof writeDB === 'function') {
+          writeDB(banco);
+        } else {
+          writeJSON(DB_FILE, banco);
+        }
+      } catch (e) {
+        console.error('[writeDB] falhou, usando fallback writeJSON', e);
+        writeJSON(DB_FILE, banco);
+      }
+
       // ===== mantém catálogos (serviços / cidades / bairros) =====
       try {
         // serviços: string[] ou [{nome,slug}]
         if (novo.servico) {
           let servs = readJSON(SERVICOS_FILE, []);
           if (!Array.isArray(servs)) servs = [];
+
           const exists = servs.some(s =>
             (typeof s === 'string' ? s : String(s?.nome || ''))
               .toLowerCase() === novo.servico.toLowerCase()
           );
+
           if (!exists) {
             if (servs.length && typeof servs[0] === 'object') {
               servs.push({ nome: novo.servico, slug: novo.servicoSlug || makeSlug(novo.servico) });
@@ -1458,7 +1476,8 @@ try {
               servs.push(novo.servico);
             }
             servs.sort((a, b) =>
-              (typeof a === 'string' ? a : a.nome).localeCompare(typeof b === 'string' ? b : b.nome, 'pt-BR')
+              (typeof a === 'string' ? a : a.nome)
+                .localeCompare(typeof b === 'string' ? b : b.nome, 'pt-BR')
             );
             writeJSON(SERVICOS_FILE, servs);
           }
@@ -1493,16 +1512,21 @@ try {
       }
 
       // ===== redireciona para o perfil =====
-      console.log('[CADASTRO] redirect ->', `/perfil.html?id=${id}`);
-      return res.redirect(`/perfil.html?id=${id}`);
+      console.log('[CADASTRO] redirect ->', `/perfil.html?id=${novo.id}`);
+      return res.redirect(`/perfil.html?id=${novo.id}`);
 
     } catch (e) {
       console.error('[ERRO /cadastro]', e);
-      return res.status(500).send(htmlMsg('Erro interno', String(e?.message || e), '/cadastro.html'));
+      return res
+        .status(500)
+        .send(
+          htmlMsg('Erro interno', String(e?.message || e), '/cadastro.html')
+        );
     }
   }
 );
 
+  
 
 // Lê o banco atual com fallback
 const current = (typeof readDB === 'function'
