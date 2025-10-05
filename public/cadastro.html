@@ -6,7 +6,7 @@
   <title>Cadastro de Profissional • Autônoma.app</title>
 
   <!-- Canonical + SEO -->
-  <link rel="canonical" href="https://www.autonomaapp.com.br/cadastro" />
+  <link rel="canonical" href="https://www.autonomaapp.com.br/cadastro.html" />
   <meta name="description" content="Cadastre seu perfil no Autônoma: informe seus dados, cidade, bairro e WhatsApp para receber clientes pelo app." />
 
   <!-- PWA / Favicons -->
@@ -27,9 +27,11 @@
     .preview { font-size:12px; color:#334155; margin-top:4px }
     .row-wrap { display:flex; gap:10px; flex-wrap:wrap }
     .field-50 { flex:1 1 220px }
-    /* Preview da foto em círculo (pedido anterior) */
+
+    /* Preview */
     .avatar-preview{ width:84px; height:84px; object-fit:cover; border-radius:50%; border:1px solid #e5e7eb; background:#f8fafc }
     .doc-preview{ width:120px; height:84px; object-fit:cover; border-radius:10px; border:1px solid #e5e7eb; background:#f8fafc }
+
     .warn { color:#b91c1c }
     .gps-pill { display:inline-flex; align-items:center; gap:8px; background:#eef2ff; border:1px solid #c7d2fe; color:#0b1f63; padding:6px 10px; border-radius:12px }
     .btn.small { padding:8px 12px; font-size:14px }
@@ -55,22 +57,19 @@
 
     <div class="card" style="max-width:880px; margin:auto">
       <!-- IMPORTANTE: action /cadastro, enctype multipart, names exatos -->
-      <form
-        id="formCad"
-        action="/cadastro"
-        method="POST"
-        enctype="multipart/form-data"
-        novalidate
-      >
+      <form id="formCad"
+            action="/cadastro"
+            method="POST"
+            enctype="multipart/form-data"
+            novalidate>
+
         <!-- Foto -->
         <label for="foto">Foto de perfil <strong>(obrigatória)</strong></label>
         <div class="row-wrap" style="align-items:center">
           <img id="fotoPrev" class="avatar-preview" src="/icons/icon-192.png" alt="Prévia da foto">
           <input id="foto" name="foto" type="file" accept="image/*" required aria-required="true">
         </div>
-        <p class="help">
-          Formatos: JPG/PNG/WEBP, até 3MB. A foto aumenta a confiança do cliente.
-        </p>
+        <p class="help">Formatos: JPG/PNG/WEBP, até 3MB. A foto aumenta a confiança do cliente.</p>
 
         <!-- Selo verificado -->
         <div class="row-wrap" style="align-items:flex-start">
@@ -78,9 +77,7 @@
             <input id="wantSelo" type="checkbox" style="transform:translateY(1px)">
             Quero selo verificado
           </label>
-          <span id="seloHint" class="muted">
-            Para análise do selo, envie um documento com foto (RG, CNH, passaporte).
-          </span>
+          <span id="seloHint" class="muted">Para análise do selo, envie um documento com foto (RG, CNH, passaporte).</span>
         </div>
 
         <div id="docWrap" style="display:none; margin-top:8px">
@@ -198,7 +195,7 @@
         <!-- E-mail / Site -->
         <div class="row-wrap">
           <div class="field-50">
-            <label for="email">E-mail *</label>
+            <label for="email">E-mail </label>
             <input
               id="email"
               name="email"
@@ -256,7 +253,7 @@
         </div>
 
         <!-- Sobre você (BIO) -->
-        <label for="bio">Sobre você *</label>
+        <label for="bio">Sobre você </label>
         <textarea
           id="bio"
           name="bio"
@@ -315,7 +312,6 @@
             <small id="matchMsg" class="muted" style="display:block; margin-top:6px"></small>
           </div>
         </div>
-        <!-- ========== [/SEGURANÇA: SENHA ] ========== -->
 
         <!-- Ações -->
         <div class="row" style="margin-top:12px; gap:8px; flex-wrap:wrap">
@@ -337,13 +333,19 @@
       const NO_STORE = { cache: "no-store" };
       const ts = () => "ts=" + Date.now();
 
+      function escapeHtml(s) {
+        return String(s||"")
+          .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+          .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+      }
+
       // --- Foto preview
       const foto = $("foto"), fotoPrev = $("fotoPrev");
       if (foto) {
         foto.addEventListener("change", () => {
           const f = foto.files?.[0];
           if (!f) { fotoPrev.src = "/icons/icon-192.png"; return; }
-          const ok = /image\/(jpeg|jpg|png|webp)/i.test(f.type);
+          const ok = /(jpeg|jpg|png|webp)$/i.test(f.type);
           if (!ok) { alert("Escolha JPG/PNG/WEBP."); foto.value = ""; return; }
           if (f.size > 3 * 1024 * 1024) { alert("Imagem até 3MB."); foto.value = ""; return; }
           fotoPrev.src = URL.createObjectURL(f);
@@ -355,14 +357,12 @@
       const docWrap = $("docWrap");
       const doc = $("doc");
       const docPrev = $("docPrev");
-
       wantSelo.addEventListener("change", () => {
         const on = wantSelo.checked;
         docWrap.style.display = on ? "" : "none";
         doc.required = on;
         doc.setAttribute("aria-required", on ? "true" : "false");
       });
-
       if (doc) {
         doc.addEventListener("change", () => {
           const f = doc.files?.[0];
@@ -392,10 +392,7 @@
         const cid = $("cidade").value.trim();
         if (!cid) { $("lista-bairros").innerHTML = ""; return; }
         try {
-          const r = await fetch(
-            "/api/geo/bairros?cidade=" + encodeURIComponent(cid) + "&" + ts(),
-            NO_STORE
-          );
+          const r = await fetch("/api/geo/bairros?cidade=" + encodeURIComponent(cid) + "&" + ts(), NO_STORE);
           if (!r.ok) return;
           const arr = await r.json();
           $("lista-bairros").innerHTML = (arr || [])
@@ -408,10 +405,7 @@
         const cid = $("cidade").value.trim();
         if (!cid || !q) return;
         try {
-          const r = await fetch(
-            `/api/geo/bairros/suggest?cidade=${encodeURIComponent(cid)}&q=${encodeURIComponent(q)}&${ts()}`,
-            NO_STORE
-          );
+          const r = await fetch(`/api/geo/bairros/suggest?cidade=${encodeURIComponent(cid)}&q=${encodeURIComponent(q)}&${ts()}`, NO_STORE);
           if (!r.ok) return;
           const arr = await r.json();
           $("lista-bairros").innerHTML = (arr || [])
@@ -440,15 +434,9 @@
       // --- GPS
       const btnGPS = $("btnGPS");
       const gpsStatus = $("gpsStatus");
-
       function isSecureForGeo() {
-        return (
-          location.hostname === "localhost" ||
-          location.hostname === "127.0.0.1" ||
-          window.isSecureContext === true
-        );
+        return (location.hostname === "localhost" || location.hostname === "127.0.0.1" || window.isSecureContext === true);
       }
-
       async function resolveCityByGPS(lat, lng) {
         try {
           const r = await fetch(`/api/geo/closest-city?lat=${lat}&lng=${lng}&${ts()}`, NO_STORE);
@@ -464,7 +452,6 @@
           gpsStatus.textContent = "Falha ao consultar a cidade.";
         }
       }
-
       btnGPS.addEventListener("click", () => {
         if (!isSecureForGeo()) {
           gpsStatus.textContent = "Para usar GPS, acesse via HTTPS ou localhost.";
@@ -477,16 +464,13 @@
         gpsStatus.textContent = "Solicitando localização…";
         navigator.geolocation.getCurrentPosition(
           async (pos) => {
-            const lat = pos.coords.latitude,
-              lng = pos.coords.longitude;
+            const lat = pos.coords.latitude, lng = pos.coords.longitude;
             $("lat").value = String(lat);
             $("lng").value = String(lng);
             gpsStatus.textContent = "Localização obtida.";
             if (!$("cidade").value.trim()) await resolveCityByGPS(lat, lng);
           },
-          (_) => {
-            gpsStatus.textContent = "Não foi possível obter a localização.";
-          },
+          (_) => { gpsStatus.textContent = "Não foi possível obter a localização."; },
           { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
         );
       });
@@ -535,153 +519,65 @@
       bindPhoneInput("whatsapp", "whatsPrev");
       bindPhoneInput("telefone", "telPrev");
 
-      // Escape HTML
-      function escapeHtml(s) {
-        return String(s || "")
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;")
-          .replace(/'/g, "&#39;");
+      // --- Password meter + toggles + match
+      const senha = $("senha");
+      const confirma = $("confirmaSenha");
+      const meterFill = $("senhaMeterFill");
+      const hint = $("senhaHint");
+      const matchMsg = $("matchMsg");
+      function scorePassword(pw) {
+        let s = 0;
+        if (pw.length >= 8) s += 25;
+        if (/[a-zA-Z]/.test(pw)) s += 25;
+        if (/\d/.test(pw)) s += 25;
+        if (/[^a-zA-Z0-9]/.test(pw)) s += 25;
+        return Math.min(100, s);
       }
-
-      // ===== Password helpers =====
-      const senha = $("senha"),
-        confirma = $("confirmaSenha");
-      const meterFill = $("senhaMeterFill"),
-        senhaHint = $("senhaHint"),
-        matchMsg = $("matchMsg");
+      function updateMeter() {
+        const v = senha.value || "";
+        const sc = scorePassword(v);
+        meterFill.style.width = sc + "%";
+        meterFill.style.background = sc < 50 ? "#f87171" : sc < 75 ? "#fbbf24" : "#22c55e";
+        hint.textContent = sc < 50 ? "Senha fraca" : sc < 75 ? "Senha média" : "Senha forte";
+      }
+      function updateMatch() {
+        if (!confirma.value) { matchMsg.textContent = ""; return; }
+        if (senha.value === confirma.value) {
+          matchMsg.textContent = "As senhas coincidem.";
+          matchMsg.style.color = "#16a34a";
+        } else {
+          matchMsg.textContent = "As senhas não coincidem.";
+          matchMsg.style.color = "#b91c1c";
+        }
+      }
+      senha.addEventListener("input", () => { updateMeter(); updateMatch(); });
+      confirma.addEventListener("input", updateMatch);
+      updateMeter();
 
       $("toggleSenha").addEventListener("click", () => {
         senha.type = senha.type === "password" ? "text" : "password";
       });
-
       $("toggleConfirma").addEventListener("click", () => {
         confirma.type = confirma.type === "password" ? "text" : "password";
       });
 
-      function scorePwd(p) {
-        let s = 0;
-        if (p.length >= 8) s++;
-        if (/[a-z]/i.test(p) && /\d/.test(p)) s++;
-        if (/[^a-z0-9]/i.test(p)) s++;
-        if (p.length >= 12) s++;
-        return Math.min(s, 4);
-      }
-
-      function updatePwd() {
-        const v = senha.value || "";
-        const sc = scorePwd(v);
-        const w = ["0%", "30%", "55%", "80%", "100%"][sc];
-        meterFill.style.width = w;
-        senhaHint.textContent = ["Muito fraca", "Fraca", "Ok", "Boa", "Excelente"][sc] || "";
-        matchMsg.textContent = (confirma.value && confirma.value !== v) ? "As senhas não coincidem." : "";
-      }
-
-      senha.addEventListener("input", updatePwd);
-      confirma.addEventListener("input", updatePwd);
-
-      // ===== Validação final no submit =====
-      const form = $("formCad");
-      const VALIDATE_FRONT = true;
-
-      form.addEventListener("submit", (e) => {
-        if (!VALIDATE_FRONT) return;
-
+      // --- Validação final antes de enviar
+      $("formCad").addEventListener("submit", (ev) => {
         err.style.display = "none";
         err.textContent = "";
 
-        // Foto obrigatória
-        if (!foto.files || !foto.files[0]) {
-          e.preventDefault();
-          err.textContent = "Envie uma foto de perfil (JPG/PNG/WEBP até 3MB).";
-          err.style.display = "";
-          foto.focus();
-          return;
-        }
-
-        // Selo: exige documento
-        if (wantSelo.checked && (!doc.files || !doc.files[0])) {
-          e.preventDefault();
-          err.textContent = "Para solicitar o selo verificado, envie um documento com foto.";
-          err.style.display = "";
-          doc.focus();
-          return;
-        }
-
-        // WhatsApp
-        const wIn = $("whatsapp"), tIn = $("telefone");
-        const wBr = toBRWith55(onlyDigits(wIn.value));
-        if (!isValidBR(wBr)) {
-          e.preventDefault();
-          err.textContent = "WhatsApp inválido. Digite com DDD. Ex.: (21) 98765-4321";
-          err.style.display = "";
-          wIn.focus();
-          return;
-        }
-        wIn.value = wBr;
-
-        // Telefone opcional
-        const tDig = onlyDigits(tIn.value);
-        if (tDig) {
-          const tBr = toBRWith55(tDig);
-          if (!isValidBR(tBr)) {
-            e.preventDefault();
-            err.textContent = "Telefone inválido. Ex.: (21) 3456-7890";
-            err.style.display = "";
-            tIn.focus();
-            return;
-          }
-          tIn.value = tBr;
-        }
-
-        // Campos obrigatórios
-        if (!$("nome").value.trim()) {
-          e.preventDefault(); err.textContent = "Informe seu nome."; err.style.display = ""; $("nome").focus(); return;
-        }
-        if (!$("cidade").value.trim()) {
-          e.preventDefault(); err.textContent = "Informe sua cidade."; err.style.display = ""; $("cidade").focus(); return;
-        }
-        if (!$("bairro").value.trim()) {
-          e.preventDefault(); err.textContent = "Informe seu bairro."; err.style.display = ""; $("bairro").focus(); return;
-        }
-        if (!($("servico").value.trim() || $("profissao").value.trim())) {
-          e.preventDefault(); err.textContent = "Informe Categoria/Serviço ou Profissão."; err.style.display = ""; $("servico").focus(); return;
-        }
-        if (!$("bio").value.trim()) {
-          e.preventDefault(); err.textContent = "Descreva seu trabalho em 'Sobre você'."; err.style.display = ""; $("bio").focus(); return;
-        }
-
-        // E-mail válido
-        const email = $("email").value.trim().toLowerCase();
-        const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-        if (!email || !okEmail) {
-          e.preventDefault(); err.textContent = "Informe um e-mail válido (obrigatório)."; err.style.display = ""; $("email").focus(); return;
-        }
-        $("email").value = email;
-
-        // Senhas
-        if (senha.value.length < 8) {
-          e.preventDefault(); err.textContent = "A senha deve ter pelo menos 8 caracteres."; err.style.display = ""; senha.focus(); return;
-        }
         if (senha.value !== confirma.value) {
-          e.preventDefault(); err.textContent = "As senhas não coincidem."; err.style.display = ""; confirma.focus(); return;
+          ev.preventDefault();
+          matchMsg.textContent = "As senhas não coincidem.";
+          matchMsg.style.color = "#b91c1c";
+          err.textContent = "Corrija os campos destacados e tente novamente.";
+          err.style.display = "";
+          confirma.focus();
+          return;
         }
+        // deixa o submit seguir normalmente (multipart POST /cadastro)
       });
     })();
-  </script>
-
-  <!-- ====== SERVICE WORKER ====== -->
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/sw.js?v=cadastro-2025-09-15").catch(() => {});
-      });
-      let reloaded = false;
-      navigator.serviceWorker.addEventListener("controllerchange", () => {
-        if (!reloaded) { reloaded = true; location.reload(); }
-      });
-    }
   </script>
 </body>
 </html>
