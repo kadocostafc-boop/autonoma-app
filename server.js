@@ -157,7 +157,7 @@ Se você não fez essa solicitação, ignore este e-mail.
 — Autônoma.app`;
 
     // -> IMPORTANTE: este helper precisa existir (você já criou acima)
-    const ok = await sendMail(identifier, subject, text);
+    const ok = await sendEMail(identifier, subject, text);
 
     if (!ok) {
       return res.status(500).json({ ok:false, error:"Não foi possível enviar o e-mail. Tente novamente." });
@@ -1237,6 +1237,7 @@ app.get("/api/ui-config", (_req, res) => {
 
 // =========================[ Cadastro ]=========================
 function validateCadastro(body) {
+  
   const e = [];
   const nome = trim(body.nome);
   if (!nome || nome.length < 2 || nome.length > 80) e.push("Nome é obrigatório (2–80).");
@@ -1302,28 +1303,18 @@ function isDuplicate(db, novo) {
 // ===== [ AUTONOMA • POST /cadastro ] =====
 app.post(
   '/cadastro',
-
-  // (1) middleware do upload (reaproveita seu `upload.single('foto')`)
+  // middleware do upload (reaproveita seu `upload.single('foto')`)
   (req, res, next) => {
     upload.single('foto')(req, res, (err) => {
       if (err) {
         console.error('[upload foto] erro:', err);
-        return res
-          .status(400)
-          .send(
-            htmlMsg(
-              'Erro no upload',
-              err.message || 'Falha ao enviar a foto',
-              '/cadastro.html'
-            )
-          );
+        return res.status(400).send(htmlMsg('Erro no upload', err.message || 'Falha ao enviar a foto', '/cadastro.html'));
       }
       next();
     });
   },
-
-  // (2) handler principal
-  (req, res) => {
+  // handler principal
+  async (req, res) => {
     try {
       // ===== normalizações básicas =====
       const onlyDigits = (s) => String(s || '').replace(/\D/g, '');
@@ -1334,25 +1325,17 @@ app.post(
 
       // normaliza telefone/whatsapp
       const wDig = onlyDigits(req.body.whatsapp);
-      const whatsapp =
-        wDig.startsWith('55')
-          ? wDig
-          : (wDig.length === 10 || wDig.length === 11 ? '55' + wDig : wDig);
-
+      const whatsapp = wDig.startsWith('55') ? wDig : (wDig.length === 10 || wDig.length === 11 ? '55' + wDig : wDig);
       const tDig = onlyDigits(req.body.telefone);
-      const telefone = tDig
-        ? (tDig.startsWith('55')
-            ? tDig
-            : (tDig.length === 10 || tDig.length === 11 ? '55' + tDig : tDig))
-        : '';
+      const telefone = tDig ? (tDig.startsWith('55') ? tDig : ((tDig.length === 10 || tDig.length === 11) ? '55' + tDig : tDig)) : '';
 
       // descrição/experiência (mantém aliases)
-      const _descricao    = norm(req.body.descricao || req.body.bio || '');
-      const _experiencia  = norm(req.body.experiencia || req.body.experienciaTempo || '');
+      const _descricao = norm(req.body.descricao || req.body.bio || '');
+      const _experiencia = norm(req.body.experiencia || req.body.experienciaTempo || '');
 
       // slug de serviço
-      const makeSlug   = (s) => norm(s).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-      const servico    = norm(req.body.servico || req.body.profissao || '');
+      const makeSlug = (s) => norm(s).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      const servico = norm(req.body.servico || req.body.profissao || '');
       const servicoSlug = servico ? makeSlug(servico) : null;
 
       // id
@@ -1361,85 +1344,83 @@ app.post(
       // ===== monta registro final =====
       const novo = {
         id,
-
         // identificação
         nome: norm(req.body.nome),
-        foto: fotoUrl, // algumas telas usam `foto`
-        fotoUrl,       // outras usam `fotoUrl`
-
+        foto: fotoUrl,
+        fotoUrl,
         // contatos
         whatsapp,
         telefone,
         email: norm((req.body.email || '').toLowerCase()),
         site: norm(req.body.site),
-
         // localização
         cidade: norm(req.body.cidade),
         estado: req.body.estado || null,
         bairro: norm(req.body.bairro),
         lat: Number.isFinite(Number(req.body.lat)) ? Number(req.body.lat) : null,
         lng: Number.isFinite(Number(req.body.lng)) ? Number(req.body.lng) : null,
-
         // profissional
         servico,
         servicoSlug,
         profissao: norm(req.body.profissao),
-
-        // descrição/bio (mantém ambos)
+        // descrição/bio
         descricao: _descricao,
         bio: _descricao,
-
-        // experiência (mantém ambos)
+        // experiência
         experiencia: _experiencia,
         experienciaTempo: _experiencia,
-
         precoBase: norm(req.body.precoBase),
         endereco: norm(req.body.endereco),
-
         // sistema
         criadoEm: new Date().toISOString(),
         verificado: false,
         mediaAvaliacao: 0,
         totalAvaliacoes: 0,
         visitas: 0,
-
-        // segurança
-        passwordHash: null, // se você já preenche em outro ponto, pode trocar aqui
+        // segurança (será preenchido abaixo)
+        passwordHash: null,
+        pinHash: null
       };
 
-      // se veio senha, gera hash
-      if (req.body.senha) {
+      // ===== SENHA: pega e gera hash (se existir) =====
+      // o usuário pode enviar o campo "senha" ou "pin" (cobre ambos)
+      const rawSenha = (req.body.senha || req.body.password || req.body.pin || '').toString().trim();
+
+      if (rawSenha) {
         try {
           const bcrypt = require('bcryptjs');
           const salt = bcrypt.genSaltSync(10);
-          novo.passwordHash = bcrypt.hashSync(String(req.body.senha), salt);
+          const hashed = bcrypt.hashSync(String(rawSenha), salt);
+          // salva em ambos os campos só por compatibilidade
+          novo.passwordHash = hashed;
+          novo.pinHash = hashed;
         } catch (e) {
           console.warn('[password] falhou, ignorando hash:', e);
           novo.passwordHash = null;
+          novo.pinHash = null;
         }
       }
 
       // ==== salva no DB ====
-      // Lê o banco atual com fallback
+      // lê o banco atual com fallback (assume readDB/readJSON/DB_FILE definidos no seu server.js)
       const current = (typeof readDB === 'function' ? readDB() : readJSON(DB_FILE, []));
       const banco = Array.isArray(current) ? current : [];
 
       // regra simples anti-duplicado por (cidade + bairro + whatsapp)
       const dup = banco.find(p =>
         String(p.cidade || '').toLowerCase() === String(novo.cidade || '').toLowerCase() &&
-        String(p.bairro  || '').toLowerCase() === String(novo.bairro  || '').toLowerCase() &&
+        String(p.bairro || '').toLowerCase() === String(novo.bairro || '').toLowerCase() &&
         String(p.whatsapp || '') === String(novo.whatsapp || '')
       );
+
       if (dup) {
         return res
           .status(400)
-          .send(
-            htmlMsg(
-              'Cadastro duplicado',
-              'Já existe um profissional com o mesmo WhatsApp neste bairro/cidade.',
-              '/cadastro.html'
-            )
-          );
+          .send(htmlMsg(
+            'Cadastro duplicado',
+            'Já existe um profissional com o mesmo WhatsApp neste bairro/cidade.',
+            '/cadastro.html'
+          ));
       }
 
       // adiciona o novo registro
@@ -1454,7 +1435,7 @@ app.post(
         }
       } catch (e) {
         console.error('[writeDB] falhou, usando fallback writeJSON', e);
-        writeJSON(DB_FILE, banco);
+        try { writeJSON(DB_FILE, banco); } catch (err) { console.error('[writeJSON] falhou também', err); }
       }
 
       // ===== mantém catálogos (serviços / cidades / bairros) =====
@@ -1463,12 +1444,9 @@ app.post(
         if (novo.servico) {
           let servs = readJSON(SERVICOS_FILE, []);
           if (!Array.isArray(servs)) servs = [];
-
           const exists = servs.some(s =>
-            (typeof s === 'string' ? s : String(s?.nome || ''))
-              .toLowerCase() === novo.servico.toLowerCase()
+            (typeof s === 'string' ? s : String(s?.nome || '')).toLowerCase() === novo.servico.toLowerCase()
           );
-
           if (!exists) {
             if (servs.length && typeof servs[0] === 'object') {
               servs.push({ nome: novo.servico, slug: novo.servicoSlug || makeSlug(novo.servico) });
@@ -1476,8 +1454,7 @@ app.post(
               servs.push(novo.servico);
             }
             servs.sort((a, b) =>
-              (typeof a === 'string' ? a : a.nome)
-                .localeCompare(typeof b === 'string' ? b : b.nome, 'pt-BR')
+              (typeof a === 'string' ? a : a.nome).localeCompare(typeof b === 'string' ? b : b.nome, 'pt-BR')
             );
             writeJSON(SERVICOS_FILE, servs);
           }
@@ -1512,23 +1489,18 @@ app.post(
       }
 
       // ===== redireciona para o perfil =====
-      console.log('[CADASTRO] redirect ->', `/perfil.html?id=${novo.id}`);
-      return res.redirect(`/perfil.html?id=${novo.id}`);
-
+      console.log('[CADASTRO] redirect ->', `/perfil.html?id=${id}`);
+      return res.redirect(`/perfil.html?id=${id}`);
     } catch (e) {
       console.error('[ERRO /cadastro]', e);
       return res
         .status(500)
-        .send(
-          htmlMsg('Erro interno', String(e?.message || e), '/cadastro.html')
-        );
+        .send(htmlMsg('Erro Interno', String(e?.message || e), '/cadastro.html'));
     }
   }
 );
 
-  
-
-// Lê o banco atual com fallback
+  // Lê o banco atual com fallback
 const current = (typeof readDB === 'function'
   ? readDB()
   : readJSON(DB_FILE, []));
@@ -1594,7 +1566,33 @@ app.get('/api/debug/ultimo-prof', (req, res) => {
     res.status(500).json({ ok: false, erro: String(e) });
   }
 });
+// Mostra caminhos reais usados pelo servidor
+app.get("/api/debug/where", (req, res) => {
+  res.json({
+    ROOT,
+    DATA_DIR,
+    DB_FILE,
+  });
+});
 
+// Mostra um resumo do DB (sem vazar hashes)
+app.get("/api/debug/db-prof", (req, res) => {
+  try {
+    const db = readJSON(DB_FILE, []);
+    const safe = db.map(p => ({
+      id: p.id,
+      nome: p.nome,
+      whatsapp: p.whatsapp,
+      cidade: p.cidade,
+      bairro: p.bairro,
+      temHash: !!p.passwordHash, // true/false para sabermos se gravou senha
+      criadoEm: p.criadoEm,
+    }));
+    res.json({ ok: true, total: safe.length, itens: safe });
+  } catch (e) {
+    res.status(500).json({ ok: false, erro: String(e && e.message || e) });
+  }
+});
 // Principal: /api/profissionais/:id  (com aliases + distância opcional)
 app.get("/api/profissionais/:id", (req, res) => {
   try {
