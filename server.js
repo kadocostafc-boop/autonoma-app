@@ -487,31 +487,130 @@ app.post('/webhooks/asaas', express.json(), async (req, res) => {
     const event = req.body;
     console.log('[Asaas] Webhook recebido:', JSON.stringify(event, null, 2));
 
-    // 3) Trate os eventos
-    switch (event.event) {
-      case 'PAYMENT_CREATED':
-        console.log('🧾 Pagamento criado:', event.payment.id);
-        break;
-      case 'PAYMENT_CONFIRMED':
-      case 'PAYMENT_RECEIVED':
-        console.log('✅ Pagamento confirmado:', event.payment.id);
-        break;
-      case 'PAYMENT_OVERDUE':
-        console.log('⚠️ Pagamento atrasado:', event.payment.id);
-        break;
-      case 'PAYMENT_REFUNDED':
-        console.log('↩️ Pagamento estornado:', event.payment.id);
-        break;
-      default:
-        console.log('📘 Evento ignorado:', event.event);
+    // 3) Extrair informações do evento
+    const eventType = event.event;
+    const payment = event.payment || {};
+    const subscription = event.subscription || payment.subscription;
+
+    // 4) Tratar eventos de PAGAMENTO
+    if (eventType === 'PAYMENT_CONFIRMED' || eventType === 'PAYMENT_RECEIVED') {
+      console.log('✅ Pagamento confirmado:', payment.id);
+      
+      // Atualizar status do profissional no banco
+      if (subscription) {
+        await updateProfissionalStatusAsaas(subscription, 'active');
+      }
+    }
+    
+    else if (eventType === 'PAYMENT_OVERDUE') {
+      console.log('⚠️ Pagamento atrasado:', payment.id);
+      
+      // Marcar como atrasado (mas não suspender ainda)
+      if (subscription) {
+        await updateProfissionalStatusAsaas(subscription, 'overdue');
+      }
+    }
+    
+    else if (eventType === 'PAYMENT_REFUNDED') {
+      console.log('↩️ Pagamento estornado:', payment.id);
+      
+      // Suspender acesso
+      if (subscription) {
+        await updateProfissionalStatusAsaas(subscription, 'refunded');
+      }
+    }
+
+    // 5) Tratar eventos de ASSINATURA
+    else if (eventType === 'SUBSCRIPTION_CREATED') {
+      console.log('📝 Assinatura criada:', subscription);
+    }
+    
+    else if (eventType === 'SUBSCRIPTION_UPDATED') {
+      console.log('🔄 Assinatura atualizada:', subscription);
+    }
+    
+    else if (eventType === 'SUBSCRIPTION_DELETED') {
+      console.log('❌ Assinatura cancelada:', subscription);
+      
+      // Voltar para plano free
+      if (subscription) {
+        await updateProfissionalStatusAsaas(subscription, 'canceled');
+      }
+    }
+    
+    else {
+      console.log('📘 Evento ignorado:', eventType);
     }
 
     res.json({ ok: true });
   } catch (e) {
     console.error('[Asaas] Erro no webhook:', e);
-    res.status(500).json({ ok: false });
+    res.status(500).json({ ok: false, error: e.message });
   }
 });
+
+// Função auxiliar para atualizar status do profissional via webhook Asaas
+async function updateProfissionalStatusAsaas(subscriptionId, newStatus) {
+  try {
+    // Ler banco de dados
+    const db = (typeof readDB === 'function' ? readDB() : readJSONSafe(DB_FILE, [])) || [];
+    
+    // Encontrar profissional pela assinatura
+    const profIndex = db.findIndex(p => p.asaasSubscriptionId === subscriptionId);
+    
+    if (profIndex === -1) {
+      console.warn(`[Asaas] Profissional não encontrado para subscription: ${subscriptionId}`);
+      return;
+    }
+
+    const prof = db[profIndex];
+    
+    // Atualizar status conforme o evento
+    switch (newStatus) {
+      case 'active':
+        prof.statusPlano = 'active';
+        prof.dataAtivacao = new Date().toISOString();
+        console.log(`✅ Profissional ${prof.id} (${prof.nome}) ativado no plano ${prof.plano}`);
+        break;
+        
+      case 'overdue':
+        prof.statusPlano = 'overdue';
+        prof.dataVencimento = new Date().toISOString();
+        console.log(`⚠️ Profissional ${prof.id} (${prof.nome}) com pagamento atrasado`);
+        break;
+        
+      case 'refunded':
+        prof.statusPlano = 'refunded';
+        prof.plano = 'free';
+        prof.asaasSubscriptionId = null;
+        console.log(`↩️ Profissional ${prof.id} (${prof.nome}) teve pagamento estornado - voltou para free`);
+        break;
+        
+      case 'canceled':
+        prof.statusPlano = 'canceled';
+        prof.plano = 'free';
+        prof.asaasSubscriptionId = null;
+        prof.dataCancelamento = new Date().toISOString();
+        console.log(`❌ Profissional ${prof.id} (${prof.nome}) cancelou assinatura - voltou para free`);
+        break;
+    }
+
+    // Salvar no banco
+    db[profIndex] = prof;
+    
+    if (typeof writeDB === 'function') {
+      writeDB(db);
+    } else {
+      writeJSON(DB_FILE, db);
+    }
+    
+    console.log(`[Asaas] Status atualizado com sucesso para profissional ${prof.id}`);
+    
+  } catch (e) {
+    console.error('[Asaas] Erro ao atualizar status do profissional:', e);
+    throw e;
+  }
+}
 
 // =========================[ Arquivos / Banco JSON ]==========================
 
@@ -1593,6 +1692,184 @@ app.get("/api/debug/db-prof", (req, res) => {
     res.status(500).json({ ok: false, erro: String(e && e.message || e) });
   }
 });
+
+// ===== NOVA ROTA: /api/profissionais (lista com filtros + distância) =====
+app.get("/api/profissionais", (req, res) => {
+  try {
+    // Ler banco de dados
+    const db = (typeof readDB === 'function' ? readDB() : readJSONSafe(DB_FILE, [])) || [];
+    if (!Array.isArray(db)) {
+      return res.status(500).json({ ok: false, error: "db_invalid" });
+    }
+
+    // Filtrar apenas profissionais ativos (não excluídos, não suspensos)
+    let items = db.filter(p => !p.excluido && !p.suspenso);
+
+    // ===== FILTROS =====
+    const norm = (s) => String(s || "").normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    
+    // Filtro por CIDADE (exato ou contém)
+    const cidadeParam = String(req.query.cidade || "").trim();
+    if (cidadeParam) {
+      const cidadeNorm = norm(cidadeParam);
+      items = items.filter(p => {
+        const pCidade = norm(p.cidade || "");
+        return pCidade === cidadeNorm || pCidade.includes(cidadeNorm);
+      });
+    }
+
+    // Filtro por BAIRRO
+    const bairroParam = String(req.query.bairro || "").trim();
+    if (bairroParam) {
+      const bairroNorm = norm(bairroParam);
+      items = items.filter(p => norm(p.bairro || "").includes(bairroNorm));
+    }
+
+    // Filtro por SERVIÇO
+    const servicoParam = String(req.query.servico || "").trim();
+    if (servicoParam) {
+      const servicoNorm = norm(servicoParam);
+      items = items.filter(p => {
+        const pServico = norm(p.servico || p.profissao || "");
+        return pServico.includes(servicoNorm);
+      });
+    }
+
+    // Filtro por BUSCA GERAL (q)
+    const qParam = String(req.query.q || "").trim();
+    if (qParam) {
+      const qNorm = norm(qParam);
+      items = items.filter(p => {
+        return norm(p.nome).includes(qNorm) ||
+               norm(p.cidade || "").includes(qNorm) ||
+               norm(p.bairro || "").includes(qNorm) ||
+               norm(p.servico || p.profissao || "").includes(qNorm);
+      });
+    }
+
+    // Filtro por AVALIAÇÃO MÍNIMA
+    const minRating = Number(req.query.minRating);
+    if (Number.isFinite(minRating) && minRating > 0) {
+      items = items.filter(p => {
+        const notas = (p.avaliacoes || []).map(a => Number(a?.nota)).filter(n => n >= 1 && n <= 5);
+        const rating = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length) : 0;
+        return rating >= minRating;
+      });
+    }
+
+    // ===== CÁLCULO DE DISTÂNCIA =====
+    const userLat = Number(req.query.userLat);
+    const userLng = Number(req.query.userLng);
+    const hasUserCoords = Number.isFinite(userLat) && Number.isFinite(userLng);
+
+    // Função de cálculo de distância (Haversine)
+    function calcDistance(lat1, lng1, lat2, lng2) {
+      const R = 6371; // Raio da Terra em km
+      const toRad = (deg) => deg * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat / 2) ** 2 +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLng / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c; // Distância em km
+    }
+
+    // Mapear profissionais com distância
+    items = items.map(p => {
+      const pLat = Number(p.lat);
+      const pLng = Number(p.lng);
+      
+      let distanceKm = null;
+      if (hasUserCoords && Number.isFinite(pLat) && Number.isFinite(pLng)) {
+        distanceKm = Math.round(calcDistance(userLat, userLng, pLat, pLng) * 10) / 10; // Arredondar para 1 casa decimal
+      }
+
+      // Calcular rating
+      const notas = (p.avaliacoes || []).map(a => Number(a?.nota)).filter(n => n >= 1 && n <= 5);
+      const rating = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length) : 0;
+
+      return {
+        id: String(p.id),
+        nome: p.nome || "",
+        foto: p.foto || p.fotoUrl || null,
+        fotoUrl: p.foto || p.fotoUrl || null,
+        descricao: (p.descricao ?? p.bio ?? "").toString(),
+        bio: (p.descricao ?? p.bio ?? "").toString(),
+        experiencia: (p.experienciaTempo ?? p.experiencia ?? "").toString(),
+        experienciaTempo: (p.experienciaTempo ?? p.experiencia ?? "").toString(),
+        servico: (p.servico ?? p.profissao ?? "").toString(),
+        servicoSlug: p.servicoSlug || null,
+        cidade: (p.cidade ?? "").toString(),
+        bairro: (p.bairro ?? "").toString(),
+        lat: Number.isFinite(pLat) ? pLat : null,
+        lng: Number.isFinite(pLng) ? pLng : null,
+        distanceKm,
+        whatsapp: (p.whatsapp ?? "").toString(),
+        telefone: (p.telefone ?? "").toString(),
+        site: (p.site ?? "").toString(),
+        precoBase: (p.precoBase ?? "").toString(),
+        verificado: !!p.verificado,
+        mediaAvaliacao: Number(p.mediaAvaliacao || rating || 0),
+        totalAvaliacoes: Number(p.totalAvaliacoes || (p.avaliacoes?.length || 0)),
+        plano: p.plano || "free",
+        criadoEm: p.criadoEm || null
+      };
+    });
+
+    // ===== ORDENAÇÃO =====
+    const sortParam = String(req.query.sort || "relevance").toLowerCase();
+    
+    if (sortParam === "distance" && hasUserCoords) {
+      // Ordenar por distância (mais próximo primeiro)
+      items.sort((a, b) => {
+        if (a.distanceKm === null) return 1;
+        if (b.distanceKm === null) return -1;
+        return a.distanceKm - b.distanceKm;
+      });
+    } else if (sortParam === "rating") {
+      // Ordenar por avaliação (melhor primeiro)
+      items.sort((a, b) => b.mediaAvaliacao - a.mediaAvaliacao);
+    } else if (sortParam === "recent") {
+      // Ordenar por mais recente
+      items.sort((a, b) => Number(b.id) - Number(a.id));
+    } else {
+      // Ordenação padrão: relevância (plano + avaliação + distância)
+      items.sort((a, b) => {
+        const planScore = (p) => p.plano === "premium" ? 3 : p.plano === "pro" ? 2 : 1;
+        const distScore = (p) => p.distanceKm !== null ? (100 - Math.min(p.distanceKm, 100)) : 0;
+        
+        const scoreA = planScore(a) * 10 + a.mediaAvaliacao * 5 + distScore(a) * 0.1;
+        const scoreB = planScore(b) * 10 + b.mediaAvaliacao * 5 + distScore(b) * 0.1;
+        
+        return scoreB - scoreA;
+      });
+    }
+
+    // ===== PAGINAÇÃO =====
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit || 20)));
+    const page = Math.max(1, Number(req.query.page || 1));
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    const slice = items.slice(start, end);
+
+    // ===== RESPOSTA =====
+    return res.json({
+      ok: true,
+      total: items.length,
+      page,
+      limit,
+      pages: Math.ceil(items.length / limit),
+      items: slice,
+      itens: slice // Compatibilidade com código antigo
+    });
+
+  } catch (e) {
+    console.error("[ERR /api/profissionais]", e);
+    return res.status(500).json({ ok: false, error: "server_error" });
+  }
+});
+
 // Principal: /api/profissionais/:id  (com aliases + distância opcional)
 app.get("/api/profissionais/:id", (req, res) => {
   try {
