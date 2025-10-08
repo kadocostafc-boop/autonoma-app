@@ -642,17 +642,20 @@ app.get("/api/profissional/:id/avaliacoes", (req, res) => {
   const prof = db.find((p) => String(p.id) === id);
   if (!prof) return res.status(404).json({ ok: false, error: "Profissional não encontrado" });
 
+  // garante que temos um array
   const list = Array.isArray(prof.avaliacoes) ? prof.avaliacoes : [];
 
-map((a) => ({
+  // normaliza cada avaliação e ordena por timestamp (mais recente primeiro)
+  const norm = list
+    .map((a) => ({
       nome: a.nome || a.autor || a.cliente || "Cliente",
       nota: Number(a.nota ?? a.rating ?? a.estrelas ?? a.score ?? 0),
       texto: a.texto || a.comentario || a.comment || a.mensagem || "",
-      ts: a.ts || a.createdAt || a.data || Date.now(),
+      ts: Number(a.ts ?? a.createdAt ?? a.data ?? Date.now()),
     }))
     .sort((a, b) => Number(b.ts) - Number(a.ts));
 
-  res.json(norm);
+  return res.json(norm);
 });
 
 // --- POST: cria nova avaliação (usado pela tela /avaliar) ---
