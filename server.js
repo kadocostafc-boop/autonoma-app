@@ -616,15 +616,6 @@ async function updateProfissionalStatusAsaas(subscriptionId, newStatus) {
 
 const DATA_FILE = process.env.DATA_FILE || "/data/profissionais.json";
 
-function loadDB() {
-  try {
-    const raw = fs.readFileSync(DATA_FILE, "utf8");
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
-  }
-}
 
 function saveDB(arr) {
   try {
@@ -632,6 +623,24 @@ function saveDB(arr) {
     fs.writeFileSync(DATA_FILE, JSON.stringify(arr, null, 2), "utf8");
   } catch {
     // noop
+  }
+}
+function loadDB() {
+  try {
+    const raw = fs.readFileSync(DATA_FILE, "utf8");
+    const parsed = JSON.parse(raw);
+    
+    // Aceitar tanto array direto [] quanto objeto {"profissionais":[]}
+    if (Array.isArray(parsed)) {
+      return parsed;
+    } else if (parsed && Array.isArray(parsed.profissionais)) {
+      return parsed.profissionais;
+    } else {
+      console.warn("⚠️ Formato de DB inválido, retornando array vazio");
+      return [];
+    }
+  } catch {
+    return [];
   }
 }
 
@@ -643,8 +652,7 @@ app.get("/api/profissional/:id/avaliacoes", (req, res) => {
   if (!prof) return res.status(404).json({ ok: false, error: "Profissional não encontrado" });
 
   const list = Array.isArray(prof.avaliacoes) ? prof.avaliacoes : [];
-
-profissionais.Array.map((a) => ({
+  const norm = list.map((a) => ({
       nome: a.nome || a.autor || a.cliente || "Cliente",
       nota: Number(a.nota ?? a.rating ?? a.estrelas ?? a.score ?? 0),
       texto: a.texto || a.comentario || a.comment || a.mensagem || "",

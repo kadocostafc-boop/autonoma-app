@@ -21,43 +21,59 @@
   <meta property="og:image" content="https://autonomaapp.com.br/img/og-cover.png">
   <meta property="og:url" content="https://autonomaapp.com.br/clientes.html">
 
-  <link rel="stylesheet" href="/css/app.css?v=clients-std-cards-2025-09-07">
+  <link rel="stylesheet" href="/css/global.css?v=2.0">
 
   <style>
-    :root{
-      --azul-escuro:#0b1f63; --azul-brilho:#2D81FF; --azul-brilho-2:#1E6EF2;
-      --cinza:#64748b; --borda:#e5e7eb;
-    }
-    .wrap{max-width:1120px;margin:0 auto;padding:16px}
-
-    /* HEADER */
-    .header{ background:var(--azul-escuro); padding:12px 16px; display:flex; gap:8px; align-items:center; justify-content:flex-end; }
-    .nav-btn{ appearance:none; border:none; cursor:pointer; background:var(--azul-brilho); color:#fff; font-weight:800; padding:8px 12px; border-radius:10px; text-decoration:none; font-size:14px; display:inline-flex; align-items:center; justify-content:center; }
-    .nav-btn:hover{ filter:brightness(.96); }
-
-    /* HERO */
-    .search-hero{
-      background: linear-gradient(180deg, var(--azul-brilho) 0%, var(--azul-brilho-2) 100%);
-      color:#fff; margin:0 0 14px 0; padding: 20px 14px 16px; border-radius:18px;
+    /* HERO de busca */
+    .search-hero {
+      background: linear-gradient(180deg, #2D81FF 0%, #1E6EF2 100%);
+      color: #fff;
+      margin: 0 0 14px 0;
+      padding: 20px 14px 16px;
+      border-radius: 18px;
       box-shadow: 0 10px 24px rgba(0,0,0,.10);
     }
-    .search-hero h1{ margin:0 0 10px; font-size:26px; line-height:1.15; font-weight:900; letter-spacing:.2px; text-shadow: 0 1px 0 #e8f0ff, 0 10px 24px rgba(0,0,0,.22); }
-    .gps-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:8px 0 12px}
-    .gps-row .pill{background:#ffffff20; border:1px solid #ffffff40; color:#fff; padding:6px 10px; border-radius:12px}
-    .gps-row .muted{color:#e2ebff}
+    .search-hero h1 {
+      margin: 0 0 10px;
+      font-size: 26px;
+      line-height: 1.15;
+      font-weight: 900;
+      letter-spacing: .2px;
+      text-shadow: 0 1px 0 #e8f0ff, 0 10px 24px rgba(0,0,0,.22);
+    }
+    .gps-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 8px 0 12px;
+    }
+    .gps-row .pill {
+      background: #ffffff20;
+      border: 1px solid #ffffff40;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 12px;
+    }
+    .gps-row .muted { color: #e2ebff; }
 
-    .filters{
-      display:grid; gap:10px; grid-template-columns:1fr;
-      background:#fff; border:1px solid #ffffff40; border-radius:14px; padding:12px;
+    .filters {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 1fr;
+      background: #fff;
+      border: 1px solid #ffffff40;
+      border-radius: 14px;
+      padding: 12px;
     }
-    @media(min-width:820px){ .filters{ grid-template-columns:1.2fr 1fr 1fr .8fr auto } }
-    .filters label{color:#0f172a; font-weight:700; font-size:13px}
-    .filters input, .filters select{
-      width:100%; border:1px solid var(--borda); border-radius:12px; padding:10px 12px;
-      background:#fff; color:#0f172a; outline:none;
+    @media(min-width:820px) {
+      .filters { grid-template-columns: 1.2fr 1fr 1fr .8fr auto; }
     }
-    .btn{ border:none; background:var(--azul-escuro); color:#fff; padding:10px 12px; border-radius:10px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:14px }
-    .btn.ghost{ background:#fff; color:#0f172a; border:1px solid var(--borda) }
+    .filters label {
+      color: var(--text-primary);
+      font-weight: 700;
+      font-size: 13px;
+    }
 
     /* GRID */
     .results-grid{ display:grid; gap:10px; grid-template-columns:1fr; }

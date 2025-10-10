@@ -4,50 +4,35 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Entrar no Painel • Autônoma.app</title>
-  <link rel="stylesheet" href="/css/app.css?v=painel-login-2025-09-15">
+  <link rel="stylesheet" href="/css/global.css?v=2.0">
   <style>
-    :root {
-      --bg:#0b1e5b; --card:#ffffff; --text:#0f172a; --muted:#64748b;
-      --primary:#2563eb; --primary-900:#1e40af;
+    /* Página de login centralizada */
+    html, body { height: 100%; }
+    body {
+      display: grid;
+      place-items: center;
+      background: var(--secondary);
     }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;
-      background:var(--bg); color:var(--text);
-      display:grid; place-items:center;
+    .wrap { width: min(680px, 92vw); }
+    .card {
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
     }
-    /* largura maior no desktop */
-    .wrap{ width:min(680px,92vw) }
-    .card{
-      background:var(--card); border-radius:18px;
-      box-shadow:0 20px 50px rgba(0,0,0,.35);
-      overflow:hidden;
+    .card-head {
+      padding: 24px 26px;
+      border-bottom: 1px solid var(--border-color);
     }
-    .card-head{padding:24px 26px; border-bottom:1px solid #e5e7eb}
-    .card-body{padding:24px 26px}
-    h1{margin:0; font-size:28px; line-height:1.15}
-    .muted{color:var(--muted)}
-
-    .grid{display:grid; gap:14px}
-    label{display:block; font-size:14px; margin-bottom:6px; color:#334155}
-
+    .card-body { padding: 24px 26px; }
+    
     /* 3 colunas no desktop: identificador | senha | olho */
-    .row{display:grid; grid-template-columns: 1fr 220px 56px; gap:10px}
-    @media (max-width:720px){ .row{grid-template-columns: 1fr} }
-
-    .input{
-      width:100%; padding:12px 14px; border-radius:12px; border:1px solid #cbd5e1;
-      background:#f8fafc; outline:none; font-size:16px;
+    .row-login {
+      display: grid;
+      grid-template-columns: 1fr 220px 56px;
+      gap: 10px;
     }
-    .input:focus{border-color:#93c5fd; box-shadow:0 0 0 3px rgba(59,130,246,.25)}
-
-    .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px;
-      padding:12px 18px; border-radius:12px; font-weight:600; border:0; cursor:pointer; text-decoration:none}
-    .btn-primary{background:var(--primary); color:#fff}
-    .btn-primary:hover{background:var(--primary-900)}
-    .btn-ghost{background:#0f172a; color:#fff}
-    .btn-ghost:hover{filter:brightness(1.1)}
+    @media (max-width: 720px) {
+      .row-login { grid-template-columns: 1fr; }
+    }
     .btn-light{background:#e2e8f0; color:#0f172a}
     .actions{display:flex; gap:12px; justify-content:flex-end; margin-top:8px}
     .remember{display:flex; align-items:center; gap:8px; font-size:14px}
@@ -70,7 +55,7 @@
     <div class="card-body">
       <form id="loginForm" class="grid" autocomplete="on">
         <!-- linha 1: identificador + senha + olho -->
-        <div class="row">
+        <div class="row-login">
           <div>
             <label for="whatsOrEmail">WhatsApp (com DDD) ou e-mail</label>
             <input id="whatsOrEmail" name="identifier" class="input" inputmode="text" autocomplete="username"
