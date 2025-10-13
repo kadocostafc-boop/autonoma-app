@@ -178,11 +178,11 @@
 
     setLoading(true);
     try{
-      const res = await fetch('/auth/pro/login', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ identifier, password, rememberMe: !!remember.checked })
-      });
+      const res = await fetch('/api/painel/login', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ phone: identifier, pin: password, rememberMe: !!remember.checked })
+});
       const data = await res.json().catch(()=> ({}));
       if(data && data.ok){
         location.href = data.redirect || '/painel';
