@@ -1493,6 +1493,15 @@ app.post(
       // o usuário pode enviar o campo "senha" ou "pin" (cobre ambos)
       const rawSenha = (req.body.senha || req.body.password || req.body.pin || '').toString().trim();
 
+      // Validação do formato do PIN (4 a 6 dígitos numéricos) para cadastro
+      if (rawSenha && !/^[0-9]{4,6}$/.test(rawSenha)) {
+        return res.status(400).send(htmlMsg(
+          'Erro no Cadastro',
+          'O PIN deve conter entre 4 e 6 dígitos numéricos.',
+          '/cadastro.html'
+        ));
+      }
+
       if (rawSenha) {
         try {
           const bcrypt = require('bcryptjs');
@@ -2545,6 +2554,11 @@ app.post("/api/painel/login", loginLimiter, (req, res) => {
     const db = readDB();
     const pro = db.find((p) => ensureBR(onlyDigits(p.whatsapp)) === phone && !p.excluido);
     if (!pro) return res.status(401).json({ ok: false, error: "not_found" });
+
+    // Validação do formato do PIN (4 a 6 dígitos numéricos) para login
+    if (!/^\d{4,6}$/.test(pin)) {
+      return res.status(400).json({ ok: false, error: "pin_invalid_format" });
+    }
 
     // precisa configurar PIN
     if (!pro.pinHash) {

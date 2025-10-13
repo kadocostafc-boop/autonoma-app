@@ -251,22 +251,25 @@
         <!-- ========== [ SEGURANÇA: SENHA ] ========== -->
         <div class="grid" style="gap:12px; margin-top:16px">
           <div class="field">
-            <label for="senha" class="label">Senha <span style="color:#ef4444">*</span></label>
+            <label for="senha" class="label">PIN de Acesso <span style="color:#ef4444">*</span></label>
             <div class="input-group" style="display:flex; align-items:center; gap:8px">
               <input
-                type="password"
+                type="tel"
+                inputmode="numeric"
                 id="senha"
                 name="senha"
                 required
-                minlength="8"
+                minlength="4"
+                maxlength="6"
+                pattern="[0-9]{4,6}"
                 autocomplete="new-password"
-                placeholder="Mínimo 8 caracteres, letras e números"
+                placeholder="4 a 6 dígitos numéricos"
                 class="input"
                 style="flex:1"
               >
               <button type="button" id="toggleSenha" class="btn btn-light" aria-label="Mostrar/ocultar senha">👁</button>
             </div>
-            <small class="muted">Use ao menos 1 letra e 1 número.</small>
+            <small class="muted">Crie um PIN de 4 a 6 números para acessar seu painel.</small>
             <div id="senhaMeterWrap" style="margin-top:8px">
               <div id="senhaMeter" style="height:8px; border-radius:6px; background:#e5e7eb; overflow:hidden">
                 <div id="senhaMeterFill" style="height:100%; width:0%"></div>
