@@ -29,6 +29,8 @@ const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcryptjs");
 const cookieParser = require("cookie-parser");
 const nodemailer = require("nodemailer");
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 // ====== [ AUTONOMA • Helpers de Arquivo/Texto ] ======
 // Pastas/arquivos base
@@ -617,29 +619,24 @@ async function updateProfissionalStatusAsaas(subscriptionId, newStatus) {
 const DATA_FILE = process.env.DATA_FILE || "/data/profissionais.json";
 
 
-function saveDB(arr) {
+async function saveDB(arr) {
   try {
-    fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
-    fs.writeFileSync(DATA_FILE, JSON.stringify(arr, null, 2), "utf8");
-  } catch {
-    // noop
+    for (const profissional of arr) {
+      await prisma.profissional.upsert({
+        where: { id: profissional.id },
+        update: profissional,
+        create: profissional,
+      });
+    }
+  } catch (e) {
+    console.error("Falha ao salvar DB com Prisma:", e);
   }
 }
-function loadDB() {
+async function loadDB() {
   try {
-    const raw = fs.readFileSync(DATA_FILE, "utf8");
-    const parsed = JSON.parse(raw);
-    
-    // Aceitar tanto array direto [] quanto objeto {"profissionais":[]}
-    if (Array.isArray(parsed)) {
-      return parsed;
-    } else if (parsed && Array.isArray(parsed.profissionais)) {
-      return parsed.profissionais;
-    } else {
-      console.warn("⚠️ Formato de DB inválido, retornando array vazio");
-      return [];
-    }
-  } catch {
+    return await prisma.profissional.findMany();
+  } catch (e) {
+    console.error("Falha ao carregar DB do Prisma:", e);
     return [];
   }
 }
@@ -2556,7 +2553,7 @@ app.post("/api/painel/login", loginLimiter, (req, res) => {
     if (!pro) return res.status(401).json({ ok: false, error: "not_found" });
 
     // Validação do formato do PIN (4 a 6 dígitos numéricos) para login
-    if (!/^\d{4,6}$/.test(pin)) {
+    if (!/^[0-9]{4,6}$/.test(pin)) {
       return res.status(400).json({ ok: false, error: "pin_invalid_format" });
     }
 
