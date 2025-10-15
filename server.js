@@ -1603,7 +1603,7 @@ app.post(
 
       // ===== redireciona para o perfil =====
       console.log('[CADASTRO] redirect ->', `/perfil.html?id=${id}`);
-      return res.redirect(`/perfil.html?id=${id}`);
+      return res.redirect(`/cadastro_sucesso.html?id=${id}`);
     } catch (e) {
       console.error('[ERRO /cadastro]', e);
       return res
@@ -1614,9 +1614,7 @@ app.post(
 );
 
   // Lê o banco atual com fallback
-const current = (typeof readDB === 'function'
-  ? readDB()
-  : readJSON(DB_FILE, []));
+const current = (typeof readDB === 'function' ? readDB() : readJSON(DB_FILE, []));
 const banco = Array.isArray(current) ? current : [];
 
 
@@ -2571,7 +2569,7 @@ app.post("/api/painel/login", loginLimiter, (req, res) => {
     if (!ok) return res.status(401).json({ ok: false, error: "pin_incorrect" });
 
     req.session.painel = { ok: true, proId: pro.id, when: Date.now() };
-    return res.json({ ok: true });
+    return res.json({ ok: true, redirect: "/painel.html" });
   } catch (e) {
     return res.status(500).json({ ok: false, error: String(e) });
   }
@@ -3186,6 +3184,7 @@ app.delete("/api/admin/profissionais/:id", requireAdmin, (req, res) => {
     const p = db.find((x) => Number(x.id) === id);
     if (!p) return res.status(404).json({ ok: false });
     p.excluido = true;
+    console.log(`[DELETE] Profissional ${id} marcado como excluido: ${p.excluido}`);
     p.excluidoEm = nowISO();
     writeDB(db);
     res.json({ ok: true });
