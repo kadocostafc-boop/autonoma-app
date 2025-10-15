@@ -20,6 +20,7 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@prisma/client": "^6.17.1",
     "bcryptjs": "^3.0.2",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
@@ -38,6 +39,7 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.10",
-    "prettier": "^3.6.2"
+    "prettier": "^3.6.2",
+    "prisma": "^6.17.1"
   }
 }
