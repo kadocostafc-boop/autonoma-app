@@ -81,6 +81,7 @@ async function sendEmail(to, subject, text) {
   }
 }
 const app = express();
+app.use(express.json());
 app.set("trust proxy", 1);
 
 // === Boot básico / deps ===
@@ -121,11 +122,17 @@ function baseUrlFrom(req) {
 function isEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||"").trim()); }
 
 // ROTA: solicita link de redefinição
-app.post("/auth/pro/forgot", express.json(), async (req, res) => {
+app.post("/auth/pro/forgot", async (req, res) => {
   try {
     const identifier = String(req.body?.identifier || "").trim(); // aqui só aceitamos e-mail
     if (!isEmail(identifier)) {
       return res.status(400).json({ ok:false, error: "Digite um e-mail válido." });
+    }
+
+    const users = readJSON(DB_FILE, []);
+    const user = users.find(u => u.email === identifier);
+    if (!user) {
+      return res.status(400).json({ ok:false, error: "E-mail não encontrado." });
     }
 
     // 1) gera token com expiração (2 horas)
@@ -138,7 +145,7 @@ app.post("/auth/pro/forgot", express.json(), async (req, res) => {
     for (const [t, info] of Object.entries(db)) {
       if (!info?.exp || Date.now() > Number(info.exp)) delete db[t];
     }
-    db[token] = { email: identifier, exp };
+    db[token] = { email: identifier, exp, userId: user.id };
     saveJSON(RESET_DB, db);
 
     // 3) monta link
@@ -159,7 +166,7 @@ Se você não fez essa solicitação, ignore este e-mail.
 — Autônoma.app`;
 
     // -> IMPORTANTE: este helper precisa existir (você já criou acima)
-    const ok = await sendEMail(identifier, subject, text);
+    const ok = await sendEmail(identifier, subject, text);
 
     if (!ok) {
       return res.status(500).json({ ok:false, error:"Não foi possível enviar o e-mail. Tente novamente." });
@@ -181,10 +188,14 @@ app.post("/auth/pro/reset", async (req, res) => {
     return res.status(400).json({ ok: false, error: "Token e nova senha obrigatórios" });
   }
 
+  const db = loadJSONSafe(RESET_DB);
+  const resetInfo = db[token];
   const users = readJSON(DB_FILE, []);
-  const user = users.find(
-    u => u.resetToken === token && u.resetExpira > Date.now()
-  );
+  if (!resetInfo || resetInfo.exp < Date.now()) {
+    return res.status(400).json({ ok: false, error: "Token inválido ou expirado" });
+  }
+
+  const user = users.find(u => u.id === resetInfo.userId);
   if (!user) {
     return res.status(400).json({ ok: false, error: "Token inválido ou expirado" });
   }
@@ -194,8 +205,8 @@ app.post("/auth/pro/reset", async (req, res) => {
   const hashed = await bcrypt.hash(senha, 10);
 
   user.senha = hashed;
-  delete user.resetToken;
-  delete user.resetExpira;
+  delete db[token];
+  saveJSON(RESET_DB, db);
 
   writeJSON(DB_FILE, users);
 
@@ -1123,6 +1134,8 @@ app.get("/", (_req, res) => res.sendFile(path.join(PUBLIC_DIR, "index.html")));
 app.get("/clientes.html", (_req, res) => res.sendFile(path.join(PUBLIC_DIR, "clientes.html")));
 app.get("/cadastro.html", (_req, res) => res.sendFile(path.join(PUBLIC_DIR, "cadastro.html")));
 app.get("/favoritos.html", (_req, res) => res.sendFile(path.join(PUBLIC_DIR, "favoritos.html")));
+app.get("/reset", (_req, res) => res.sendFile(path.join(PUBLIC_DIR, "reset.html")));
+
 app.get("/cadastro_sucesso.html", (_req, res) =>
   res.sendFile(path.join(PUBLIC_DIR, "cadastro_sucesso.html"))
 );
