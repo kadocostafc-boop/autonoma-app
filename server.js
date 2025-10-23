@@ -29,6 +29,7 @@ const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcryptjs");
 const cookieParser = require("cookie-parser");
 const nodemailer = require("nodemailer");
+const SibApiV3Sdk = require("sib-api-v3-sdk")
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
@@ -56,30 +57,53 @@ function hashPassword(plain) {
 // Função genérica para envio de e-mails
 async function sendEmail(to, subject, text) {
   try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 465,
-      secure: process.env.SMTP_SECURE === "true", // true para 465, false para 587
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
+    if (process.env.SMTP_DISABLED === "true") {
+      // Usar a API da Brevo
+      let defaultClient = SibApiV3Sdk.ApiClient.instance;
+      let apiKey = defaultClient.authentications["api-key"];
+      apiKey.apiKey = process.env.BREVO_API_KEY;
 
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || `Autônoma.app <${process.env.SMTP_USER}>`,
-      to,
-      subject,
-      text,
-    });
+      let apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+      let sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
 
-    console.log("📧 E-mail enviado para:", to);
-    return true;
-  } catch (err) {
-    console.error("❌ Erro ao enviar e-mail:", err);
+      const senderEmailMatch = (process.env.SMTP_FROM || "").match(/<(.*)>/);
+      const senderEmail = senderEmailMatch ? senderEmailMatch[1] : process.env.SMTP_FROM;
+      const senderName = (process.env.SMTP_FROM || "").includes("<") ? process.env.SMTP_FROM.split("<")[0].trim() : "Autônoma.app";
+      sendSmtpEmail.sender = { email: senderEmail, name: senderName };
+      sendSmtpEmail.to = [{ email: to }];
+      sendSmtpEmail.subject = subject;
+      sendSmtpEmail.textContent = text;
+
+      await apiInstance.sendTransacEmail(sendSmtpEmail);
+      console.log("E-mail enviado via Brevo API.");
+      return true;
+    } else {
+      // Usar nodemailer para SMTP direto
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT) || 465,
+        secure: process.env.SMTP_SECURE === "true", // true para 465, false para 587
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      });
+
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || `Autônoma.app <${process.env.SMTP_USER}>`,
+        to,
+        subject,
+        text,
+      });
+      console.log("E-mail enviado via SMTP.");
+      return true;
+    }
+  } catch (error) {
+    console.error("Erro ao enviar e-mail:", error);
     return false;
   }
 }
+
 const app = express();
 app.use(express.json());
 app.set("trust proxy", 1);
@@ -202,7 +226,8 @@ app.post("/auth/pro/reset", async (req, res) => {
 
   // Hash da nova senha
   const bcrypt = require("bcryptjs");
-  const hashed = await bcrypt.hash(senha, 10);
+   const hashedPassword = await bcrypt.hash(senha, 10);
+  user.senha = hashedPassword;
 
   user.senha = hashed;
   delete db[token];
@@ -3479,6 +3504,10 @@ app.get("/api/admin/export", requireAdmin, (req, res) => {
     res.status(500).type("text").send("erro");
   }
 });
+novoUsuario.senha = hashedPassword;
+  // ...
+  return res.status(201).json({ ok: true, message: "Cadastro realizado com sucesso!", redirect: "/cadastro_sucesso.html" });
+
 
 // Dump completo (somente admin) — útil p/ backup/debug
 app.get("/api/admin/_dump_all", requireAdmin, (_req, res) => {
