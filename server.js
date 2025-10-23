@@ -3504,9 +3504,6 @@ app.get("/api/admin/export", requireAdmin, (req, res) => {
     res.status(500).type("text").send("erro");
   }
 });
-novoUsuario.senha = hashedPassword;
-  // ...
-  return res.status(201).json({ ok: true, message: "Cadastro realizado com sucesso!", redirect: "/cadastro_sucesso.html" });
 
 
 // Dump completo (somente admin) — útil p/ backup/debug
