@@ -229,7 +229,7 @@ app.post("/auth/pro/reset", async (req, res) => {
    const hashedPassword = await bcrypt.hash(senha, 10);
   user.senha = hashedPassword;
 
-  user.senha = hashed;
+
   delete db[token];
   saveJSON(RESET_DB, db);
 
