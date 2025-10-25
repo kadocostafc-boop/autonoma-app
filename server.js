@@ -2551,6 +2551,7 @@ app.get("/api/painel/me", (req, res) => {
       descricao: pro.descricao || "",
       whatsapp: pro.whatsapp || "",
       site: pro.site || "",
+      email: pro.email || "",
       atendimentos: pro.atendimentos || 0,
       avaliacoes: pro.avaliacoes || [],
       visitas: pro.visitas || 0,
