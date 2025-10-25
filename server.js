@@ -228,11 +228,9 @@ app.post("/auth/pro/reset", async (req, res) => {
   const bcrypt = require("bcryptjs");
    const hashedPassword = await bcrypt.hash(senha, 10);
   user.senha = hashedPassword;
-
-
   delete db[token];
   saveJSON(RESET_DB, db);
-
+  
   writeJSON(DB_FILE, users);
 
   res.json({ ok: true, message: "Senha redefinida com sucesso" });
@@ -2551,6 +2549,7 @@ app.get("/api/painel/me", (req, res) => {
       descricao: pro.descricao || "",
       whatsapp: pro.whatsapp || "",
       site: pro.site || "",
+      email: pro.email || "",
       email: pro.email || "",
       atendimentos: pro.atendimentos || 0,
       avaliacoes: pro.avaliacoes || [],
