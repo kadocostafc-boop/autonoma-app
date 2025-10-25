@@ -68,8 +68,9 @@
             <img id="foto" class="avatar" alt="Foto">
             <div>
               <h1 id="nome" style="margin:0">—</h1>
-              <div class="meta" id="servico">—</div>
-              <div class="meta"><span id="local">—</span> • <span id="plano">FREE</span></div>
+	              <div class="meta" id="servico">—</div>
+	              <div class="meta" id="emailProfissional">E-mail: —</div>
+	              <div class="meta"><span id="local">—</span> • <span id="plano">FREE</span></div>
             </div>
           </div>
           <div class="row">
@@ -304,8 +305,9 @@
 
     function paintHeader(me){
       $('#nome').textContent = me.nome || '—';
-      $('#servico').textContent = (me.servico || me.profissao || '—');
-      $('#local').textContent = [me.bairro, me.cidade].filter(Boolean).join(' • ') || '—';
+	      $('#servico').textContent = (me.servico || me.profissao || '—');
+	      $('#emailProfissional').textContent = `E-mail: ${me.email || 'Não informado'}`; // NOVO
+	      $('#local').textContent = [me.bairro, me.cidade].filter(Boolean).join(' • ') || '—';
       setPlanBadges(me.plano);
       const foto = me.foto || 'https://via.placeholder.com/160?text=Foto';
       const img = $('#foto'); img.src = foto; img.alt = 'Foto de '+(me.nome||'Profissional');
