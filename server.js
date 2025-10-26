@@ -30,8 +30,8 @@ const bcrypt = require("bcryptjs");
 const cookieParser = require("cookie-parser");
 const nodemailer = require("nodemailer");
 const SibApiV3Sdk = require("sib-api-v3-sdk")
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// const { PrismaClient } = require('@prisma/client');
+// const prisma = new PrismaClient();
 
 // ====== [ AUTONOMA • Helpers de Arquivo/Texto ] ======
 // Pastas/arquivos base
@@ -648,31 +648,9 @@ async function updateProfissionalStatusAsaas(subscriptionId, newStatus) {
   }
 }
 
-// =========================[ Arquivos / Banco JSON ]==========================
-
+/// =========================[ Arquivos / Banco JSON ]==========================
+// Removidas funções loadDB/saveDB para forçar o uso do fallback JSON.
 const DATA_FILE = process.env.DATA_FILE || "/data/profissionais.json";
-
-
-async function saveDB(arr) {
-  try {
-    for (const profissional of arr) {
-      await prisma.profissional.upsert({
-        where: { id: profissional.id },
-        update: profissional,
-        create: profissional,
-      });
-    }
-  } catch (e) {
-    console.error("Falha ao salvar DB com Prisma:", e);
-  }
-}
-async function loadDB() {
-  try {
-    return await prisma.profissional.findMany();
-  } catch (e) {
-    console.error("Falha ao carregar DB do Prisma:", e);
-    return [];
-  }
 }
 
 // --- GET: lista avaliações do profissional (mais recentes primeiro) ---
