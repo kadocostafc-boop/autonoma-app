@@ -96,6 +96,14 @@
     .rating{ color:#f59e0b; }
     .right{ display:flex; flex-direction:column; gap:6px; align-items:flex-end; min-width:98px }
 
+        /* Correção de Responsividade para Mobile */
+        @media(max-width: 500px) {
+          .pro-card { flex-wrap: wrap; } /* Permite que o conteúdo quebre para baixo */
+          .pro-main { flex: 1 1 100%; } /* Permite que o conteúdo principal ocupe 100% da largura */
+          .right { flex: 1 1 100%; align-items: stretch; min-width: auto; } /* Botão ocupa 100% da largura */
+          .right .btn { width: 100%; }
+        }
+
     .loader{ display:none; font-size:14px }
     .gps-ok{ color:#22c55e } .gps-warn{ color:#f59e0b }
 
