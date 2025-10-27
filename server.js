@@ -26,7 +26,6 @@ const crypto = require("crypto");
 const compression = require("compression");
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
-const fetch = require('node-fetch'); // Necessário para asaasRequest
 
 
 const QRCode = require("qrcode");
