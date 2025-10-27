@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Assinatura de Plano • Autônoma.app</title>
+
+  <!-- Meta/PWA básicos -->
+  <meta name="theme-color" content="#2563eb">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
+  <meta name="description" content="Assine seu Plano Pro ou Premium com Pix ou Cartão no Autônoma.app.">
+
+  <link rel="stylesheet" href="/css/global.css">
+    <style>
+    /* Estilos para o checkout de assinatura (Mobile-First) */
+    .wrap-narrow{max-width:600px;margin:auto}
+    .box{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:20px}
+    .h{margin:.2rem 0}
+    .muted{color:#64748b}
+    .hr{height:1px;background:#e5e7eb;margin:15px 0}
+    .radio{display:flex;gap:10px;align-items:center;margin:8px 0}
+    .total{font-size:22px;font-weight:800}
+    .err{color:#b91c1c}
+    .plan-info{background:#f1f5f9;padding:15px;border-radius:10px;margin-bottom:20px;border:1px solid #e5e7eb; text-align:center;}
+    .plan-info h2{margin-top:0;margin-bottom:5px;color:#2563eb}
+    .plan-info .price{font-size:28px;font-weight:800;color:#0f172a}
+    .plan-info .price small{font-size:16px;font-weight:400;color:#64748b}
+
+    /* Responsividade */
+    @media(min-width:768px){
+      .wrap-narrow{max-width:720px}
+    }
+  </style>
+</head>
+<body>
+  <header class="header" role="banner">
+    <a href="/" aria-label="Início">
+      <img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display='none'">
+    </a>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <a class="btn ghost" href="/painel.html">Voltar ao Painel</a>
+    </div>
+  </header>
+
+  <main class="wrap wrap-narrow" role="main">
+    <div class="card">
+      <h1 class="mt-0">Assinatura de Plano</h1>
+      <p class="meta">Finalize a assinatura do seu plano. O pagamento é seguro e processado pelo Asaas.</p>
+    </div>
+
+    <div class="box">
+      <!-- Coluna esquerda: formulário -->
+      <section aria-label="Detalhes e pagamento">
+        <div class="plan-info">
+          <h2 id="planTitle">Plano Pro Mensal</h2>
+          <p class="price" id="planPrice">R$ 0,00 <small>/mês</small></p>
+          <p class="muted small">Pagamento seguro via Asaas. A assinatura será ativada imediatamente após a confirmação.</p>
+        </div>
+
+        <h3 class="h">Seus Dados (Pré-preenchidos)</h3>
+        <form id="form" novalidate>
+          <label for="nome">Nome</label>
+          <input id="nome" name="nome" type="text" placeholder="Seu nome" maxlength="80" required readonly>
+
+          <label for="doc">CPF (somente números)</label>
+          <input id="doc" name="doc" inputmode="numeric" pattern="\\d{11}" maxlength="11" placeholder="Ex.: 12345678901" required readonly>
+
+          <div class="hr"></div>
+
+          <h3 class="h">Forma de pagamento</h3>
+          <label class="radio">
+            <input type="radio" name="method" value="pix" checked>
+            <span>Pix <span class="muted small">(geramos QR na hora)</span></span>
+          </label>
+          <label class="radio">
+            <input type="radio" name="method" value="card">
+            <span>Cartão (crédito/débito) <span class="muted small">(processado pelo Asaas)</span></span>
+          </label>
+
+          <div id="cardFields" class="hidden" aria-hidden="true">
+            <label for="cardNumber">Número do cartão</label>
+            <input id="cardNumber" inputmode="numeric" placeholder="4111 1111 1111 1111" maxlength="19">
+            <div style="display:flex; gap:8px">
+              <div style="flex:1">
+                <label for="cardExp">Validade (MM/AA)</label>
+                <input id="cardExp" placeholder="12/28" maxlength="5">
+              </div>
+              <div style="flex:1">
+                <label for="cardCvv">CVV</label>
+                <input id="cardCvv" inputmode="numeric" placeholder="123" maxlength="4">
+              </div>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+            <span class="total">Total a Pagar</span>
+            <span class="total" id="grand">R$ 0,00</span>
+          </div>
+
+          <div class="row" style="margin-top:12px;gap:8px;justify-content:flex-end">
+            <a href="/painel.html" class="btn ghost">Cancelar</a>
+            <button class="btn" id="payBtn" type="submit">Pagar e Assinar</button>
+          </div>
+
+          <p id="msg" class="meta" style="margin-top:8px"></p>
+          <p id="err" class="err small" style="display:none;margin-top:6px"></p>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <footer class="wrap">
+    <div class="foot">
+      <a href="/top10.html">Top 10</a>
+      <a href="/planos.html">Planos</a>
+      <a href="/clientes.html">Buscar</a>
+      <a href="/termos-de-uso.html">Termos</a>
+      <a href="/politica-de-privacidade.html">Privacidade</a>
+    </div>
+  </footer>
+
+	  <script>
+	  (function(){
+	    // Utilidades
+	    const $ = (id)=> document.getElementById(id);
+	    const esc = (s)=> String(s||"");
+	    const money = (v)=> isFinite(v) ? v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"}) : "—";
+	    const onlyDigits = (v)=> String(v||"").replace(/\D/g,"");
+	    const qs = new URLSearchParams(location.search);
+	
+	    // Parâmetros esperados na URL
+	    const plan = qs.get("plano") || ""; // 'pro' ou 'premium'
+	    const prices = { pro: 29.90, premium: 49.90 };
+	    const planAmount = prices[plan] || 0;
+	
+	    // Guardas iniciais
+	    if (!plan || planAmount <= 0) {
+	      document.body.innerHTML = `
+	        <div class="wrap" style="padding:40px;text-align:center">
+	          <h1 class="mt-0">Plano Inválido</h1>
+	          <p>Não foi possível identificar o plano de assinatura. Por favor, volte ao painel e tente novamente.</p>
+	          <a href="/painel.html" class="btn">Voltar ao Painel</a>
+	        </div>
+	      `;
+	      return;
+	    }
+	
+	    // Estado atual
+	    let method = "pix";
+	    let currentProId = null;
+	
+	    // Elementos
+	    const form = $("form");
+	    const err  = $("err");
+	    const msg  = $("msg");
+	    const cardFields = $("cardFields");
+	    const grand= $("grand");
+	    const planTitle = $("planTitle");
+	    const planPrice = $("planPrice");
+	
+	    // Inicialização do Layout
+	    planTitle.textContent = `Plano ${plan.toUpperCase()} Mensal`;
+	    planPrice.innerHTML = `${money(planAmount)} <small>/mês</small>`;
+	    grand.textContent = money(planAmount);
+	
+	    // 1. Carrega dados do profissional logado
+	    fetch("/api/painel/me")
+	      .then(r => r.ok ? r.json() : Promise.reject())
+	      .then(js => {
+	        if (js.ok && js.pro && js.pro.id) {
+	          currentProId = js.pro.id;
+	          // Preenche os campos do formulário com os dados do profissional logado
+	          $("nome").value = js.pro.nome || "";
+	          $("doc").value = onlyDigits(js.pro.cpf || "");
+	          $("payBtn").disabled = false;
+	        } else {
+	          // Se não estiver logado, redireciona para o login
+	          location.href = '/painel_login.html';
+	        }
+	      })
+	      .catch(() => {
+	        err.style.display = "";
+	        err.textContent = "Erro ao carregar dados do profissional logado. Tente novamente.";
+	        $("payBtn").disabled = true;
+	      });
+	
+	    // Alterna método
+	    document.querySelectorAll('input[name="method"]').forEach(el=>{
+	      el.addEventListener("change", ()=>{
+	        method = el.value;
+	        const card = (method==="card");
+	        cardFields.classList.toggle("hidden", !card);
+	        cardFields.setAttribute("aria-hidden", String(!card));
+	      });
+	    });
+	
+	    // Submeter pagamento
+	    form.addEventListener("submit", async (e)=>{
+	      e.preventDefault();
+	      err.style.display = "none"; err.textContent = "";
+	      msg.textContent = "";
+	
+	      // Valida básicos
+	      const nome = esc($("nome").value).trim();
+	      const doc  = onlyDigits($("doc").value);
+	      if (!nome || doc.length!==11){
+	        err.style.display = "";
+	        err.textContent = "Informe nome e CPF válidos (11 dígitos).";
+	        return;
+	      }
+	      const card = (method==="card");
+	      if (card){
+	        const n = onlyDigits($("cardNumber").value);
+	        const exp = ($("cardExp").value||"").trim();
+	        const cvv = onlyDigits($("cardCvv").value);
+	        if (n.length<13 || !/^\d{2}\/\d{2}$/.test(exp) || cvv.length<3){
+	          err.style.display = "";
+	          err.textContent = "Dados de cartão inválidos.";
+	          return;
+	        }
+	      }
+	
+	      // Monta payload
+	      const apiEndpoint = "/api/pay/asaas/subscription/create";
+	      const payload = {
+	        proId: currentProId,
+	        plan: plan,
+	        amount: planAmount, 
+	        buyer: { nome, cpf: doc } 
+	      };
+	
+	      $("payBtn").disabled = true;
+	      $("payBtn").textContent = "Processando...";
+	
+	      try{
+	        const resp = await fetch(apiEndpoint,{
+	          method:"POST",
+	          headers:{ "Content-Type":"application/json" },
+	          body: JSON.stringify(payload)
+	        });
+	
+	        if (!resp.ok){
+	          throw new Error("Falha ao iniciar pagamento. Código: " + resp.status);
+	        }
+	        const js = await resp.json();
+	
+	        // Assinatura: espera-se um redirectUrl do Asaas para o checkout
+	        if (js.url) {
+	          msg.textContent = "Redirecionando para o Asaas...";
+	          location.href = js.url; // Redireciona para o checkout do Asaas
+	          return;
+	        }
+	        throw new Error("Falha ao obter URL de pagamento do Asaas.");
+	        
+	      }catch(ex){
+	        err.style.display = "";
+	        err.textContent = (ex && ex.message) ? ex.message : "Erro ao iniciar pagamento.";
+	      }finally{
+	        $("payBtn").disabled = false;
+	        $("payBtn").textContent = "Pagar e Assinar";
+	      }
+	    });
+	  })();
+	  </script>
+    // Utilidades
+    const $ = (id)=> document.getElementById(id);
+    const esc = (s)=> String(s||"");
+    const money = (v)=> isFinite(v) ? v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"}) : "—";
+    const onlyDigits = (v)=> String(v||"").replace(/\D/g,"");
+    const qs = new URLSearchParams(location.search);
+
+    // Parâmetros esperados na URL
+    const proId = Number(qs.get("proId")||"0");
+    const amount = Number(qs.get("amount")||"0"); // em reais (ex.: 120.50)
+    const title = qs.get("title") || "Pagamento de serviço";
+    const backTo = qs.get("back") || "/";
+
+    // NOVO: Fluxo de Assinatura (para profissionais)
+    const plan = qs.get("plano") || ""; // 'pro' ou 'premium'
+
+    // Estado atual
+    let method = "pix";
+    let quote = null;       // retorno de /api/pay/quote
+    let pro = null;         // /api/profissional/:id (nome/foto/etc)
+    let receiveViaApp = true;
+
+    // Elementos
+    const form = $("form");
+    const err  = $("err");
+    const msg  = $("msg");
+    const fees = $("fees");
+    const grand= $("grand");
+    const cardFields = $("cardFields");
+    const qrBlock = $("qrBlock");
+    const qrImg = $("qrImg");
+    const pixCopiaCola = $("pixCopiaCola");
+    const copyPix = $("copyPix");
+
+    // Resumo
+    const proFoto = $("proFoto");
+    const proNome = $("proNome");
+    const proServico = $("proServico");
+    const proCidade = $("proCidade");
+    const valBase = $("valBase");
+    const feeApp = $("feeApp");
+    const feeAcq = $("feeAcq");
+    const valTotal = $("valTotal");
+    const recebPref = $("recebPref");
+    const recebWarn = $("recebWarn");
+    const desc = $("desc");
+
+    // Guardas iniciais
+    desc.textContent = title;
+    
+    // NOVO: Lógica para Assinatura (Plano)
+    let isSubscription = false;
+    if (plan === 'pro' || plan === 'premium') {
+      isSubscription = true;
+      // O profissional já está logado, então precisamos do ID dele.
+      // O ID será obtido via /api/painel/me, mas o checkout precisa saber que é uma assinatura.
+      // Vamos carregar os dados do profissional e o valor do plano.
+      desc.textContent = `Assinatura Plano ${plan.toUpperCase()} Mensal`;
+      $("nome").placeholder = "Seu nome (já preenchido ao logar)";
+      $("doc").placeholder = "Seu CPF (já preenchido ao logar)";
+    }
+    
+    // Lógica para Pagamento de Serviço (Cliente)
+    if (!isSubscription && (!proId || !isFinite(amount) || amount <= 0)) {
+      err.style.display = "";
+      err.textContent = "Link de pagamento inválido. Volte e gere novamente.";
+      $("payBtn").disabled = true;
+      return;
+    }
+
+    // Carrega dados do profissional (para ambos os casos)
+    let currentProId = proId; // Se for pagamento de cliente, usa o proId da URL
+    
+    if (isSubscription) {
+      // Se for assinatura, precisamos do ID do profissional logado
+      fetch("/api/painel/me")
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(js => {
+          if (js.ok && js.id) {
+            currentProId = js.id;
+            // Preenche os campos do formulário com os dados do profissional logado
+            $("nome").value = js.nome || "";
+            $("doc").value = onlyDigits(js.cpf || "");
+            
+            // Carrega o valor do plano (stub)
+            const prices = { pro: 29.90, premium: 49.90 };
+            const planAmount = prices[plan] || 0;
+            if (planAmount > 0) {
+              // Simula o fluxo de quote para preencher os valores
+              refreshQuote(planAmount, currentProId);
+            } else {
+              err.style.display = "";
+              err.textContent = "Plano inválido ou preço não definido.";
+              $("payBtn").disabled = true;
+            }
+            
+            // Oculta o resumo do profissional (já que é o próprio)
+            document.querySelector('aside.box').style.display = 'none';
+          } else {
+            // Se não estiver logado, redireciona para o login
+            location.href = '/painel_login.html';
+          }
+        })
+        .catch(() => {
+          err.style.display = "";
+          err.textContent = "Erro ao carregar dados do profissional logado.";
+          $("payBtn").disabled = true;
+        });
+      return; // Sai do init() para não executar o código abaixo
+    }
+
+    // Carrega profissional (para pagamento de serviço)
+    fetch("/api/profissional/"+proId)
+      .then(r=> r.ok ? r.json() : Promise.reject())
+      .then(js=>{
+        pro = js;
+        proFoto.src = pro.foto || "/img/user.png";
+        proNome.textContent = pro.nome || "Profissional";
+        proServico.textContent = pro.servico || "—";
+        proCidade.textContent = [pro.bairro, pro.cidade].filter(Boolean).join(" — ") || "—";
+        receiveViaApp = !!pro.receiveViaApp;
+        recebPref.textContent = receiveViaApp ? "Receber pelo aplicativo (Pix/Cartão)" : "Receber direto do cliente (fora do app)";
+        recebWarn.style.display = receiveViaApp ? "none" : "";
+        refreshQuote(amount, currentProId); // Inicia o cálculo de quote para pagamento de serviço
+      })
+      .catch(()=>{ /* segue mesmo assim */ });
+    
+    // Cálculo de taxas (quote)
+    function refreshQuote(amount, proId){
+      fees.textContent = "Calculando taxas…";
+      grand.textContent = "—";
+      valBase.textContent = money(amount);
+
+      const body = { proId, amount, method };
+      return fetch("/api/pay/quote",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify(body)
+      })
+      .then(r=> r.ok ? r.json() : Promise.reject(r))
+      .then(js=>{
+        quote = js;
+        // Campos: feeAppPercent, feeAcquirer, total
+        feeApp.textContent = money(js.feeAppValue ?? 0);
+        feeAcq.textContent = money(js.feeAcquirerValue ?? 0);
+        valTotal.textContent = money(js.total ?? amount);
+        grand.textContent = money(js.total ?? amount);
+        fees.textContent = `Taxas estimadas — App: ${js.feeAppPercent||4}% • Adquirente: ${js.feeAcquirerPercent||0}%`;
+      })
+      .catch(()=>{
+        // Fallback simples, só app 4%
+        const feeAppVal = +(amount * 0.04).toFixed(2);
+        const total = +(amount + feeAppVal).toFixed(2);
+        feeApp.textContent = money(feeAppVal);
+        feeAcq.textContent = money(0);
+        valTotal.textContent = money(total);
+        grand.textContent = money(total);
+        fees.textContent = "Taxas estimadas (fallback): App 4%.";
+      });
+    }
+
+    // Alterna método
+    document.querySelectorAll('input[name="method"]').forEach(el=>{
+      el.addEventListener("change", ()=>{
+        method = el.value;
+        const card = (method==="card");
+        cardFields.classList.toggle("hidden", !card);
+        cardFields.setAttribute("aria-hidden", String(!card));
+        qrBlock.style.display = "none";
+        refreshQuote(isSubscription ? (prices[plan] || 0) : amount, currentProId);
+      });
+    });
+
+    refreshQuote(amount, currentProId);
+
+    // Submeter pagamento
+    form.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      err.style.display = "none"; err.textContent = "";
+      msg.textContent = "";
+
+      // Valida básicos
+      const nome = esc($("nome").value).trim();
+      const doc  = onlyDigits($("doc").value);
+      if (!nome || doc.length!==11){
+        err.style.display = "";
+        err.textContent = "Informe nome e CPF válidos (11 dígitos).";
+        return;
+      }
+      const card = (method==="card");
+      if (card){
+        const n = onlyDigits($("cardNumber").value);
+        const exp = ($("cardExp").value||"").trim();
+        const cvv = onlyDigits($("cardCvv").value);
+        if (n.length<13 || !/^\d{2}\/\d{2}$/.test(exp) || cvv.length<3){
+          err.style.display = "";
+          err.textContent = "Dados de cartão inválidos.";
+          return;
+        }
+      }
+
+      // Monta payload
+      let apiEndpoint = "/api/pay/checkout";
+      let payload = {};
+      
+      if (isSubscription) {
+        // Fluxo de Assinatura
+        apiEndpoint = "/api/pay/asaas/subscription/create";
+        payload = {
+          proId: currentProId,
+          plan: plan,
+          // Os dados do cliente (nome/cpf) serão usados para criar/identificar o cliente Asaas
+          // O backend deve cuidar disso, mas o frontend envia para o backend
+          buyer: { nome, cpf: doc } 
+        };
+      } else {
+        // Fluxo de Pagamento de Serviço (Cliente)
+        payload = {
+          proId, amount, method, title,
+          buyer:{ nome, cpf:doc },
+          card: card ? {
+            number: onlyDigits($("cardNumber").value),
+            exp: ($("cardExp").value||"").trim(),
+            cvv: onlyDigits($("cardCvv").value)
+          } : null
+        };
+      }
+
+      $("payBtn").disabled = true;
+
+      try{
+        const resp = await fetch(apiEndpoint,{
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!resp.ok){
+          throw new Error("Falha ao iniciar pagamento.");
+        }
+        const js = await resp.json();
+
+        if (isSubscription) {
+          // Assinatura: espera-se um redirectUrl do Asaas para o checkout
+          if (js.url) {
+            msg.textContent = "Redirecionando para o Asaas...";
+            location.href = js.url; // Redireciona para o checkout do Asaas
+            return;
+          }
+          throw new Error("Falha ao obter URL de pagamento do Asaas.");
+        }
+        
+        // Fluxo Pix (stub: retorna {qrImage, copiaCola})
+        if (method==="pix" && js && (js.qrImage || js.copiaCola)){
+          qrBlock.style.display = "block";
+          if (js.qrImage) qrImg.src = js.qrImage;
+          pixCopiaCola.textContent = js.copiaCola || "";
+          copyPix.onclick = async ()=>{
+            try { await navigator.clipboard.writeText(js.copiaCola||""); copyPix.textContent="Copiado!"; setTimeout(()=>copyPix.textContent="Copiar Pix copia e cola",1500);} catch(_){}
+          };
+          msg.textContent = "Aguardando pagamento Pix…";
+          return;
+        }
+
+        // Fluxo cartão (stub: redirect para página do parceiro ou status direto)
+        if (method==="card"){
+          if (js.redirectUrl){
+            location.href = js.redirectUrl;
+            return;
+          }
+          msg.textContent = js.status ? ("Status: " + js.status) : "Pagamento enviado para processamento.";
+          return;
+        }
+
+        // Genérico
+        msg.textContent = "Pagamento iniciado.";
+      }catch(ex){
+        err.style.display = "";
+        err.textContent = (ex && ex.message) ? ex.message : "Erro ao iniciar pagamento.";
+      }finally{
+        $("payBtn").disabled = false;
+      }
+    });
+
+    // O código original do refreshQuote está aqui, mas foi movido para dentro do init() para ser chamado corretamente.
+    // O código original do refreshQuote será removido na próxima edição.
+  })();
+  </script>
+</body>
+</html>
+
+    // Carrega profissional
+    fetch("/api/profissional/"+proId)
+      .then(r=> r.ok ? r.json() : Promise.reject())
+      .then(js=>{
+        pro = js;
+        proFoto.src = pro.foto || "/img/user.png";
+        proNome.textContent = pro.nome || "Profissional";
+        proServico.textContent = pro.servico || "—";
+        proCidade.textContent = [pro.bairro, pro.cidade].filter(Boolean).join(" — ") || "—";
+        receiveViaApp = !!pro.receiveViaApp;
+        recebPref.textContent = receiveViaApp ? "Receber pelo aplicativo (Pix/Cartão)" : "Receber direto do cliente (fora do app)";
+        recebWarn.style.display = receiveViaApp ? "none" : "";
+      })
+      .catch(()=>{ /* segue mesmo assim */ });
+
+    // Cálculo de taxas (quote)
+    function refreshQuote(amount, proId){
+      fees.textContent = "Calculando taxas…";
+      grand.textContent = "—";
+      valBase.textContent = money(amount);
+
+      const body = { proId, amount, method };
+      return fetch("/api/pay/quote",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify(body)
+      })
+      .then(r=> r.ok ? r.json() : Promise.reject(r))
+      .then(js=>{
+        quote = js;
+        // Campos: feeAppPercent, feeAcquirer, total
+        feeApp.textContent = money(js.feeAppValue ?? 0);
+        feeAcq.textContent = money(js.feeAcquirerValue ?? 0);
+        valTotal.textContent = money(js.total ?? amount);
+        grand.textContent = money(js.total ?? amount);
+        fees.textContent = `Taxas estimadas — App: ${js.feeAppPercent||4}% • Adquirente: ${js.feeAcquirerPercent||0}%`;
+      })
+      .catch(()=>{
+        // Fallback simples, só app 4%
+        const feeAppVal = +(amount * 0.04).toFixed(2);
+        const total = +(amount + feeAppVal).toFixed(2);
+        feeApp.textContent = money(feeAppVal);
+        feeAcq.textContent = money(0);
+        valTotal.textContent = money(total);
+        grand.textContent = money(total);
+        fees.textContent = "Taxas estimadas (fallback): App 4%.";
+      });
+    }
+
+    // Alterna método
+    document.querySelectorAll('input[name="method"]').forEach(el=>{
+      el.addEventListener("change", ()=>{
+        method = el.value;
+        const card = (method==="card");
+        cardFields.classList.toggle("hidden", !card);
+        cardFields.setAttribute("aria-hidden", String(!card));
+        qrBlock.style.display = "none";
+        // Recalcula quote com base no fluxo (assinatura ou pagamento de serviço)
+        const prices = { pro: 29.90, premium: 49.90 };
+        const newAmount = isSubscription ? (prices[plan] || 0) : amount;
+        refreshQuote(newAmount, currentProId);
+      });
+    });
+
+    // Submeter pagamento
+    form.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      err.style.display = "none"; err.textContent = "";
+      msg.textContent = "";
+
+      // Valida básicos
+      const nome = esc($("nome").value).trim();
+      const doc  = onlyDigits($("doc").value);
+      if (!nome || doc.length!==11){
+        err.style.display = "";
+        err.textContent = "Informe nome e CPF válidos (11 dígitos).";
+        return;
+      }
+      const card = (method==="card");
+      if (card){
+        const n = onlyDigits($("cardNumber").value);
+        const exp = ($("cardExp").value||"").trim();
+        const cvv = onlyDigits($("cardCvv").value);
+        if (n.length<13 || !/^\d{2}\/\d{2}$/.test(exp) || cvv.length<3){
+          err.style.display = "";
+          err.textContent = "Dados de cartão inválidos.";
+          return;
+        }
+      }
+
+      // Monta payload
+      let apiEndpoint = "/api/pay/checkout";
+      let payload = {};
+      
+      if (isSubscription) {
+        // Fluxo de Assinatura
+        apiEndpoint = "/api/pay/asaas/subscription/create";
+        payload = {
+          proId: currentProId,
+          plan: plan,
+          // Os dados do cliente (nome/cpf) serão usados para criar/identificar o cliente Asaas
+          // O backend deve cuidar disso, mas o frontend envia para o backend
+          buyer: { nome, cpf: doc } 
+        };
+      } else {
+        // Fluxo de Pagamento de Serviço (Cliente)
+        payload = {
+          proId, amount, method, title,
+          buyer:{ nome, cpf:doc },
+          card: card ? {
+            number: onlyDigits($("cardNumber").value),
+            exp: ($("cardExp").value||"").trim(),
+            cvv: onlyDigits($("cardCvv").value)
+          } : null
+        };
+      }
+
+      $("payBtn").disabled = true;
+
+      try{
+        const resp = await fetch(apiEndpoint,{
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!resp.ok){
+          throw new Error("Falha ao iniciar pagamento.");
+        }
+        const js = await resp.json();
+
+        if (isSubscription) {
+          // Assinatura: espera-se um redirectUrl do Asaas para o checkout
+          if (js.url) {
+            msg.textContent = "Redirecionando para o Asaas...";
+            location.href = js.url; // Redireciona para o checkout do Asaas
+            return;
+          }
+          throw new Error("Falha ao obter URL de pagamento do Asaas.");
+        }
+        
+        // Fluxo Pix (stub: retorna {qrImage, copiaCola})
+        if (method==="pix" && js && (js.qrImage || js.copiaCola)){
+          qrBlock.style.display = "block";
+          if (js.qrImage) qrImg.src = js.qrImage;
+          pixCopiaCola.textContent = js.copiaCola || "";
+          copyPix.onclick = async ()=>{
+            try { await navigator.clipboard.writeText(js.copiaCola||""); copyPix.textContent="Copiado!"; setTimeout(()=>copyPix.textContent="Copiar Pix copia e cola",1500);} catch(_){}
+          };
+          msg.textContent = "Aguardando pagamento Pix…";
+          return;
+        }
+
+        // Fluxo cartão (stub: redirect para página do parceiro ou status direto)
+        if (method==="card"){
+          if (js.redirectUrl){
+            location.href = js.redirectUrl;
+            return;
+          }
+          msg.textContent = js.status ? ("Status: " + js.status) : "Pagamento enviado para processamento.";
+          return;
+        }
+
+        // Genérico
+        msg.textContent = "Pagamento iniciado.";
+      }catch(ex){
+        err.style.display = "";
+        err.textContent = (ex && ex.message) ? ex.message : "Erro ao iniciar pagamento.";
+      }finally{
+        $("payBtn").disabled = false;
+      }
+    });
+
+  })();
+  </script>
+</body>
+</html>

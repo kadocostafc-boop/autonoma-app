@@ -256,8 +256,14 @@ app.get(['/painel', '/pa'], requireProAuth, (_req, res) => {
 
 // Rota de Pagamento (Protegida)
 app.get("/painel/pagamento", requireProAuth, (req, res) => {
-  // A rota /painel/pagamento deve simplesmente redirecionar para o checkout.html,
-  // que por sua vez usará o JS para chamar a API de criação de assinatura.
+  const plano = req.query.plano;
+  
+  // Se houver o parâmetro 'plano', serve a página de checkout de assinatura
+  if (plano === 'pro' || plano === 'premium') {
+    return res.sendFile(path.join(PUBLIC_DIR, "checkout-assinatura.html"));
+  }
+  
+  // Caso contrário, serve a página de checkout padrão (para clientes pagando por serviço)
   res.sendFile(path.join(PUBLIC_DIR, "checkout.html"));
 });
 // ===== Forçar HTTPS e controlar redirects (exceto /health e /healthz) =====
