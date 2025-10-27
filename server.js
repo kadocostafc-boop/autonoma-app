@@ -1032,95 +1032,11 @@ app.get('/api/pagamento/historico', requireAuth, async (req, res) => {
 // === Middleware de Autorização por Plano (plan-authorization.js) ===
 // ============================================================================
 
-const PLAN_LIMITS = {
-  free: {
-    destaque: false,
-    raioKm: 0,
-    cidadesExtras: 3,
-    fotosMax: 1,
-    leadsMax: 3,
-    metricas: false,
-    top10: false,
-  },
-  pro: {
-    destaque: true,
-    raioKm: 30,
-    cidadesExtras: 5,
-    fotosMax: 5,
-    leadsMax: 15,
-    metricas: true,
-    top10: false,
-  },
-  premium: {
-    destaque: true,
-    raioKm: 50,
-    cidadesExtras: 10,
-    fotosMax: 10,
-    leadsMax: -1, // ilimitado
-    metricas: true,
-    top10: true,
-  },
-};
-
-/**
- * Função para obter o limite de um recurso para um plano
- * @param {string} plano - Plano do usuário
- * @param {string} recurso - Recurso
- * @returns {any} - Limite do recurso
- */
-function getPlanLimit(plano, recurso) {
-  const limits = PLAN_LIMITS[plano] || PLAN_LIMITS.free;
-  return limits[recurso];
-}
-
-/**
- * Middleware para verificar se o usuário pode usar um recurso específico
- * @param {string} recurso - Nome do recurso (destaque, raio, cidades, fotos, leads, metricas, top10)
- */
-function requirePlanFeature(recurso) {
-  return async (req, res, next) => {
-    if (!req.session || !req.session.painel?.proId) {
-      return res.status(401).json({ ok: false, error: 'Não autenticado' });
-    }
-    
-    const usuarioId = req.session.painel.proId;
-
-    // TODO: Implementar com Prisma
-    const profissional = readDB().find(p => p.id === usuarioId);
-
-    if (!profissional) {
-      return res.status(404).json({ ok: false, error: 'Profissional não encontrado' });
-    }
-
-    const limits = PLAN_LIMITS[profissional.plano] || PLAN_LIMITS.free;
-
-    if (!limits[recurso]) {
-      return res.status(403).json({
-        ok: false,
-        error: `Recurso "${recurso}" não disponível no plano ${profissional.plano}`,
-      });
-    }
-
-    next();
-  };
-}
-
-// Middlewares específicos (ex: requirePhotoLimit, requireLeadLimit, etc.)
-// Podem ser criados conforme a necessidade, usando requirePlanFeature como base.
-
-// Exemplo: Middleware para bloquear acesso a métricas
-const requireMetricsAccess = requirePlanFeature('metricas');
-
-// Exemplo: Middleware para bloquear acesso ao Top 10
-const requireTop10Access = requirePlanFeature('top10');
+// As constantes PLAN_LIMITS, getPlanLimit, requirePlanFeature, requireMetricsAccess,
+// e requireTop10Access foram removidas daqui para evitar declaração duplicada,
+// pois o erro indica que elas já existem no escopo global do server.js original.
 
 // =========================[ Assinaturas Pro/Premium ]=========================
-
-// Preços fixos dos planos (em centavos)
-const PLAN_PRICES = {
-  pro: 2990,     // R$ 29,90
-  premium: 4990  // R$ 49,90
-};
 
 // Criar assinatura (Pro/Premium) + salvar no banco (status pending)
 app.post('/api/pay/asaas/subscription/create', express.json(), async (req, res) => {
