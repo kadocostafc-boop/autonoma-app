@@ -455,6 +455,18 @@ async function asaasRequest(endpoint, options = {}) {
   return res.json();
 }
 
+// ============================================================================
+// INTEGRAÇÃO DE MONETIZAÇÃO
+// ============================================================================
+
+// Importar rotas de pagamento e middleware
+const asaasPaymentRouter = require('./routes/asaas-payment');
+const paymentFeeRouter = require('./routes/payment-fee');
+
+// Registrar rotas
+app.use(asaasPaymentRouter);
+app.use(paymentFeeRouter);
+
 // =========================[ Assinaturas Pro/Premium ]=========================
 
 // Preços fixos dos planos (em centavos)
@@ -518,162 +530,7 @@ app.post('/api/pay/asaas/subscription/create', express.json(), async (req, res) 
     return res.status(400).json({ ok:false, error: e.message });
   }
 });
-// Cancelar assinatura
-app.post("/api/pay/asaas/subscription/cancel", express.json(), async (req, res) => {
-  try {
-    const { subscriptionId } = req.body;
-    if (!subscriptionId) {
-      return res.status(400).json({ ok: false, error: "ID da assinatura é obrigatório" });
-    }
 
-    // Cancelar assinatura no Asaas
-    const resp = await asaas.delete(`/subscriptions/${subscriptionId}`);
-
-    res.json({ ok: true, canceled: resp.data });
-  } catch (err) {
-    console.error("Erro ao cancelar assinatura:", err.response?.data || err.message);
-    res.status(500).json({ ok: false, error: "Falha ao cancelar assinatura" });
-  }
-});
-
-// =======================[ Webhook Asaas ]=======================
-app.post('/webhooks/asaas', express.json(), async (req, res) => {
-  try {
-    // 1) Segurança — confere token enviado pelo Asaas
-    const sig = req.headers['asaas-access-token'];
-    if (sig !== process.env.ASAAS_WEBHOOK_TOKEN) {
-      console.warn('[Asaas] Webhook com token inválido:', sig);
-      return res.status(401).json({ ok: false, error: 'Token inválido' });
-    }
-
-    // 2) Evento recebido
-    const event = req.body;
-    console.log('[Asaas] Webhook recebido:', JSON.stringify(event, null, 2));
-
-    // 3) Extrair informações do evento
-    const eventType = event.event;
-    const payment = event.payment || {};
-    const subscription = event.subscription || payment.subscription;
-
-    // 4) Tratar eventos de PAGAMENTO
-    if (eventType === 'PAYMENT_CONFIRMED' || eventType === 'PAYMENT_RECEIVED') {
-      console.log('✅ Pagamento confirmado:', payment.id);
-      
-      // Atualizar status do profissional no banco
-      if (subscription) {
-        await updateProfissionalStatusAsaas(subscription, 'active');
-      }
-    }
-    
-    else if (eventType === 'PAYMENT_OVERDUE') {
-      console.log('⚠️ Pagamento atrasado:', payment.id);
-      
-      // Marcar como atrasado (mas não suspender ainda)
-      if (subscription) {
-        await updateProfissionalStatusAsaas(subscription, 'overdue');
-      }
-    }
-    
-    else if (eventType === 'PAYMENT_REFUNDED') {
-      console.log('↩️ Pagamento estornado:', payment.id);
-      
-      // Suspender acesso
-      if (subscription) {
-        await updateProfissionalStatusAsaas(subscription, 'refunded');
-      }
-    }
-
-    // 5) Tratar eventos de ASSINATURA
-    else if (eventType === 'SUBSCRIPTION_CREATED') {
-      console.log('📝 Assinatura criada:', subscription);
-    }
-    
-    else if (eventType === 'SUBSCRIPTION_UPDATED') {
-      console.log('🔄 Assinatura atualizada:', subscription);
-    }
-    
-    else if (eventType === 'SUBSCRIPTION_DELETED') {
-      console.log('❌ Assinatura cancelada:', subscription);
-      
-      // Voltar para plano free
-      if (subscription) {
-        await updateProfissionalStatusAsaas(subscription, 'canceled');
-      }
-    }
-    
-    else {
-      console.log('📘 Evento ignorado:', eventType);
-    }
-
-    res.json({ ok: true });
-  } catch (e) {
-    console.error('[Asaas] Erro no webhook:', e);
-    res.status(500).json({ ok: false, error: e.message });
-  }
-});
-
-// Função auxiliar para atualizar status do profissional via webhook Asaas
-async function updateProfissionalStatusAsaas(subscriptionId, newStatus) {
-  try {
-    // Ler banco de dados
-    const db = (typeof readDB === 'function' ? readDB() : readJSONSafe(DB_FILE, [])) || [];
-    
-    // Encontrar profissional pela assinatura
-    const profIndex = db.findIndex(p => p.asaasSubscriptionId === subscriptionId);
-    
-    if (profIndex === -1) {
-      console.warn(`[Asaas] Profissional não encontrado para subscription: ${subscriptionId}`);
-      return;
-    }
-
-    const prof = db[profIndex];
-    
-    // Atualizar status conforme o evento
-    switch (newStatus) {
-      case 'active':
-        prof.statusPlano = 'active';
-        prof.dataAtivacao = new Date().toISOString();
-        console.log(`✅ Profissional ${prof.id} (${prof.nome}) ativado no plano ${prof.plano}`);
-        break;
-        
-      case 'overdue':
-        prof.statusPlano = 'overdue';
-        prof.dataVencimento = new Date().toISOString();
-        console.log(`⚠️ Profissional ${prof.id} (${prof.nome}) com pagamento atrasado`);
-        break;
-        
-      case 'refunded':
-        prof.statusPlano = 'refunded';
-        prof.plano = 'free';
-        prof.asaasSubscriptionId = null;
-        console.log(`↩️ Profissional ${prof.id} (${prof.nome}) teve pagamento estornado - voltou para free`);
-        break;
-        
-      case 'canceled':
-        prof.statusPlano = 'canceled';
-        prof.plano = 'free';
-        prof.asaasSubscriptionId = null;
-        prof.dataCancelamento = new Date().toISOString();
-        console.log(`❌ Profissional ${prof.id} (${prof.nome}) cancelou assinatura - voltou para free`);
-        break;
-    }
-
-    // Salvar no banco
-    db[profIndex] = prof;
-    
-    if (typeof writeDB === 'function') {
-      writeDB(db);
-    } else {
-      writeJSON(DB_FILE, db);
-    }
-    
-    console.log(`[Asaas] Status atualizado com sucesso para profissional ${prof.id}`);
-    
-  } catch (e) {
-    console.error('[Asaas] Erro ao atualizar status do profissional:', e);
-    throw e;
-  }
-}
 
 /// =========================[ Arquivos / Banco JSON ]==========================
 // Removidas funções loadDB/saveDB para forçar o uso do fallback JSON.
@@ -2611,6 +2468,7 @@ app.post("/api/painel/login", loginLimiter, (req, res) => {
     if (!ok) return res.status(401).json({ ok: false, error: "pin_incorrect" });
 
     req.session.painel = { ok: true, proId: pro.id, when: Date.now() };
+    req.session.usuarioId = pro.usuarioId; // Adicionar para compatibilidade com o novo requireAuth
     return res.json({ ok: true, redirect: "/painel.html" });
   } catch (e) {
     return res.status(500).json({ ok: false, error: String(e) });
@@ -2621,6 +2479,7 @@ app.post("/api/painel/login", loginLimiter, (req, res) => {
 app.post("/api/painel/set-pin", (req, res) => {
   const s = req.session?.painel;
   if (!s?.ok || !s.proId) return res.status(401).json({ ok: false });
+  // O usuário deve estar logado para setar o PIN, então 's.proId' é suficiente.
 
   const pin = String(req.body?.pin || "").trim();
   if (!/^\d{6}$/.test(pin)) return res.status(400).json({ ok: false, error: "pin_format" });
