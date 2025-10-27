@@ -120,7 +120,7 @@ app.use(session({
   cookie: {
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 dias
     secure: process.env.SECURE_COOKIES === "true",
-    sameSite: "Lax",
+    sameSite: "None", // Alterado para corrigir possível problema de sessão em requisições cross-site/assíncronas
     httpOnly: true,
   }
 }));
@@ -3343,7 +3343,7 @@ function ensureFavUID(req, res) {
   let uid = cookies.FAV_UID || "";
   if (!uid) {
     uid = crypto.randomBytes(12).toString("hex");
-    setCookie(res, "FAV_UID", uid, { maxAge: 365 * 24 * 3600 * 1000, path: "/", sameSite: "Lax", secure: false });
+    setCookie(res, "FAV_UID", uid, { maxAge: 365 * 24 * 3600 * 1000, path: "/", sameSite: "None", // Alterado para corrigir possível problema de sessão em requisições cross-site/assíncronas secure: false });
   }
   return uid;
 }
