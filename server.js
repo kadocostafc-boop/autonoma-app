@@ -461,9 +461,7 @@ async function asaasRequest(endpoint, options = {}) {
 // ============================================================================
 
 // === Funções e Constantes do asaas-payment.js ===
-// As constantes ASAAS_KEY, ASAAS_ENV, ASAAS_BASE_URL, ASAAS_WEBHOOK_TOKEN
-// foram removidas daqui para evitar declaração duplicada, pois já devem
-// estar declaradas em escopo global no server.js original.
+const ASAAS_WEBHOOK_TOKEN = process.env.ASAAS_WEBHOOK_TOKEN;
 
 // Preços dos planos (em reais)
 const PLAN_PRICES = {
@@ -504,6 +502,14 @@ const PLAN_BENEFITS = {
 
 // Função auxiliar para chamar API Asaas
 async function asaasRequest(endpoint, options = {}) {
+  // Reintroduzir as constantes de configuração do Asaas no escopo da função
+  const ASAAS_KEY = process.env.ASAAS_API_KEY;
+  const ASAAS_ENV = process.env.ASAAS_ENV || 'sandbox';
+  const ASAAS_BASE_URL =
+    ASAAS_ENV === 'prod'
+      ? 'https://api.asaas.com/v3'
+      : 'https://sandbox.asaas.com/api/v3';
+  
   const url = `${ASAAS_BASE_URL}${endpoint}`;
   
   const res = await fetch(url, {
