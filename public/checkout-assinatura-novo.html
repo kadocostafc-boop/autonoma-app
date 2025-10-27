@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout de Assinatura - Autônoma.app</title>
+  <link rel="stylesheet" href="/css/global.css">
+  <style>
+    .wrap-narrow { max-width: 820px; margin: auto; }
+    .grid2 { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    @media (min-width: 960px) { .grid2 { grid-template-columns: 1.2fr 0.8fr; } }
+    .box { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 14px; }
+    .h { margin: 0.2rem 0; }
+    .muted { color: #64748b; }
+    .hr { height: 1px; background: #e5e7eb; margin: 10px 0; }
+    .total { font-size: 20px; font-weight: 800; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace; }
+    .badge-plan { font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background: #f1f5f9; }
+    .warn { color: #b45309; }
+    .err { color: #b91c1c; }
+    .success { color: #15803d; }
+    .loading { text-align: center; padding: 20px; }
+    .spinner { border: 4px solid #f3f4f6; border-top: 4px solid #2563eb; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <header class="header" role="banner">
+    <a href="/" aria-label="Início">
+      <img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display='none'">
+    </a>
+    <div style="margin-left: auto; display: flex; gap: 8px;">
+      <a class="btn ghost" href="/planos.html">Voltar aos Planos</a>
+    </div>
+  </header>
+
+  <main class="wrap wrap-narrow" role="main">
+    <div class="card">
+      <h1 class="mt-0">Checkout de Assinatura</h1>
+      <p class="meta">Confirme os detalhes da sua assinatura mensal.</p>
+    </div>
+
+    <div class="grid2">
+      <!-- Coluna principal: Detalhes -->
+      <div>
+        <div class="card">
+          <h2>Detalhes da Assinatura</h2>
+          
+          <div id="planDetails" class="loading">
+            <div class="spinner"></div>
+            <p>Carregando detalhes...</p>
+          </div>
+
+          <div id="paymentForm" style="display: none;">
+            <div class="hr"></div>
+            
+            <h3>Dados de Pagamento</h3>
+            <form id="checkoutForm">
+              <div style="margin-bottom: 12px;">
+                <label for="cardName" style="display: block; margin-bottom: 4px; font-weight: 500;">Nome no Cartão</label>
+                <input type="text" id="cardName" name="cardName" required style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;">
+              </div>
+
+              <div style="margin-bottom: 12px;">
+                <label for="cardEmail" style="display: block; margin-bottom: 4px; font-weight: 500;">E-mail</label>
+                <input type="email" id="cardEmail" name="cardEmail" required style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;">
+              </div>
+
+              <div style="margin-bottom: 12px;">
+                <label for="cardPhone" style="display: block; margin-bottom: 4px; font-weight: 500;">Telefone</label>
+                <input type="tel" id="cardPhone" name="cardPhone" placeholder="(11) 99999-9999" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;">
+              </div>
+
+              <div style="margin-bottom: 12px;">
+                <label for="cardCPF" style="display: block; margin-bottom: 4px; font-weight: 500;">CPF/CNPJ</label>
+                <input type="text" id="cardCPF" name="cardCPF" placeholder="000.000.000-00" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px;">
+              </div>
+
+              <div class="hr"></div>
+
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn outline" onclick="goBackToPlans()" style="flex: 1;">Cancelar</button>
+                <button type="submit" class="btn" style="flex: 1;" id="submitBtn">Confirmar e Pagar</button>
+              </div>
+            </form>
+
+            <div id="errorMsg" style="display: none; margin-top: 12px; padding: 12px; background: #fee2e2; border: 1px solid #fecaca; border-radius: 6px; color: #b91c1c;"></div>
+            <div id="successMsg" style="display: none; margin-top: 12px; padding: 12px; background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 6px; color: #15803d;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Coluna lateral: Resumo -->
+      <div>
+        <div class="card box">
+          <h3 style="margin-top: 0;">Resumo</h3>
+          
+          <div style="margin-bottom: 12px;">
+            <div class="muted" style="font-size: 12px;">Plano</div>
+            <div id="summaryPlan" style="font-weight: bold; font-size: 18px;">-</div>
+          </div>
+
+          <div style="margin-bottom: 12px;">
+            <div class="muted" style="font-size: 12px;">Valor Mensal</div>
+            <div id="summaryPrice" style="font-weight: bold; font-size: 18px;">-</div>
+          </div>
+
+          <div style="margin-bottom: 12px;">
+            <div class="muted" style="font-size: 12px;">Renovação</div>
+            <div id="summaryRenewal" style="font-size: 14px;">Automática a cada mês</div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div style="margin-bottom: 12px;">
+            <div class="muted" style="font-size: 12px;">Benefícios Inclusos</div>
+            <ul id="benefitsList" style="margin: 8px 0; padding-left: 20px; font-size: 14px;">
+              <li>Carregando...</li>
+            </ul>
+          </div>
+
+          <div class="hr"></div>
+
+          <div style="padding: 12px; background: #f0fdf4; border-radius: 6px; border-left: 4px solid #22c55e;">
+            <div class="muted" style="font-size: 12px;">Taxa de Pagamento via App</div>
+            <div style="font-size: 14px; margin-top: 4px;">
+              <strong>4%</strong> será retido em cada transação de serviço pago via app
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <button class="btn" style="width: 100%;" id="confirmBtn" onclick="submitCheckout()">Confirmar Assinatura</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const PLAN_PRICES = {
+      pro: 29.90,
+      premium: 49.90,
+    };
+
+    const PLAN_BENEFITS = {
+      free: {
+        destaque: false,
+        raioKm: 0,
+        cidadesExtras: 3,
+        fotosMax: 1,
+        leadsMax: 3,
+        metricas: false,
+        top10: false,
+      },
+      pro: {
+        destaque: 'medium',
+        raioKm: 30,
+        cidadesExtras: 5,
+        fotosMax: 5,
+        leadsMax: 15,
+        metricas: 'basic',
+        top10: false,
+      },
+      premium: {
+        destaque: 'high',
+        raioKm: 50,
+        cidadesExtras: 10,
+        fotosMax: 10,
+        leadsMax: -1,
+        metricas: 'advanced',
+        top10: true,
+      },
+    };
+
+    let selectedPlan = null;
+
+    function getQueryParam(name) {
+      const url = new URL(window.location);
+      return url.searchParams.get(name);
+    }
+
+    function displayPlanDetails() {
+      selectedPlan = getQueryParam('plan') || 'pro';
+      
+      if (!PLAN_PRICES[selectedPlan]) {
+        selectedPlan = 'pro';
+      }
+
+      const price = PLAN_PRICES[selectedPlan];
+      const benefits = PLAN_BENEFITS[selectedPlan];
+      const planName = selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1);
+
+      // Atualizar resumo
+      document.getElementById('summaryPlan').textContent = `${planName} Mensal`;
+      document.getElementById('summaryPrice').textContent = `R$ ${price.toFixed(2)}`;
+
+      // Listar benefícios
+      const benefitsList = document.getElementById('benefitsList');
+      const benefitsHTML = `
+        <li>Destaque: ${benefits.destaque ? (benefits.destaque === 'high' ? 'Alto' : 'Médio') : 'Nenhum'}</li>
+        <li>Raio: ${benefits.raioKm} km</li>
+        <li>Cidades extras: ${benefits.cidadesExtras}</li>
+        <li>Fotos: ${benefits.fotosMax}</li>
+        <li>Leads: ${benefits.leadsMax === -1 ? 'Ilimitado' : benefits.leadsMax}/mês</li>
+        <li>Métricas: ${benefits.metricas ? (benefits.metricas === 'advanced' ? 'Avançadas' : 'Básicas') : 'Nenhuma'}</li>
+        <li>Top 10: ${benefits.top10 ? 'Sim' : 'Não'}</li>
+      `;
+      benefitsList.innerHTML = benefitsHTML;
+
+      // Mostrar formulário
+      document.getElementById('planDetails').style.display = 'none';
+      document.getElementById('paymentForm').style.display = 'block';
+    }
+
+    async function submitCheckout() {
+      const name = document.getElementById('cardName').value;
+      const email = document.getElementById('cardEmail').value;
+      const phone = document.getElementById('cardPhone').value;
+      const cpf = document.getElementById('cardCPF').value;
+
+      if (!name || !email) {
+        showError('Nome e e-mail são obrigatórios');
+        return;
+      }
+
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Processando...';
+
+      try {
+        const response = await fetch('/api/pay/asaas/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            plan: selectedPlan,
+            name,
+            email,
+            phone,
+            cpf,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.ok && data.redirectUrl) {
+          showSuccess('Redirecionando para pagamento...');
+          setTimeout(() => {
+            window.location.href = data.redirectUrl;
+          }, 2000);
+        } else {
+          showError(data.error || 'Erro ao processar checkout');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Confirmar e Pagar';
+        }
+      } catch (error) {
+        console.error('Erro:', error);
+        showError('Erro ao processar checkout');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Confirmar e Pagar';
+      }
+    }
+
+    function showError(msg) {
+      const errorDiv = document.getElementById('errorMsg');
+      errorDiv.textContent = msg;
+      errorDiv.style.display = 'block';
+    }
+
+    function showSuccess(msg) {
+      const successDiv = document.getElementById('successMsg');
+      successDiv.textContent = msg;
+      successDiv.style.display = 'block';
+    }
+
+    function goBackToPlans() {
+      window.location.href = '/planos.html';
+    }
+
+    // Inicializar
+    document.addEventListener('DOMContentLoaded', displayPlanDetails);
+  </script>
+</body>
+</html>
+
