@@ -24,7 +24,8 @@ const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
 const compression = require("compression");
-
+const cookieParser = require("cookie-parser");
+const session = require("express-session");
 
 const QRCode = require("qrcode");
 const rateLimit = require("express-rate-limit");
