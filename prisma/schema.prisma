@@ -7,113 +7,103 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-///////////////////////////////////////////////////////////////
-// MODELO DE USUÁRIO
-///////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////
 model Usuario {
-  id             Int            @id @default(autoincrement())
-  nome           String
-  email          String         @unique
-  senha          String
-  tipo           String         // "cliente" ou "profissional"
-  criadoEm       DateTime       @default(now())
-  profissional   Profissional?
-  assinatura     Assinatura[]
+  id           Int           @id @default(autoincrement())
+  nome         String
+  email        String        @unique
+  senha        String
+  tipo         String
+  criadoEm     DateTime      @default(now())
+  profissional Profissional?
 }
 
-///////////////////////////////////////////////////////////////
-// MODELO DE PROFISSIONAL
-///////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////
 model Profissional {
-  id                Int             @id @default(autoincrement())
-  usuarioId         Int             @unique
-  nome              String
-  idade             Int
-  tempoExperiencia  Int
-  fotoUrl           String?
-  descricao         String?
-  endereco          Endereco?
-  servicos          Servico[]
-  avaliacoes        Avaliacao[]
-  mensagens         Mensagem[]
-  criadoEm          DateTime        @default(now())
-  usuario           Usuario         @relation(fields: [usuarioId], references: [id])
+  id               Int         @id @default(autoincrement())
+  usuarioId        Int         @unique
+  nome             String
+  idade            Int
+  tempoExperiencia Int
+  fotoUrl          String?
+  descricao        String?
+  criadoEm         DateTime    @default(now())
+  avaliacoes       Avaliacao[]
+  endereco         Endereco?
+  mensagens        Mensagem[]
+  usuario          Usuario     @relation(fields: [usuarioId], references: [id])
+  servicos         Servico[]
 }
 
-///////////////////////////////////////////////////////////////
-// MODELO DE ENDEREÇO
-///////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////
 model Endereco {
-  id              Int            @id @default(autoincrement())
-  profissionalId  Int            @unique
-  cidade          String
-  bairro          String
-  estado          String
-  latitude        Float?
-  longitude       Float?
-  profissional    Profissional   @relation(fields: [profissionalId], references: [id])
+  id             Int          @id @default(autoincrement())
+  profissionalId Int          @unique
+  cidade         String
+  bairro         String
+  estado         String
+  latitude       Float?
+  longitude      Float?
+  profissional   Profissional @relation(fields: [profissionalId], references: [id])
 }
 
-///////////////////////////////////////////////////////////////
-// MODELO DE CATEGORIA
-///////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////
 model Categoria {
-  id          Int         @id @default(autoincrement())
-  nome        String      @unique
-  servicos    Servico[]
+  id       Int       @id @default(autoincrement())
+  nome     String    @unique
+  servicos Servico[]
 }
 
-///////////////////////////////////////////////////////////////
-// MODELO DE SERVIÇO
-///////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////
 model Servico {
-  id               Int             @id @default(autoincrement())
-  profissionalId   Int
-  categoriaId      Int
-  titulo           String
-  descricao        String
-  preco            Float
-  publicado        Boolean         @default(true)
-  criadoEm         DateTime        @default(now())
-  profissional     Profissional    @relation(fields: [profissionalId], references: [id])
-  categoria        Categoria       @relation(fields: [categoriaId], references: [id])
+  id             Int          @id @default(autoincrement())
+  profissionalId Int
+  categoriaId    Int
+  titulo         String
+  descricao      String
+  preco          Float
+  publicado      Boolean      @default(true)
+  criadoEm       DateTime     @default(now())
+  categoria      Categoria    @relation(fields: [categoriaId], references: [id])
+  profissional   Profissional @relation(fields: [profissionalId], references: [id])
 }
 
-///////////////////////////////////////////////////////////////
-// MODELO DE AVALIAÇÃO
-///////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////
 model Avaliacao {
-  id               Int             @id @default(autoincrement())
-  profissionalId   Int
-  nota             Int
-  comentario       String?
-  clienteNome      String
-  criadoEm         DateTime        @default(now())
-  profissional     Profissional    @relation(fields: [profissionalId], references: [id])
+  id             Int          @id @default(autoincrement())
+  profissionalId Int
+  nota           Int
+  comentario     String?
+  clienteNome    String
+  criadoEm       DateTime     @default(now())
+  profissional   Profissional @relation(fields: [profissionalId], references: [id])
 }
 
-///////////////////////////////////////////////////////////////
-// MODELO DE MENSAGEM
-///////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////
 model Mensagem {
-  id               Int             @id @default(autoincrement())
-  profissionalId   Int
-  nomeCliente      String
-  contato          String
-  mensagem         String
-  respondido       Boolean         @default(false)
-  criadoEm         DateTime        @default(now())
-  profissional     Profissional    @relation(fields: [profissionalId], references: [id])
+  id             Int          @id @default(autoincrement())
+  profissionalId Int
+  nomeCliente    String
+  contato        String
+  mensagem       String
+  respondido     Boolean      @default(false)
+  criadoEm       DateTime     @default(now())
+  profissional   Profissional @relation(fields: [profissionalId], references: [id])
 }
 
-///////////////////////////////////////////////////////////////
-// MODELO DE ASSINATURA
-///////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////
+/// ////////////////////////////////////////////////////////////
 model Assinatura {
-  id               Int             @id @default(autoincrement())
-  usuarioId        Int
-  plano            String
-  ativo            Boolean         @default(true)
-  criadoEm         DateTime        @default(now())
-  usuario          Usuario         @relation(fields: [usuarioId], references: [id])
+  id        Int      @id @default(autoincrement())
+  usuarioId Int
+  plano     String
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
 }
