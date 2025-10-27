@@ -184,6 +184,14 @@
   </main>
 
   <script>
+    // Constantes de planos
+    const PLAN_PRICES = { pro: 29.90, premium: 49.90 };
+    const PLAN_BENEFITS = {
+      free: { destaque: false, raioKm: 0, cidadesExtras: 3, fotosMax: 1, leadsMax: 3, metricas: false, top10: false },
+      pro: { destaque: 'medium', raioKm: 30, cidadesExtras: 5, fotosMax: 5, leadsMax: 15, metricas: 'basic', top10: false },
+      premium: { destaque: 'high', raioKm: 50, cidadesExtras: 10, fotosMax: 10, leadsMax: -1, metricas: 'advanced', top10: true }
+    };
+
     // Mantém intenção de plano quando o usuário vem por ?plan=pro|premium
     const u = new URL(location.href);
     const planIntent = (u.searchParams.get('plan')||'').toLowerCase();
@@ -194,7 +202,39 @@
     // Helpers
     function digits(s){ return String(s||'').replace(/\D/g,''); }
 
-    // Fluxo de assinatura
+    // Carregar status do plano atual
+    async function loadCurrentPlanStatus() {
+      try {
+        const response = await fetch('/api/plano/status');
+        const data = await response.json();
+        if (data.ok) {
+          displayCurrentPlanInfo(data);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar status do plano:', error);
+      }
+    }
+
+    function displayCurrentPlanInfo(data) {
+      const section = document.querySelector('.card.hero');
+      if (!section) return;
+      
+      const planName = data.plano.charAt(0).toUpperCase() + data.plano.slice(1);
+      const statusText = data.statusAssinatura === 'ativa' ? '✅ Ativo' : '⏸️ Inativo';
+      const expiryText = data.validadePlano ? new Date(data.validadePlano).toLocaleDateString('pt-BR') : '-';
+      
+      const infoHTML = `
+        <div style="margin-top: 16px; padding: 12px; background: #f1f5f9; border-radius: 8px; font-size: 14px;">
+          <strong>Seu plano atual:</strong> ${planName} | ${statusText} | Válido até: ${expiryText}
+          ${data.plano !== 'free' && data.statusAssinatura === 'ativa' ? `
+            <button class="btn ghost" style="margin-left: 8px;" onclick="cancelarPlano()">Cancelar</button>
+          ` : ''}
+        </div>
+      `;
+      section.insertAdjacentHTML('beforeend', infoHTML);
+    }
+
+    // Fluxo de assinatura (atualizado)
     async function assinarPlano(plan){ // 'pro' | 'premium'
       try {
         // se não estiver logado, manda para o login mantendo intenção
@@ -204,7 +244,7 @@
           return;
         }
 
-        // dados do profissional logado — preencha no template do painel quando possível
+        // dados do profissional logado
         const proId       = window.PRO_ID;
         const name        = window.PRO_NAME;
         const email       = window.PRO_EMAIL;
@@ -215,35 +255,57 @@
           return;
         }
 
-        // 1) garantir customer no Asaas (o endpoint salva no seu JSON se receber proId)
-        const cRes = await fetch('/api/pay/asaas/customer', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ name, email, mobilePhone, proId })
+        // Usar nova rota de checkout
+        const checkoutRes = await fetch('/api/pay/asaas/checkout', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ plan })
         });
-        const cJs = await cRes.json();
-        if(!cJs.ok){ alert('Falha ao preparar cobrança.'); return; }
-        const customerId = cJs.customerId;
+        const checkoutData = await checkoutRes.json();
 
-        // 2) criar assinatura e abrir a 1ª fatura
-        const sRes = await fetch('/api/pay/asaas/subscription/create', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ customerId, plan, proId })
-        });
-        const sJs = await sRes.json();
-        if(!sJs.ok){ alert('Falha ao criar assinatura: ' + (sJs.error||'')); return; }
+        if (!checkoutData.ok) {
+          alert('Falha ao criar checkout: ' + (checkoutData.error || ''));
+          return;
+        }
 
-        if (sJs.url) {
-          window.location.href = sJs.url;
+        if (checkoutData.redirectUrl) {
+          window.location.href = checkoutData.redirectUrl;
         } else {
-          alert('Assinatura criada. Aguarde a fatura aparecer no Asaas.');
+          alert('Assinatura criada. Aguarde a fatura aparecer.');
         }
       } catch(e){
         console.error(e);
         alert('Erro inesperado. Tente novamente.');
       }
     }
+
+    // Cancelar assinatura
+    async function cancelarPlano() {
+      if (!confirm('Tem certeza que deseja cancelar sua assinatura? Você voltará ao plano Free.')) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/plano/cancelar', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'}
+        });
+        const data = await response.json();
+
+        if (data.ok) {
+          alert('Assinatura cancelada com sucesso!');
+          location.reload();
+        } else {
+          alert('Erro ao cancelar: ' + (data.error || ''));
+        }
+      } catch (error) {
+        console.error('Erro ao cancelar:', error);
+        alert('Erro ao processar cancelamento');
+      }
+    }
+
+    // Carregar status ao abrir a página
+    document.addEventListener('DOMContentLoaded', loadCurrentPlanStatus);
   </script>
 </body>
 </html>
