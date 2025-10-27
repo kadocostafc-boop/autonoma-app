@@ -538,8 +538,8 @@ function requireAuth(req, res, next) {
     }
     return res.redirect('/painel.html'); // Redireciona páginas HTML
   }
-  // Para compatibilidade, define usuarioId como proId
-  req.session.usuarioId = req.session.painel.proId;
+  // Remove a linha de criação de req.session.usuarioId para evitar conflitos.
+  // As rotas abaixo usarão req.session.painel.proId diretamente.
   next();
 }
 
@@ -549,7 +549,7 @@ function requireAuth(req, res, next) {
 app.post('/api/pay/asaas/checkout', express.json(), requireAuth, async (req, res) => {
   try {
     const { plan } = req.body || {};
-    const usuarioId = req.session.usuarioId;
+    const usuarioId = req.session.painel.proId;
 
     if (!PLAN_PRICES[plan]) {
       return res.status(400).json({
@@ -722,7 +722,7 @@ app.post('/api/pay/asaas/webhook', express.json(), async (req, res) => {
 // POST /api/plano/cancelar
 app.post('/api/plano/cancelar', express.json(), requireAuth, async (req, res) => {
   try {
-    const usuarioId = req.session.usuarioId;
+    const usuarioId = req.session.painel.proId;
 
     const db = readDB();
     const profIndex = db.findIndex(p => p.id === usuarioId);
@@ -767,7 +767,7 @@ app.post('/api/plano/cancelar', express.json(), requireAuth, async (req, res) =>
 // GET /api/plano/status
 app.get('/api/plano/status', requireAuth, async (req, res) => {
   try {
-    const usuarioId = req.session.usuarioId;
+    const usuarioId = req.session.painel.proId;
 
     const profissional = readDB().find(p => p.id === usuarioId);
 
@@ -910,7 +910,7 @@ function calculatePaymentFee(valor, metodo = 'app') {
 app.post('/api/pagamento/processar', express.json(), requireAuth, async (req, res) => {
   try {
     const { profissionalId, valor, metodo } = req.body || {};
-    const usuarioId = req.session.usuarioId;
+    const usuarioId = req.session.painel.proId;
 
     if (!profissionalId || !valor || !metodo) {
       return res.status(400).json({
@@ -1006,7 +1006,7 @@ app.get('/api/pagamento/simular', (req, res) => {
 // GET /api/pagamento/historico
 app.get('/api/pagamento/historico', requireAuth, async (req, res) => {
   try {
-    const usuarioId = req.session.usuarioId;
+    const usuarioId = req.session.painel.proId;
 
     // TODO: Implementar com Prisma
     // const pagamentos = await prisma.pagamentoViaApp.findMany({
