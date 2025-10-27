@@ -236,9 +236,17 @@ app.post("/auth/pro/reset", async (req, res) => {
 
   res.json({ ok: true, message: "Senha redefinida com sucesso" });
 });
-// ===== Redirecionar /painel e atalhos para o login =====
-app.get(['/painel', '/pa'], (_req, res) => {
-  res.redirect(301, '/painel_login.html');
+// ===== Rotas do Painel do Profissional (Protegidas) =====
+// Rota /painel é protegida, redireciona para o painel.html (que também é protegido)
+app.get(['/painel', '/pa'], requireProAuth, (_req, res) => {
+  res.redirect(302, '/painel.html');
+});
+
+// Rota de Pagamento (Protegida)
+app.get("/painel/pagamento", requireProAuth, (req, res) => {
+  // A rota /painel/pagamento deve simplesmente redirecionar para o checkout.html,
+  // que por sua vez usará o JS para chamar a API de criação de assinatura.
+  res.sendFile(path.join(PUBLIC_DIR, "checkout.html"));
 });
 // ===== Forçar HTTPS e controlar redirects (exceto /health e /healthz) =====
 const PRIMARY_HOST = String(process.env.PRIMARY_HOST || '')
@@ -2550,9 +2558,8 @@ app.get("/api/painel/me", (req, res) => {
   }
 });
 
-// Painel HTML (somente com sessão válida)
-app.get("/painel.html", (req, res) => {
-  if (!(req.session?.painel?.ok)) return res.redirect("/painel_login.html");
+// Painel HTML (agora usa o middleware requireProAuth para proteção)
+app.get("/painel.html", requireProAuth, (_req, res) => {
   return res.sendFile(path.join(PUBLIC_DIR, "painel.html"));
 });
 
@@ -2813,6 +2820,32 @@ app.get("/api/checkout/pro/:id", (req, res) => {
   });
 });
 
+// ===========================[ Assinaturas Asaas (Stub) ]======================
+app.post("/api/pay/asaas/subscription/create", requireProAuth, (req, res) => {
+  try {
+    const { proId, plan, buyer } = req.body || {};
+    const id = Number(proId || "0");
+    const p = readDB().find((x) => Number(x.id) === id && !x.excluido);
+    if (!p) return res.status(404).json({ ok: false, error: "Profissional não encontrado" });
+    if (!(plan === "pro" || plan === "premium")) return res.status(400).json({ ok: false, error: "Plano inválido" });
+
+    // Simulação da criação de assinatura no Asaas
+    // Em um ambiente real, esta função chamaria a API do Asaas para:
+    // 1. Criar/Obter o cliente no Asaas (usando CPF/Nome do buyer)
+    // 2. Criar a assinatura (Subscription)
+    // 3. Obter a URL de checkout (Checkout URL)
+    
+    // Stub: Retorna uma URL de checkout fictícia que redireciona para o painel
+    const checkoutUrl = `/painel.html?payment_status=pending&plan=${plan}&asaas_id=sub_${Date.now()}`;
+
+    res.json({ ok: true, url: checkoutUrl });
+  } catch (e) {
+    console.error("[ERR /api/pay/asaas/subscription/create]", e);
+    res.status(500).json({ ok: false, error: String(e) });
+  }
+});
+
+
 // ===========================[ Denúncias ]======================
 app.post("/api/denuncias", (req, res) => {
   try {
@@ -2939,6 +2972,15 @@ app.delete("/api/favoritos/:id", (req, res) => {
     res.status(500).json({ ok: false, error: String(e) });
   }
 });
+
+// ===================[ Profissional — login & dashboard ]=================
+function requireProAuth(req, res, next) {
+  // Se a sessão tem o ID do profissional (armazenado em req.session.painel.proId), continua
+  if (req.session?.painel?.ok && req.session.painel.proId) return next();
+  
+  // Se não, redireciona para o login
+  return res.redirect("/painel_login.html");
+}
 
 // ===================[ Admin — login & dashboard ]=================
 function requireAdmin(req, res, next) { if (req.session?.isAdmin) return next(); return res.status(401).json({ ok: false }); }
