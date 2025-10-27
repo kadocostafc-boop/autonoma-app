@@ -26,6 +26,8 @@ const crypto = require("crypto");
 const compression = require("compression");
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
+const fetch = require('node-fetch'); // Necessário para asaasRequest
+
 
 const QRCode = require("qrcode");
 const rateLimit = require("express-rate-limit");
@@ -456,16 +458,662 @@ async function asaasRequest(endpoint, options = {}) {
 }
 
 // ============================================================================
-// INTEGRAÇÃO DE MONETIZAÇÃO
+// INTEGRAÇÃO DE MONETIZAÇÃO (Rotas e Funções)
 // ============================================================================
 
-// Importar rotas de pagamento e middleware
-const asaasPaymentRouter = require('./routes/asaas-payment');
-const paymentFeeRouter = require('./routes/payment-fee');
+// === Funções e Constantes do asaas-payment.js ===
 
-// Registrar rotas
-app.use(asaasPaymentRouter);
-app.use(paymentFeeRouter);
+const ASAAS_KEY = process.env.ASAAS_API_KEY;
+const ASAAS_ENV = process.env.ASAAS_ENV || 'sandbox';
+const ASAAS_BASE_URL =
+  ASAAS_ENV === 'prod'
+    ? 'https://api.asaas.com/v3'
+    : 'https://sandbox.asaas.com/api/v3';
+
+const ASAAS_WEBHOOK_TOKEN = process.env.ASAAS_WEBHOOK_TOKEN;
+
+// Preços dos planos (em reais)
+const PLAN_PRICES = {
+  pro: 29.90,
+  premium: 49.90,
+};
+
+// Benefícios por plano
+const PLAN_BENEFITS = {
+  free: {
+    destaque: false,
+    raioKm: 0,
+    cidadesExtras: 3,
+    fotosMax: 1,
+    leadsMax: 3,
+    metricas: false,
+    top10: false,
+  },
+  pro: {
+    destaque: 'medium',
+    raioKm: 30,
+    cidadesExtras: 5,
+    fotosMax: 5,
+    leadsMax: 15,
+    metricas: 'basic',
+    top10: false,
+  },
+  premium: {
+    destaque: 'high',
+    raioKm: 50,
+    cidadesExtras: 10,
+    fotosMax: 10,
+    leadsMax: -1, // ilimitado
+    metricas: 'advanced',
+    top10: true,
+  },
+};
+
+// Função auxiliar para chamar API Asaas
+async function asaasRequest(endpoint, options = {}) {
+  const url = `${ASAAS_BASE_URL}${endpoint}`;
+  
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${ASAAS_KEY}`,
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Erro Asaas ${res.status}: ${err}`);
+  }
+
+  return res.json();
+}
+
+// Middleware de autenticação (usando req.session.painel.proId)
+function requireAuth(req, res, next) {
+  if (!req.session || !req.session.painel?.proId) {
+    // Redireciona para login se não autenticado
+    if (req.originalUrl.startsWith('/api/')) {
+      return res.status(401).json({ ok: false, error: 'Não autenticado' });
+    }
+    return res.redirect('/painel.html'); // Redireciona páginas HTML
+  }
+  // Para compatibilidade, define usuarioId como proId
+  req.session.usuarioId = req.session.painel.proId;
+  next();
+}
+
+// === Rotas do asaas-payment.js ===
+
+// POST /api/pay/asaas/checkout
+app.post('/api/pay/asaas/checkout', express.json(), requireAuth, async (req, res) => {
+  try {
+    const { plan } = req.body || {};
+    const usuarioId = req.session.usuarioId;
+
+    if (!PLAN_PRICES[plan]) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Plano inválido. Use "pro" ou "premium".',
+      });
+    }
+
+    // Aqui você buscaria os dados do usuário do banco de dados
+    // Por enquanto, vamos usar dados da sessão (simplificado)
+    const pro = readDB().find(p => p.id === usuarioId) || {};
+    const email = pro.email;
+    const nome = pro.nome;
+
+    if (!email || !nome) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Dados do usuário incompletos (e-mail ou nome)',
+      });
+    }
+
+    // 1) Criar ou obter customer no Asaas
+    let customerId = pro.asaasCustomerId;
+
+    if (!customerId) {
+      const customer = await asaasRequest('/customers', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: nome,
+          email: email,
+          mobilePhone: pro.whatsapp || '',
+          cpfCnpj: pro.cpf || '',
+        }),
+      });
+      customerId = customer.id;
+      // TODO: Salvar customerId no banco de dados (JSON)
+      const db = readDB();
+      const idx = db.findIndex(p => p.id === usuarioId);
+      if (idx !== -1) {
+        db[idx].asaasCustomerId = customerId;
+        writeDB(db);
+      }
+    }
+
+    // 2) Criar assinatura no Asaas
+    const value = PLAN_PRICES[plan];
+    const description = plan === 'premium' ? 'Plano Premium Mensal' : 'Plano Pro Mensal';
+    const today = new Date().toISOString().slice(0, 10);
+
+    const subscription = await asaasRequest('/subscriptions', {
+      method: 'POST',
+      body: JSON.stringify({
+        customer: customerId,
+        value,
+        cycle: 'MONTHLY',
+        nextDueDate: today,
+        description,
+        notificationEnabled: true,
+      }),
+    });
+
+    // 3) Obter link de pagamento
+    let paymentUrl = null;
+    try {
+      const payments = await asaasRequest(
+        `/payments?subscription=${subscription.id}&status=PENDING&limit=1`,
+        { method: 'GET' }
+      );
+      const payment = payments?.data?.[0];
+      paymentUrl = payment?.invoiceUrl || payment?.bankSlipUrl || null;
+    } catch (e) {
+      console.error('Erro ao obter URL de pagamento:', e.message);
+    }
+
+    // 4) Salvar assinatura no banco de dados (JSON)
+    const db = readDB();
+    const idx = db.findIndex(p => p.id === usuarioId);
+    if (idx !== -1) {
+      db[idx].asaasSubscriptionId = subscription.id;
+      db[idx].plano = plan;              // 'pro' ou 'premium'
+      db[idx].statusAssinatura = 'pendente';   // aguardando pagamento
+      writeDB(db);
+    }
+
+    return res.json({
+      ok: true,
+      subscriptionId: subscription.id,
+      paymentUrl: paymentUrl,
+      redirectUrl: paymentUrl || `https://dashboard.asaas.com/subscription/${subscription.id}`,
+    });
+  } catch (e) {
+    console.error('[Asaas][checkout] erro:', e.message);
+    return res.status(400).json({
+      ok: false,
+      error: e.message,
+    });
+  }
+});
+
+// POST /api/pay/asaas/webhook
+app.post('/api/pay/asaas/webhook', express.json(), async (req, res) => {
+  try {
+    // Validar token do webhook
+    const token = req.headers['asaas-access-token'];
+    if (token !== ASAAS_WEBHOOK_TOKEN) {
+      console.warn('[Asaas] Webhook com token inválido:', token);
+      return res.status(401).json({ ok: false, error: 'Token inválido' });
+    }
+
+    const event = req.body;
+    console.log('[Asaas] Webhook recebido:', event.event);
+
+    const eventType = event.event;
+    const subscriptionId = event.subscription || event.payment?.subscription;
+    const payment = event.payment || {};
+
+    // Encontrar profissional pela assinatura
+    const db = readDB();
+    const profIndex = db.findIndex(p => p.asaasSubscriptionId === subscriptionId);
+    
+    if (profIndex === -1) {
+      console.warn(`[Asaas] Profissional não encontrado para subscription: ${subscriptionId}`);
+      return res.json({ ok: true });
+    }
+
+    const prof = db[profIndex];
+
+    // Tratar eventos
+    switch (eventType) {
+      case 'PAYMENT_CONFIRMED':
+      case 'PAYMENT_RECEIVED':
+        console.log('✅ Pagamento confirmado:', payment.id);
+        // Atualizar status
+        prof.statusAssinatura = 'ativa';
+        prof.plano = prof.plano === 'free' ? 'pro' : prof.plano; // Garante que o plano é ativado
+        prof.validadePlano = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        break;
+
+      case 'PAYMENT_OVERDUE':
+        console.log('⚠️ Pagamento atrasado:', payment.id);
+        prof.statusAssinatura = 'pendente';
+        break;
+
+      case 'PAYMENT_REFUNDED':
+      case 'SUBSCRIPTION_DELETED':
+      case 'SUBSCRIPTION_CANCELED':
+        console.log('❌ Assinatura cancelada/estornada:', subscriptionId);
+        // Voltar para plano free
+        prof.plano = 'free';
+        prof.statusAssinatura = 'cancelada';
+        prof.validadePlano = null;
+        prof.asaasSubscriptionId = null;
+        break;
+
+      default:
+        console.log('📘 Evento ignorado:', eventType);
+    }
+    
+    // Salvar no banco
+    db[profIndex] = prof;
+    writeDB(db);
+
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('[Asaas] Erro no webhook:', e.message);
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// POST /api/plano/cancelar
+app.post('/api/plano/cancelar', express.json(), requireAuth, async (req, res) => {
+  try {
+    const usuarioId = req.session.usuarioId;
+
+    const db = readDB();
+    const profIndex = db.findIndex(p => p.id === usuarioId);
+
+    if (profIndex === -1) {
+      return res.status(404).json({ ok: false, error: 'Profissional não encontrado' });
+    }
+
+    const prof = db[profIndex];
+
+    if (!prof.asaasSubscriptionId) {
+      return res.status(404).json({ ok: false, error: 'Nenhuma assinatura ativa encontrada' });
+    }
+
+    // Cancelar no Asaas
+    await asaasRequest(`/subscriptions/${prof.asaasSubscriptionId}`, {
+      method: 'DELETE',
+    });
+
+    // Atualizar no banco
+    prof.plano = 'free';
+    prof.statusAssinatura = 'cancelada';
+    prof.validadePlano = null;
+    prof.asaasSubscriptionId = null;
+
+    db[profIndex] = prof;
+    writeDB(db);
+
+    return res.json({
+      ok: true,
+      message: 'Assinatura cancelada com sucesso',
+    });
+  } catch (e) {
+    console.error('[Plano] Erro ao cancelar:', e.message);
+    return res.status(500).json({
+      ok: false,
+      error: e.message,
+    });
+  }
+});
+
+// GET /api/plano/status
+app.get('/api/plano/status', requireAuth, async (req, res) => {
+  try {
+    const usuarioId = req.session.usuarioId;
+
+    const profissional = readDB().find(p => p.id === usuarioId);
+
+    if (!profissional) {
+      return res.status(404).json({ ok: false, error: 'Profissional não encontrado' });
+    }
+
+    const benefits = PLAN_BENEFITS[profissional.plano] || PLAN_BENEFITS.free;
+
+    return res.json({
+      ok: true,
+      plano: profissional.plano,
+      statusAssinatura: profissional.statusAssinatura,
+      validadePlano: profissional.validadePlano,
+      beneficios: benefits,
+      limiteLeads: benefits.leadsMax,
+      leadsUsados: profissional.totalLeadsMes || 0,
+    });
+  } catch (e) {
+    console.error('[Plano] Erro ao obter status:', e.message);
+    return res.status(500).json({
+      ok: false,
+      error: e.message,
+    });
+  }
+});
+
+// GET /api/plano/beneficios/:plan
+app.get('/api/plano/beneficios/:plan', (req, res) => {
+  const plan = req.params.plan.toLowerCase();
+  const benefits = PLAN_BENEFITS[plan];
+
+  if (!benefits) {
+    return res.status(404).json({
+      ok: false,
+      error: 'Plano não encontrado',
+    });
+  }
+
+  return res.json({
+    ok: true,
+    plano: plan,
+    preco: PLAN_PRICES[plan] || 0,
+    beneficios: benefits,
+  });
+});
+
+// ============================================================================
+// === Funções e Constantes do payment-fee.js ===
+// ============================================================================
+
+const TAX_RATE = 0.04; // 4%
+
+// Função para verificar e fazer downgrade automático (chamada pelo webhook)
+async function checkAndDowngradePlan(usuarioId) {
+  try {
+    // TODO: Implementar com Prisma
+    // const profissional = await prisma.profissional.findUnique({
+    //   where: { usuarioId },
+    // });
+
+    // if (!profissional) return null;
+
+    // // Se o plano expirou, downgrade para Free
+    // if (profissional.validadePlano && new Date(profissional.validadePlano) < new Date()) {
+    //   const updated = await prisma.profissional.update({
+    //     where: { usuarioId },
+    //     data: {
+    //       plano: 'free',
+    //       statusAssinatura: 'cancelada',
+    //       validadePlano: null,
+    //       limiteLeadsMes: 3,
+    //       totalLeadsMes: 0,
+    //     },
+    //   });
+
+    //   console.log(`✅ Profissional ${usuarioId} downgrade para Free (plano expirou)`);
+    //   return updated;
+    // }
+
+    return null;
+  } catch (e) {
+    console.error('[Downgrade] Erro:', e.message);
+    throw e;
+  }
+}
+
+// Função para resetar leads mensais (chamada diariamente ou quando necessário)
+async function resetMonthlyLeads() {
+  try {
+    // TODO: Implementar com Prisma
+    // const now = new Date();
+    // const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // // Resetar leads de todos os profissionais no primeiro dia do mês
+    // const updated = await prisma.profissional.updateMany({
+    //   where: {
+    //     criadoEm: { lt: firstDayOfMonth },
+    //   },
+    //   data: {
+    //     totalLeadsMes: 0,
+    //   },
+    // });
+
+    // console.log(`✅ Leads mensais resetados para ${updated.count} profissionais`);
+    // return updated;
+
+    return null;
+  } catch (e) {
+    console.error('[ResetLeads] Erro:', e.message);
+    throw e;
+  }
+}
+
+// Função para calcular taxa de pagamento
+function calculatePaymentFee(valor, metodo = 'app') {
+  const valorNumerico = parseFloat(valor);
+  
+  if (metodo === 'whatsapp') {
+    return {
+      valor: valorNumerico,
+      taxa: 0,
+      valorComTaxa: valorNumerico,
+      taxaPercentual: 0,
+    };
+  }
+
+  const taxa = valorNumerico * TAX_RATE;
+  return {
+    valor: valorNumerico,
+    taxa: parseFloat(taxa.toFixed(2)),
+    valorComTaxa: parseFloat((valorNumerico + taxa).toFixed(2)),
+    taxaPercentual: 4,
+  };
+}
+
+// === Rotas do payment-fee.js ===
+
+// POST /api/pagamento/processar
+app.post('/api/pagamento/processar', express.json(), requireAuth, async (req, res) => {
+  try {
+    const { profissionalId, valor, metodo } = req.body || {};
+    const usuarioId = req.session.usuarioId;
+
+    if (!profissionalId || !valor || !metodo) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Informe profissionalId, valor e metodo (pix|cartao|whatsapp)',
+      });
+    }
+
+    const valorNumerico = parseFloat(valor);
+    if (isNaN(valorNumerico) || valorNumerico <= 0) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Valor inválido',
+      });
+    }
+
+    let taxa = 0;
+    let valorComTaxa = valorNumerico;
+
+    // Aplicar taxa apenas se o método não é WhatsApp direto
+    if (metodo !== 'whatsapp') {
+      taxa = valorNumerico * TAX_RATE;
+      valorComTaxa = valorNumerico + taxa;
+    }
+
+    // TODO: Salvar pagamento no banco (JSON/Prisma)
+    // const pagamento = await prisma.pagamentoViaApp.create({...});
+
+    return res.json({
+      ok: true,
+      pagamento: {
+        valor: valorNumerico,
+        taxa: taxa,
+        valorComTaxa: valorComTaxa,
+        metodo: metodo,
+        taxaPercentual: metodo === 'whatsapp' ? 0 : 4,
+        descricao: metodo === 'whatsapp' 
+          ? 'Sem taxa - Contato direto via WhatsApp'
+          : `Taxa de ${(TAX_RATE * 100).toFixed(0)}% aplicada ao pagamento via app`,
+      },
+    });
+  } catch (e) {
+    console.error('[Pagamento] Erro ao processar:', e.message);
+    return res.status(500).json({
+      ok: false,
+      error: e.message,
+    });
+  }
+});
+
+// GET /api/pagamento/simular
+app.get('/api/pagamento/simular', (req, res) => {
+  try {
+    const { valor, metodo } = req.query || {};
+
+    if (!valor || !metodo) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Informe valor e metodo (pix|cartao|whatsapp)',
+      });
+    }
+
+    const valorNumerico = parseFloat(valor);
+    if (isNaN(valorNumerico) || valorNumerico <= 0) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Valor inválido',
+      });
+    }
+
+    const simulacao = calculatePaymentFee(valorNumerico, metodo);
+
+    return res.json({
+      ok: true,
+      simulacao: {
+        ...simulacao,
+        taxa: parseFloat(simulacao.taxa.toFixed(2)),
+        valorComTaxa: parseFloat(simulacao.valorComTaxa.toFixed(2)),
+        descricao: simulacao.taxaPercentual === 0 
+          ? 'Sem taxa - Contato direto via WhatsApp'
+          : `Taxa de 4% aplicada ao pagamento via app`,
+      },
+    });
+  } catch (e) {
+    console.error('[Pagamento] Erro ao simular:', e.message);
+    return res.status(500).json({
+      ok: false,
+      error: e.message,
+    });
+  }
+});
+
+// GET /api/pagamento/historico
+app.get('/api/pagamento/historico', requireAuth, async (req, res) => {
+  try {
+    const usuarioId = req.session.usuarioId;
+
+    // TODO: Implementar com Prisma
+    // const pagamentos = await prisma.pagamentoViaApp.findMany({
+    //   where: { usuarioId },
+    //   orderBy: { criadoEm: 'desc' },
+    //   take: 50,
+    // });
+
+    return res.json({
+      ok: true,
+      pagamentos: [], // TODO: retornar pagamentos reais
+    });
+  } catch (e) {
+    console.error('[Pagamento] Erro ao obter histórico:', e.message);
+    return res.status(500).json({
+      ok: false,
+      error: e.message,
+    });
+  }
+});
+
+// ============================================================================
+// === Middleware de Autorização por Plano (plan-authorization.js) ===
+// ============================================================================
+
+const PLAN_LIMITS = {
+  free: {
+    destaque: false,
+    raioKm: 0,
+    cidadesExtras: 3,
+    fotosMax: 1,
+    leadsMax: 3,
+    metricas: false,
+    top10: false,
+  },
+  pro: {
+    destaque: true,
+    raioKm: 30,
+    cidadesExtras: 5,
+    fotosMax: 5,
+    leadsMax: 15,
+    metricas: true,
+    top10: false,
+  },
+  premium: {
+    destaque: true,
+    raioKm: 50,
+    cidadesExtras: 10,
+    fotosMax: 10,
+    leadsMax: -1, // ilimitado
+    metricas: true,
+    top10: true,
+  },
+};
+
+/**
+ * Função para obter o limite de um recurso para um plano
+ * @param {string} plano - Plano do usuário
+ * @param {string} recurso - Recurso
+ * @returns {any} - Limite do recurso
+ */
+function getPlanLimit(plano, recurso) {
+  const limits = PLAN_LIMITS[plano] || PLAN_LIMITS.free;
+  return limits[recurso];
+}
+
+/**
+ * Middleware para verificar se o usuário pode usar um recurso específico
+ * @param {string} recurso - Nome do recurso (destaque, raio, cidades, fotos, leads, metricas, top10)
+ */
+function requirePlanFeature(recurso) {
+  return async (req, res, next) => {
+    if (!req.session || !req.session.painel?.proId) {
+      return res.status(401).json({ ok: false, error: 'Não autenticado' });
+    }
+    
+    const usuarioId = req.session.painel.proId;
+
+    // TODO: Implementar com Prisma
+    const profissional = readDB().find(p => p.id === usuarioId);
+
+    if (!profissional) {
+      return res.status(404).json({ ok: false, error: 'Profissional não encontrado' });
+    }
+
+    const limits = PLAN_LIMITS[profissional.plano] || PLAN_LIMITS.free;
+
+    if (!limits[recurso]) {
+      return res.status(403).json({
+        ok: false,
+        error: `Recurso "${recurso}" não disponível no plano ${profissional.plano}`,
+      });
+    }
+
+    next();
+  };
+}
+
+// Middlewares específicos (ex: requirePhotoLimit, requireLeadLimit, etc.)
+// Podem ser criados conforme a necessidade, usando requirePlanFeature como base.
+
+// Exemplo: Middleware para bloquear acesso a métricas
+const requireMetricsAccess = requirePlanFeature('metricas');
+
+// Exemplo: Middleware para bloquear acesso ao Top 10
+const requireTop10Access = requirePlanFeature('top10');
 
 // =========================[ Assinaturas Pro/Premium ]=========================
 
