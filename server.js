@@ -18,16 +18,17 @@
 require("dotenv").config();
 
 const express = require("express");
-const session = require("express-session");
+
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
 const compression = require("compression");
+
+
 const QRCode = require("qrcode");
 const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcryptjs");
-const cookieParser = require("cookie-parser");
 const nodemailer = require("nodemailer");
 const SibApiV3Sdk = require("sib-api-v3-sdk")
 // const { PrismaClient } = require('@prisma/client');
@@ -108,11 +109,21 @@ const app = express();
 app.use(express.json());
 app.set("trust proxy", 1);
 
+// Configuração da Sessão
+app.use(cookieParser());
+app.use(session({
+  secret: process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 dias
+    secure: process.env.SECURE_COOKIES === "true",
+    sameSite: "Lax",
+    httpOnly: true,
+  }
+}));
+
 // === Boot básico / deps ===
-require('dotenv').config();
-
-app.set('trust proxy', 1);
-
 // ==== Healthcheck deve responder SEM redirecionar ====
 app.get('/health', (_req, res) => res.type('text').send('ok'));
 app.head('/health', (_req, res) => res.type('text').send('ok')); // extra segurança
