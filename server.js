@@ -252,12 +252,12 @@ app.post("/auth/pro/reset", async (req, res) => {
 });
 // ===== Rotas do Painel do Profissional (Protegidas) =====
 // Rota /painel é protegida, redireciona para o painel.html (que também é protegido)
-app.get(['/painel', '/pa'], requireAuth, (_req, res) => {
+app.get(['/painel', '/pa'], requireProAuth, (_req, res) => {
   res.redirect(302, '/painel.html');
 });
 
 // Rota de Pagamento (Protegida)
-app.get("/painel/pagamento", requireAuth, (req, res) => {
+app.get("/painel/pagamento", requireProAuth, (req, res) => {
   const plano = req.query.plano;
   
   // Se houver o parâmetro 'plano', serve a página de checkout de assinatura
@@ -531,7 +531,7 @@ async function asaasRequest(endpoint, options = {}) {
 }
 
 // Middleware de autenticação (usando req.session.painel.proId)
-function requireAuth(req, res, next) {
+function requireProAuth(req, res, next) {
   if (!req.session || !req.session.painel?.proId) {
     // 1. Salva a URL original para redirecionar após o login
     req.session.redirectTo = req.originalUrl;
@@ -550,7 +550,7 @@ function requireAuth(req, res, next) {
 // === Rotas do asaas-payment.js ===
 
 // POST /api/pay/asaas/checkout
-app.post('/api/pay/asaas/checkout', express.json(), requireAuth, async (req, res) => {
+app.post('/api/pay/asaas/checkout', express.json(), requireProAuth, async (req, res) => {
   try {
     const { plan } = req.body || {};
     const usuarioId = req.session.painel.proId;
@@ -724,7 +724,7 @@ app.post('/api/pay/asaas/webhook', express.json(), async (req, res) => {
 });
 
 // POST /api/plano/cancelar
-app.post('/api/plano/cancelar', express.json(), requireAuth, async (req, res) => {
+app.post('/api/plano/cancelar', express.json(), requireProAuth, async (req, res) => {
   try {
     const usuarioId = req.session.painel.proId;
 
@@ -769,7 +769,7 @@ app.post('/api/plano/cancelar', express.json(), requireAuth, async (req, res) =>
 });
 
 // GET /api/plano/status
-app.get('/api/plano/data', requireAuth, async (req, res) => {
+app.get('/api/plano/data', requireProAuth, async (req, res) => {
   try {
     const usuarioId = req.session.painel.proId;
 
@@ -911,7 +911,7 @@ function calculatePaymentFee(valor, metodo = 'app') {
 // === Rotas do payment-fee.js ===
 
 // POST /api/pagamento/processar
-app.post('/api/pagamento/processar', express.json(), requireAuth, async (req, res) => {
+app.post('/api/pagamento/processar', express.json(), requireProAuth, async (req, res) => {
   try {
     const { profissionalId, valor, metodo } = req.body || {};
     const usuarioId = req.session.painel.proId;
@@ -1008,7 +1008,7 @@ app.get('/api/pagamento/simular', (req, res) => {
 });
 
 // GET /api/pagamento/historico
-app.get('/api/pagamento/historico', requireAuth, async (req, res) => {
+app.get('/api/pagamento/historico', requireProAuth, async (req, res) => {
   try {
     const usuarioId = req.session.painel.proId;
 
@@ -3035,9 +3035,9 @@ app.post("/api/painel/login", loginLimiter, (req, res) => {
     if (!ok) return res.status(401).json({ ok: false, error: "pin_incorrect" });
 
     req.session.painel = { ok: true, proId: pro.id, when: Date.now() };
-    req.session.usuarioId = pro.usuarioId; // Adicionar para compatibilidade com o novo requireAuth
+    req.session.usuarioId = pro.usuarioId; // Adicionar para compatibilidade com o novo requireProAuth
 
-    // Redirecionamento correto: usa a URL salva ou o padrão
+    // Redirecionamento correto: usa a URL salva ou o padrão (Problema 1)
     const redirectTo = req.session.redirectTo || "/painel.html";
     delete req.session.redirectTo; // Limpa a URL salva
     
