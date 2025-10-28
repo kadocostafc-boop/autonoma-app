@@ -250,6 +250,21 @@ app.post("/auth/pro/reset", async (req, res) => {
 
   res.json({ ok: true, message: "Senha redefinida com sucesso" });
 });
+// Middleware de autenticação (usando req.session.painel.proId)
+function requireProAuth(req, res, next) {
+  if (!req.session || !req.session.painel?.proId) {
+    // 1. Salva a URL original para redirecionar após o login
+    req.session.redirectTo = req.originalUrl;
+    // 2. Redireciona para a página de login
+    if (req.originalUrl.startsWith('/api/')) {
+      return res.status(401).json({ ok: false, error: 'Não autenticado' });
+    }
+    return res.redirect('/painel_login.html'); // Redireciona páginas HTML
+  }
+  // Se autenticado, continua
+  next();
+}
+
 // ===== Rotas do Painel do Profissional (Protegidas) =====
 // Rota /painel é protegida, redireciona para o painel.html (que também é protegido)
 app.get(['/painel', '/pa'], requireProAuth, (_req, res) => {
@@ -530,20 +545,7 @@ async function asaasRequest(endpoint, options = {}) {
   return res.json();
 }
 
-// Middleware de autenticação (usando req.session.painel.proId)
-function requireProAuth(req, res, next) {
-  if (!req.session || !req.session.painel?.proId) {
-    // 1. Salva a URL original para redirecionar após o login
-    req.session.redirectTo = req.originalUrl;
-    // 2. Redireciona para a página de login
-    if (req.originalUrl.startsWith('/api/')) {
-      return res.status(401).json({ ok: false, error: 'Não autenticado' });
-    }
-    return res.redirect('/painel_login.html'); // Redireciona páginas HTML
-  }
-  // Se autenticado, continua
-  next();
-}
+
 
 
 
