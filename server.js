@@ -33,8 +33,14 @@ const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
 const SibApiV3Sdk = require("sib-api-v3-sdk")
-// const { PrismaClient } = require('@prisma/client');
-// const prisma = new PrismaClient();
+const jwt = require("jsonwebtoken");
+const axios = require("axios");
+
+// Integração Asaas
+const Asaas = require('asaas-node');
+const asaas = new Asaas(process.env.ASAAS_API_KEY, process.env.ASAAS_ENV === 'production' ? 'production' : 'sandbox');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 // ====== [ AUTONOMA • Helpers de Arquivo/Texto ] ======
 // Pastas/arquivos base
@@ -128,6 +134,7 @@ app.use(session({
 }));
 
 // Middleware de autenticação (usando req.session.painel.proId)
+// Middleware para rotas protegidas do painel do profissional
 function requireProAuth(req, res, next) {
   if (!req.session || !req.session.painel?.ok) {
     // 1. Salva a URL original para redirecionar após o login
@@ -4019,4 +4026,290 @@ const PORT = Number(process.env.PORT || 8080);
 // Não passe HOST aqui; sem host o Express usa 0.0.0.0
 app.listen(PORT, () => {
   console.log(`[BOOT] Autônoma.app rodando na porta ${PORT}`);
+});
+// ============================================================================
+// ===== [ ROTAS DE PAGAMENTO ASAAS ] =====
+// ============================================================================
+
+const TAXA = 0.04; // 4%
+
+/**
+ * Rota: /api/pagamentos/criar
+ * Método: POST
+ * Função: Criar cobrança no Asaas
+ * 
+ * Body: { servicoId: Int, nomeCliente: String, emailCliente: String, cpfCnpjCliente: String }
+ */
+app.post("/api/pagamentos/criar", async (req, res) => {
+    try {
+        const { servicoId, nomeCliente, emailCliente, cpfCnpjCliente } = req.body;
+
+        if (!servicoId || !nomeCliente || !emailCliente || !cpfCnpjCliente) {
+            return res.status(400).json({ ok: false, error: "Dados incompletos para criar a cobrança." });
+        }
+
+        const servico = await prisma.servico.findUnique({
+            where: { id: parseInt(servicoId) },
+            include: { profissional: true }
+        });
+
+        if (!servico) {
+            return res.status(404).json({ ok: false, error: "Serviço não encontrado." });
+        }
+
+        const valor = servico.preco;
+        const taxa = valor * TAXA;
+        const valorLiquido = valor - taxa;
+
+        // 1. Criar o registro de pagamento no banco de dados (status: pendente)
+        const novoPagamento = await prisma.pagamento.create({
+            data: {
+                profissionalId: servico.profissionalId,
+                clienteId: req.session.painel?.proId || 1, // Assumindo que o cliente é o usuário logado, ou um ID padrão
+                servicoId: servico.id,
+                status: "pendente",
+                valor: valor,
+                taxa: taxa,
+                valorLiquido: valorLiquido,
+                // O externalId será preenchido após a criação da cobrança no Asaas
+            }
+        });
+
+        // 2. Criar ou buscar o cliente no Asaas
+        // TODO: Implementar a lógica de busca/criação de cliente Asaas
+        // Por enquanto, vamos usar um cliente fake para testes
+        let customerId = "cus_000005118742"; // Exemplo de ID de cliente Asaas
+
+        // 3. Criar a cobrança no Asaas
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 1); // Vencimento em 1 dia
+
+        const charge = {
+            customer: customerId,
+            billingType: "UNDEFINED", // Permite Pix e Cartão
+            value: parseFloat(valor.toFixed(2)),
+            dueDate: dueDate.toISOString().split('T')[0],
+            description: `Pagamento do serviço: ${servico.titulo}`,
+            externalReference: `PAGTO-${novoPagamento.id}`, // Referência para o webhook
+        };
+
+        const asaasCharge = await asaas.charges.create(charge);
+
+        // 4. Atualizar o registro de pagamento com o ID da cobrança do Asaas
+        await prisma.pagamento.update({
+            where: { id: novoPagamento.id },
+            data: { externalId: asaasCharge.id }
+        });
+
+        // 5. Retornar os dados da cobrança para o cliente (link de pagamento, QR Code, etc.)
+        res.json({
+            ok: true,
+            pagamentoId: novoPagamento.id,
+            asaasId: asaasCharge.id,
+            linkPagamento: asaasCharge.invoiceUrl,
+            qrCode: asaasCharge.pixQrCode, // Se for Pix
+            // TODO: Adicionar lógica para retornar o QR Code do Pix
+        });
+
+    } catch (error) {
+        console.error("[/api/pagamentos/criar] Erro:", error);
+        res.status(500).json({ ok: false, error: "Erro interno ao criar a cobrança." });
+    }
+});
+
+/**
+ * Rota: /api/pagamentos/status/:id
+ * Método: GET
+ * Função: Consultar status do pagamento
+ */
+app.get("/api/pagamentos/status/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const pagamento = await prisma.pagamento.findUnique({
+            where: { id: parseInt(id) }
+        });
+
+        if (!pagamento) {
+            return res.status(404).json({ ok: false, error: "Pagamento não encontrado." });
+        }
+
+        // 1. Consultar o status no Asaas (opcional, o webhook é o principal)
+        if (pagamento.externalId) {
+            const asaasCharge = await asaas.charges.get(pagamento.externalId);
+            const statusAsaas = asaasCharge.status;
+
+            // 2. Se o status no Asaas for diferente do banco, atualizar
+            if (statusAsaas !== pagamento.status) {
+                // TODO: Mapear status do Asaas para o status do banco
+                // Ex: RECEIVED -> pago
+                // Ex: PENDING -> pendente
+                // Ex: CANCELED -> cancelado
+                // Vamos retornar o status do banco por enquanto
+            }
+        }
+
+        res.json({
+            ok: true,
+            status: pagamento.status,
+            valor: pagamento.valor,
+            valorLiquido: pagamento.valorLiquido,
+        });
+
+    } catch (error) {
+        console.error("[/api/pagamentos/status/:id] Erro:", error);
+        res.status(500).json({ ok: false, error: "Erro interno ao consultar status." });
+    }
+});
+
+/**
+ * Rota: /api/pagamentos/webhook
+ * Método: POST
+ * Função: Receber confirmação do Asaas
+ */
+app.post("/api/pagamentos/webhook", async (req, res) => {
+    try {
+        const { event, payment } = req.body;
+
+        // 1. Verificar a assinatura do webhook (segurança)
+        // TODO: Implementar verificação de assinatura do webhook Asaas
+
+        // 2. Processar apenas eventos de pagamento confirmado
+        if (event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED") {
+            const externalId = payment.id;
+            const status = "pago"; // Mapeamento simplificado
+
+            const pagamento = await prisma.pagamento.findFirst({
+                where: { externalId: externalId }
+            });
+
+            if (!pagamento) {
+                console.warn(`[Webhook] Pagamento não encontrado para externalId: ${externalId}`);
+                return res.status(200).json({ ok: true, message: "Pagamento ignorado (não encontrado no DB)." });
+            }
+
+            if (pagamento.status === "pago") {
+                return res.status(200).json({ ok: true, message: "Pagamento já processado." });
+            }
+
+            // 3. Atualizar Pagamento.status → "pago"
+            const pagamentoAtualizado = await prisma.pagamento.update({
+                where: { id: pagamento.id },
+                data: { status: status }
+            });
+
+            // 4. Atualizar saldo do profissional (somando valor líquido)
+            await prisma.profissional.update({
+                where: { id: pagamento.profissionalId },
+                data: {
+                    saldo: {
+                        increment: pagamento.valorLiquido
+                    }
+                }
+            });
+
+            console.log(`[Webhook] Pagamento ${pagamento.id} atualizado para 'pago'. Saldo do profissional ${pagamento.profissionalId} atualizado.`);
+        }
+
+        res.status(200).json({ ok: true });
+
+    } catch (error) {
+        console.error("[/api/pagamentos/webhook] Erro:", error);
+        res.status(500).json({ ok: false, error: "Erro interno ao processar webhook." });
+    }
+});
+
+/**
+ * Rota: /api/saldo/pro/:id
+ * Método: GET
+ * Função: Consultar saldo do profissional
+ */
+app.get("/api/saldo/pro/:id", requireProAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const profissionalId = parseInt(id);
+
+        // 1. Apenas profissional dono da conta vê o saldo
+        if (req.profissional.id !== profissionalId) {
+            return res.status(403).json({ ok: false, error: "Acesso negado." });
+        }
+
+        const profissional = await prisma.profissional.findUnique({
+            where: { id: profissionalId },
+            select: { saldo: true }
+        });
+
+        if (!profissional) {
+            return res.status(404).json({ ok: false, error: "Profissional não encontrado." });
+        }
+
+        res.json({
+            ok: true,
+            saldo: profissional.saldo,
+        });
+
+    } catch (error) {
+        console.error("[/api/saldo/pro/:id] Erro:", error);
+        res.status(500).json({ ok: false, error: "Erro interno ao consultar saldo." });
+    }
+});
+
+/**
+ * Rota: /api/saldo/saque
+ * Método: POST
+ * Função: Solicitar saque via Pix
+ * 
+ * Body: { valor: Float, chavePix: String }
+ */
+app.post("/api/saldo/saque", requireProAuth, async (req, res) => {
+    try {
+        const { valor, chavePix } = req.body;
+        const profissionalId = req.profissional.id;
+
+        if (!valor || !chavePix || isNaN(parseFloat(valor)) || parseFloat(valor) <= 0) {
+            return res.status(400).json({ ok: false, error: "Valor e chave Pix válidos são obrigatórios." });
+        }
+
+        const valorSaque = parseFloat(valor);
+        const profissional = await prisma.profissional.findUnique({
+            where: { id: profissionalId }
+        });
+
+        if (profissional.saldo < valorSaque) {
+            return res.status(400).json({ ok: false, error: "Saldo insuficiente para saque." });
+        }
+
+        // 1. Criar o registro de saque (status: pendente)
+        const novoSaque = await prisma.saque.create({
+            data: {
+                profissionalId: profissionalId,
+                valor: valorSaque,
+                chavePix: chavePix,
+                status: "pendente",
+            }
+        });
+
+        // 2. Debitar o valor do saldo do profissional
+        await prisma.profissional.update({
+            where: { id: profissionalId },
+            data: {
+                saldo: {
+                    decrement: valorSaque
+                }
+            }
+        });
+
+        // TODO: Implementar a lógica de pagamento via Pix no Asaas (transferências)
+        // Por enquanto, apenas registra o saque e debita o saldo
+
+        res.json({
+            ok: true,
+            saqueId: novoSaque.id,
+            message: "Solicitação de saque enviada com sucesso. Processamento pendente.",
+        });
+
+    } catch (error) {
+        console.error("[/api/saldo/saque] Erro:", error);
+        res.status(500).json({ ok: false, error: "Erro interno ao solicitar saque." });
+    }
 });
