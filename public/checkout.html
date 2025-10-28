@@ -35,7 +35,7 @@
 <body>
   <header class="header" role="banner">
     <a href="/" aria-label="Início">
-      <img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display='none'">
+      <img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display=\'none\'">
     </a>
     <div style="margin-left:auto;display:flex;gap:8px">
       <a class="btn ghost" href="/planos.html">Planos</a>
@@ -256,29 +256,27 @@
       fetch("/api/painel/me")
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(js => {
-          if (js.ok && js.id) {
-            currentProId = js.id;
-            // Preenche os campos do formulário com os dados do profissional logado
-            $("nome").value = js.nome || "";
-            $("doc").value = onlyDigits(js.cpf || "");
-            
-            // Carrega o valor do plano (stub)
-            const prices = { pro: 29.90, premium: 49.90 };
-            const planAmount = prices[plan] || 0;
-            if (planAmount > 0) {
-              // Simula o fluxo de quote para preencher os valores
-              refreshQuote(planAmount, currentProId);
-            } else {
-              err.style.display = "";
-              err.textContent = "Plano inválido ou preço não definido.";
-              $("payBtn").disabled = true;
-            }
-            
-            // Oculta o resumo do profissional (já que é o próprio)
-            document.querySelector('aside.box').style.display = 'none';
-          } else {
-            // Se não estiver logado, redireciona para o login
-            location.href = '/painel_login.html';
+          currentProId = js.id;
+          $("nome").value = js.nome || "";
+          $("doc").value = js.cpf || "";
+          // Carrega os dados do profissional para exibir no resumo
+          return fetch("/api/profissional/"+currentProId);
+        })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(js => {
+          pro = js;
+          proFoto.src = pro.foto || "/img/user.png";
+          proNome.textContent = pro.nome || "Profissional";
+          proServico.textContent = pro.servico || "—";
+          proCidade.textContent = [pro.bairro, pro.cidade].filter(Boolean).join(" — ") || "—";
+          const prices = { pro: 29.90, premium: 49.90 };
+          refreshQuote(prices[plan] || 0, currentProId); // Inicia o cálculo de quote para assinatura
+        })
+        .catch(() => {
+          err.style.display = "";
+          if (location.pathname.startsWith("/painel")) {
+            err.textContent = "Sessão expirada. Faça login novamente.";
+            location.href = \'/painel_login.html\';
           }
         })
         .catch(() => {
@@ -305,185 +303,6 @@
       })
       .catch(()=>{ /* segue mesmo assim */ });
     
-    // Cálculo de taxas (quote)
-    function refreshQuote(amount, proId){
-      fees.textContent = "Calculando taxas…";
-      grand.textContent = "—";
-      valBase.textContent = money(amount);
-
-      const body = { proId, amount, method };
-      return fetch("/api/pay/quote",{
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify(body)
-      })
-      .then(r=> r.ok ? r.json() : Promise.reject(r))
-      .then(js=>{
-        quote = js;
-        // Campos: feeAppPercent, feeAcquirer, total
-        feeApp.textContent = money(js.feeAppValue ?? 0);
-        feeAcq.textContent = money(js.feeAcquirerValue ?? 0);
-        valTotal.textContent = money(js.total ?? amount);
-        grand.textContent = money(js.total ?? amount);
-        fees.textContent = `Taxas estimadas — App: ${js.feeAppPercent||4}% • Adquirente: ${js.feeAcquirerPercent||0}%`;
-      })
-      .catch(()=>{
-        // Fallback simples, só app 4%
-        const feeAppVal = +(amount * 0.04).toFixed(2);
-        const total = +(amount + feeAppVal).toFixed(2);
-        feeApp.textContent = money(feeAppVal);
-        feeAcq.textContent = money(0);
-        valTotal.textContent = money(total);
-        grand.textContent = money(total);
-        fees.textContent = "Taxas estimadas (fallback): App 4%.";
-      });
-    }
-
-    // Alterna método
-    document.querySelectorAll('input[name="method"]').forEach(el=>{
-      el.addEventListener("change", ()=>{
-        method = el.value;
-        const card = (method==="card");
-        cardFields.classList.toggle("hidden", !card);
-        cardFields.setAttribute("aria-hidden", String(!card));
-        qrBlock.style.display = "none";
-        refreshQuote(isSubscription ? (prices[plan] || 0) : amount, currentProId);
-      });
-    });
-
-    refreshQuote(amount, currentProId);
-
-    // Submeter pagamento
-    form.addEventListener("submit", async (e)=>{
-      e.preventDefault();
-      err.style.display = "none"; err.textContent = "";
-      msg.textContent = "";
-
-      // Valida básicos
-      const nome = esc($("nome").value).trim();
-      const doc  = onlyDigits($("doc").value);
-      if (!nome || doc.length!==11){
-        err.style.display = "";
-        err.textContent = "Informe nome e CPF válidos (11 dígitos).";
-        return;
-      }
-      const card = (method==="card");
-      if (card){
-        const n = onlyDigits($("cardNumber").value);
-        const exp = ($("cardExp").value||"").trim();
-        const cvv = onlyDigits($("cardCvv").value);
-        if (n.length<13 || !/^\d{2}\/\d{2}$/.test(exp) || cvv.length<3){
-          err.style.display = "";
-          err.textContent = "Dados de cartão inválidos.";
-          return;
-        }
-      }
-
-      // Monta payload
-      let apiEndpoint = "/api/pay/checkout";
-      let payload = {};
-      
-      if (isSubscription) {
-        // Fluxo de Assinatura
-        apiEndpoint = "/api/pay/asaas/subscription/create";
-        payload = {
-          proId: currentProId,
-          plan: plan,
-          // Os dados do cliente (nome/cpf) serão usados para criar/identificar o cliente Asaas
-          // O backend deve cuidar disso, mas o frontend envia para o backend
-          buyer: { nome, cpf: doc } 
-        };
-      } else {
-        // Fluxo de Pagamento de Serviço (Cliente)
-        payload = {
-          proId, amount, method, title,
-          buyer:{ nome, cpf:doc },
-          card: card ? {
-            number: onlyDigits($("cardNumber").value),
-            exp: ($("cardExp").value||"").trim(),
-            cvv: onlyDigits($("cardCvv").value)
-          } : null
-        };
-      }
-
-      $("payBtn").disabled = true;
-
-      try{
-        const resp = await fetch(apiEndpoint,{
-          method:"POST",
-          headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        if (!resp.ok){
-          throw new Error("Falha ao iniciar pagamento.");
-        }
-        const js = await resp.json();
-
-        if (isSubscription) {
-          // Assinatura: espera-se um redirectUrl do Asaas para o checkout
-          if (js.url) {
-            msg.textContent = "Redirecionando para o Asaas...";
-            location.href = js.url; // Redireciona para o checkout do Asaas
-            return;
-          }
-          throw new Error("Falha ao obter URL de pagamento do Asaas.");
-        }
-        
-        // Fluxo Pix (stub: retorna {qrImage, copiaCola})
-        if (method==="pix" && js && (js.qrImage || js.copiaCola)){
-          qrBlock.style.display = "block";
-          if (js.qrImage) qrImg.src = js.qrImage;
-          pixCopiaCola.textContent = js.copiaCola || "";
-          copyPix.onclick = async ()=>{
-            try { await navigator.clipboard.writeText(js.copiaCola||""); copyPix.textContent="Copiado!"; setTimeout(()=>copyPix.textContent="Copiar Pix copia e cola",1500);} catch(_){}
-          };
-          msg.textContent = "Aguardando pagamento Pix…";
-          return;
-        }
-
-        // Fluxo cartão (stub: redirect para página do parceiro ou status direto)
-        if (method==="card"){
-          if (js.redirectUrl){
-            location.href = js.redirectUrl;
-            return;
-          }
-          msg.textContent = js.status ? ("Status: " + js.status) : "Pagamento enviado para processamento.";
-          return;
-        }
-
-        // Genérico
-        msg.textContent = "Pagamento iniciado.";
-      }catch(ex){
-        err.style.display = "";
-        err.textContent = (ex && ex.message) ? ex.message : "Erro ao iniciar pagamento.";
-      }finally{
-        $("payBtn").disabled = false;
-      }
-    });
-
-    // O código original do refreshQuote está aqui, mas foi movido para dentro do init() para ser chamado corretamente.
-    // O código original do refreshQuote será removido na próxima edição.
-  })();
-  </script>
-</body>
-</html>
-
-    // Carrega profissional
-    fetch("/api/profissional/"+proId)
-      .then(r=> r.ok ? r.json() : Promise.reject())
-      .then(js=>{
-        pro = js;
-        proFoto.src = pro.foto || "/img/user.png";
-        proNome.textContent = pro.nome || "Profissional";
-        proServico.textContent = pro.servico || "—";
-        proCidade.textContent = [pro.bairro, pro.cidade].filter(Boolean).join(" — ") || "—";
-        receiveViaApp = !!pro.receiveViaApp;
-        recebPref.textContent = receiveViaApp ? "Receber pelo aplicativo (Pix/Cartão)" : "Receber direto do cliente (fora do app)";
-        recebWarn.style.display = receiveViaApp ? "none" : "";
-      })
-      .catch(()=>{ /* segue mesmo assim */ });
-
     // Cálculo de taxas (quote)
     function refreshQuote(amount, proId){
       fees.textContent = "Calculando taxas…";
