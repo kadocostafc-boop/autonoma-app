@@ -123,8 +123,7 @@ app.use(session({
     secure: true,
     sameSite: "None",
     httpOnly: true,
-    // CORREÇÃO FINAL: Especificar o domínio para garantir a persistência entre subdomínios/rotas
-    domain: process.env.COOKIE_DOMAIN || '.autonomaapp.com.br',
+
   }
 }));
 
