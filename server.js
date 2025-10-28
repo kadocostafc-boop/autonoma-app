@@ -119,8 +119,8 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 dias
-    secure: true, // Forçado para true para compatibilidade com SameSite: "None" em ambientes de produção
-    sameSite: "None", // Alterado para corrigir possível problema de sessão em requisições cross-site/assíncronas
+    secure: process.env.SECURE_COOKIES === "true",
+    sameSite: "Lax",
     httpOnly: true,
   }
 }));
@@ -1371,7 +1371,7 @@ app.use(
     cookie: {
       httpOnly: true,
       sameSite: process.env.SECURE_COOKIES === "true" ? "none" : "lax",
-      secure: true, // Forçado para true para compatibilidade com SameSite: "None" em ambientes de produção
+      secure: process.env.SECURE_COOKIES === "true",
     },
   })
 );
@@ -2513,7 +2513,7 @@ function ensureReviewCookie(req, res) {
   res.cookie("rev_uid", uid, {
     httpOnly: true,
     sameSite: "lax",
-    secure: true, // Forçado para true para compatibilidade com SameSite: "None" em ambientes de produção
+    secure: process.env.SECURE_COOKIES === "true",
     maxAge: 180 * 24 * 3600 * 1000,
     path: "/",
   });
@@ -3343,7 +3343,7 @@ function ensureFavUID(req, res) {
   let uid = cookies.FAV_UID || "";
   if (!uid) {
     uid = crypto.randomBytes(12).toString("hex");
-    setCookie(res, "FAV_UID", uid, { maxAge: 365 * 24 * 3600 * 1000, path: "/", sameSite: "None", // Alterado para corrigir possível problema de sessão em requisições cross-site/assíncronas secure: false });
+    setCookie(res, "FAV_UID", uid, { maxAge: 365 * 24 * 3600 * 1000, path: "/", sameSite: "Lax", secure: false });
   }
   return uid;
 }
