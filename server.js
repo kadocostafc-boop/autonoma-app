@@ -135,10 +135,7 @@ function requireProAuth(req, res, next) {
     if (req.originalUrl.startsWith('/api/')) {
       return res.status(401).json({ ok: false, error: 'Não autenticado' });
     }
-    // Forçar o salvamento da sessão antes do redirecionamento (Correção do Loop)
-    return req.session.save(() => {
-      res.redirect('/painel_login.html');
-    });
+    return res.redirect('/painel_login.html'); // Redireciona páginas HTML
   }
   // Se autenticado, continua
   next();
