@@ -545,6 +545,8 @@ function requireAuth(req, res, next) {
   next();
 }
 
+const requireProAuth = requireAuth;
+
 // === Rotas do asaas-payment.js ===
 
 // POST /api/pay/asaas/checkout
@@ -3039,7 +3041,10 @@ app.post("/api/painel/login", loginLimiter, (req, res) => {
     const redirectTo = req.session.redirectTo || "/painel.html";
     delete req.session.redirectTo; // Limpa a URL salva
     
-    return res.json({ ok: true, redirect: redirectTo });
+    req.session.save((err) => {
+      if (err) console.error("Erro ao salvar sessão após login:", err);
+      return res.json({ ok: true, redirect: redirectTo });
+    });
   } catch (e) {
     return res.status(500).json({ ok: false, error: String(e) });
   }
