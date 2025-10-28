@@ -119,8 +119,9 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 dias
-    secure: process.env.SECURE_COOKIES === "true",
-    sameSite: "Lax",
+    // Força Secure e SameSite=None em produção (Railway) para que o cookie persista
+    secure: true,
+    sameSite: "None",
     httpOnly: true,
   }
 }));
