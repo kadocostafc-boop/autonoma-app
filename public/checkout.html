@@ -44,7 +44,7 @@
   </header>
 
   <main class="wrap wrap-narrow" role="main">
-    <div class="card">
+    <div class="box">
       <h1 class="mt-0">Checkout</h1>
       <p class="meta">Pague com <strong>Pix</strong> ou <strong>Cartão</strong>. Mostramos as taxas com transparência antes de confirmar.</p>
     </div>
@@ -92,7 +92,7 @@
             </div>
           </div>
 
-          <div class="hr"></div>
+          <div class="box">div>
 
           <div id="fees" class="muted small">Calculando taxas…</div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
@@ -105,8 +105,8 @@
             <button class="btn" id="payBtn" type="submit">Pagar agora</button>
           </div>
 
-          <p id="msg" class="meta" style="margin-top:8px"></p>
-          <p id="err" class="err small" style="display:none;margin-top:6px"></p>
+          <p id="msg" class="meta" style="margin-top:8px;color:#166534"></p>
+          <p id="err" class="err small" style="display:none;margin-top:6px;font-weight:600"></p>
         </form>
 
         <!-- Bloco QR Pix -->
@@ -240,10 +240,16 @@
       $("doc").placeholder = "Seu CPF (já preenchido ao logar)";
     }
     
-    // Lógica para Pagamento de Serviço (Cliente)
-    if (!isSubscription && (!proId || !isFinite(amount) || amount <= 0)) {
+    // Lógica para Pagamento de Serviço (Cliente) e Assinatura
+if (!isSubscription && (!proId || !isFinite(amount) || amount <= 0)) {
       err.style.display = "";
-      err.textContent = "Link de pagamento inválido. Volte e gere novamente.";
+      err.textContent = "Parâmetros inválidos. Se você está tentando pagar por um serviço, por favor, volte e selecione o profissional novamente.";
+      $("payBtn").disabled = true;
+      return;
+    }
+    if (isSubscription && !plan) {
+      err.style.display = "";
+      err.textContent = "Link de pagamento inválido. Plano de assinatura ausente.";
       $("payBtn").disabled = true;
       return;
     }
@@ -416,7 +422,13 @@
         });
 
         if (!resp.ok){
-          throw new Error("Falha ao iniciar pagamento.");
+          const errText = await resp.text();
+          try {
+            const errJson = JSON.parse(errText);
+            throw new Error(errJson.message || "Falha ao iniciar pagamento.");
+          } catch (e) {
+            throw new Error(errText || "Falha ao iniciar pagamento.");
+          }
         }
         const js = await resp.json();
 
@@ -596,7 +608,13 @@
         });
 
         if (!resp.ok){
-          throw new Error("Falha ao iniciar pagamento.");
+          const errText = await resp.text();
+          try {
+            const errJson = JSON.parse(errText);
+            throw new Error(errJson.message || "Falha ao iniciar pagamento.");
+          } catch (e) {
+            throw new Error(errText || "Falha ao iniciar pagamento.");
+          }
         }
         const js = await resp.json();
 
