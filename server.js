@@ -532,14 +532,15 @@ async function asaasRequest(endpoint, options = {}) {
 // Middleware de autenticação (usando req.session.painel.proId)
 function requireAuth(req, res, next) {
   if (!req.session || !req.session.painel?.proId) {
-    // Redireciona para login se não autenticado
+    // 1. Salva a URL original para redirecionar após o login
+    req.session.redirectTo = req.originalUrl;
+    // 2. Redireciona para a página de login
     if (req.originalUrl.startsWith('/api/')) {
       return res.status(401).json({ ok: false, error: 'Não autenticado' });
     }
-    return res.redirect('/painel.html'); // Redireciona páginas HTML
+    return res.redirect('/painel_login.html'); // Redireciona páginas HTML
   }
-  // Remove a linha de criação de req.session.usuarioId para evitar conflitos.
-  // As rotas abaixo usarão req.session.painel.proId diretamente.
+  // Se autenticado, continua
   next();
 }
 
@@ -3032,7 +3033,12 @@ app.post("/api/painel/login", loginLimiter, (req, res) => {
 
     req.session.painel = { ok: true, proId: pro.id, when: Date.now() };
     req.session.usuarioId = pro.usuarioId; // Adicionar para compatibilidade com o novo requireAuth
-    return res.json({ ok: true, redirect: "/painel.html" });
+
+    // Redirecionamento correto: usa a URL salva ou o padrão
+    const redirectTo = req.session.redirectTo || "/painel.html";
+    delete req.session.redirectTo; // Limpa a URL salva
+    
+    return res.json({ ok: true, redirect: redirectTo });
   } catch (e) {
     return res.status(500).json({ ok: false, error: String(e) });
   }
