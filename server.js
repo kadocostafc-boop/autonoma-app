@@ -109,7 +109,7 @@ async function sendEmail(to, subject, text) {
 
 const app = express();
 app.use(express.json());
-app.set("trust proxy", 1);
+app.set("trust proxy", true);
 
 // Configuração da Sessão
 app.use(cookieParser());
@@ -252,7 +252,7 @@ app.post("/auth/pro/reset", async (req, res) => {
 });
 // Middleware de autenticação (usando req.session.painel.proId)
 function requireProAuth(req, res, next) {
-  if (!req.session || !req.session.painel?.proId) {
+  if (!req.session || !req.session.painel?.ok) {
     // 1. Salva a URL original para redirecionar após o login
     req.session.redirectTo = req.originalUrl;
     // 2. Redireciona para a página de login
