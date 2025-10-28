@@ -766,7 +766,7 @@ app.post('/api/plano/cancelar', express.json(), requireAuth, async (req, res) =>
 });
 
 // GET /api/plano/status
-app.get('/api/plano/status', requireAuth, async (req, res) => {
+app.get('/api/plano/data', requireAuth, async (req, res) => {
   try {
     const usuarioId = req.session.painel.proId;
 
