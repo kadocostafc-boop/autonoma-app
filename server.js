@@ -252,12 +252,12 @@ app.post("/auth/pro/reset", async (req, res) => {
 });
 // ===== Rotas do Painel do Profissional (Protegidas) =====
 // Rota /painel é protegida, redireciona para o painel.html (que também é protegido)
-app.get(['/painel', '/pa'], requireProAuth, (_req, res) => {
+app.get(['/painel', '/pa'], requireAuth, (_req, res) => {
   res.redirect(302, '/painel.html');
 });
 
 // Rota de Pagamento (Protegida)
-app.get("/painel/pagamento", requireProAuth, (req, res) => {
+app.get("/painel/pagamento", requireAuth, (req, res) => {
   const plano = req.query.plano;
   
   // Se houver o parâmetro 'plano', serve a página de checkout de assinatura
@@ -545,7 +545,7 @@ function requireAuth(req, res, next) {
   next();
 }
 
-const requireProAuth = requireAuth;
+
 
 // === Rotas do asaas-payment.js ===
 
@@ -3425,14 +3425,7 @@ app.delete("/api/favoritos/:id", (req, res) => {
   }
 });
 
-// ===================[ Profissional — login & dashboard ]=================
-function requireProAuth(req, res, next) {
-  // Se a sessão tem o ID do profissional (armazenado em req.session.painel.proId), continua
-  if (req.session?.painel?.ok && req.session.painel.proId) return next();
-  
-  // Se não, redireciona para o login
-  return res.redirect("/painel_login.html");
-}
+
 
 // ===================[ Admin — login & dashboard ]=================
 function requireAdmin(req, res, next) { if (req.session?.isAdmin) return next(); return res.status(401).json({ ok: false }); }
