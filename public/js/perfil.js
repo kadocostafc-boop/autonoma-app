@@ -167,7 +167,9 @@
             <p class="meta" style="margin:6px 0 0">${esc(a.texto||'')}</p>
           </div>
         `).join('');
+        $('#noReviews').style.display='none';
       } else {
+        $('#reviews').innerHTML = '';
         $('#noReviews').style.display='';
       }
 
