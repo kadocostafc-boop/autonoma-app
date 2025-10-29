@@ -133,6 +133,8 @@ app.use(
       sameSite: "none", // permite cookie entre subdomínios (minúsculo)
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 dias
       httpOnly: true,
+      // Garante que o cookie seja válido para o domínio raiz e subdomínios (ex: .autonomaapp.com.br)
+      domain: process.env.PRIMARY_HOST ? "." + process.env.PRIMARY_HOST.replace(/^www\./, "") : undefined,
     },
   })
 );
