@@ -117,6 +117,25 @@ const app = express();
 app.use(express.json());
 app.set("trust proxy", true);
 
+
+// ===== [ MIDDLEWARE DE REDIRECIONAMENTO DE DOMÍNIO ] =====
+const primaryHost = process.env.PRIMARY_HOST?.replace(/^https?:\/\//, "");
+
+if (primaryHost) {
+  app.use((req, res, next) => {
+    // Redireciona apenas se o host atual for diferente do PRIMARY_HOST
+    // e se o host atual não for localhost (para desenvolvimento)
+    const host = req.hostname;
+    if (host !== primaryHost && host !== 'localhost') {
+      // Redireciona com 301 (Moved Permanently) para o domínio principal (com HTTPS)
+      return res.redirect(301, `https://${primaryHost}${req.originalUrl}`);
+    }
+    next();
+  });
+}
+// =========================================================
+
+
 // Configuração da Sessão
 app.use(cookieParser());
 app.use(session({
