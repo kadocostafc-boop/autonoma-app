@@ -123,19 +123,19 @@ app.set("trust proxy", true);
 
 // Configuração da Sessão
 app.use(cookieParser());
-app.use(session({
-  secret: process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 dias
-    // Força Secure e SameSite=None em produção (Railway) para que o cookie persista
-    secure: true,
-    sameSite: "None",
-    httpOnly: true,
-
-  }
-}));
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: true, // obrigatório em HTTPS
+      sameSite: "none", // permite cookie entre subdomínios (minúsculo)
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 dias
+      httpOnly: true,
+    },
+  })
+);
 
 // Middleware de autenticação (usando req.session.painel.proId)
 // Middleware para rotas protegidas do painel do profissional
@@ -3068,12 +3068,12 @@ app.post("/api/painel/login", loginLimiter, (req, res) => {
     req.session.painel = { ok: true, proId: pro.id, when: Date.now() };
     req.session.usuarioId = pro.usuarioId; // Adicionar para compatibilidade com o novo requireProAuth
 
-    // Redirecionamento correto: usa a URL salva ou o padrão (Problema 1)
+    // Redirecionam    // 2. Redireciona para onde veio, ou para o painel
     const redirectTo = req.session.redirectTo || "/painel.html";
     delete req.session.redirectTo; // Limpa a URL salva
     
-    req.session.save((err) => {
-      if (err) console.error("Erro ao salvar sessão após login:", err);
+    // Corrigido: Salvar a sessão antes de redirecionar para garantir a persistência do cookie
+    req.session.save(() => {
       return res.json({ ok: true, redirect: redirectTo });
     });
   } catch (e) {
