@@ -114,8 +114,8 @@ async function sendEmail(to, subject, text) {
 }
 
 const app = express();
+app.set("trust proxy", true); // Movido para antes de outros middlewares
 app.use(express.json());
-app.set("trust proxy", true);
 
 
 
@@ -134,7 +134,8 @@ app.use(
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 dias
       httpOnly: true,
       // Garante que o cookie seja válido para o domínio raiz e subdomínios (ex: .autonomaapp.com.br)
-      domain: process.env.PRIMARY_HOST ? "." + process.env.PRIMARY_HOST.replace(/^www\./, "") : undefined,
+      // Simplificado: Se PRIMARY_HOST existe, usa o domínio raiz para o cookie
+      domain: process.env.PRIMARY_HOST ? process.env.PRIMARY_HOST.replace(/^www\./, "") : undefined,
     },
   })
 );
@@ -142,6 +143,9 @@ app.use(
 // Middleware de autenticação (usando req.session.painel.proId)
 // Middleware para rotas protegidas do painel do profissional
 function requireProAuth(req, res, next) {
+  // DEBUG: Loga se a sessão está presente (para debug no Railway)
+  console.log(`[DEBUG AUTH] Session OK: ${!!req.session?.painel?.ok} | Session ID: ${req.sessionID}`);
+
   if (!req.session || !req.session.painel?.ok) {
     // 1. Salva a URL original para redirecionar após o login
     req.session.redirectTo = req.originalUrl;
