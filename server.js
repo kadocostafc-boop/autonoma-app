@@ -118,22 +118,7 @@ app.use(express.json());
 app.set("trust proxy", true);
 
 
-// ===== [ MIDDLEWARE DE REDIRECIONAMENTO DE DOMÍNIO ] =====
-const primaryHost = process.env.PRIMARY_HOST?.replace(/^https?:\/\//, "");
 
-if (primaryHost) {
-  app.use((req, res, next) => {
-    // Redireciona apenas se o host atual for diferente do PRIMARY_HOST
-    // e se o host atual não for localhost (para desenvolvimento)
-    const host = req.hostname;
-    if (host !== primaryHost && host !== 'localhost') {
-      // Redireciona com 301 (Moved Permanently) para o domínio principal (com HTTPS)
-      return res.redirect(301, `https://${primaryHost}${req.originalUrl}`);
-    }
-    next();
-  });
-}
-// =========================================================
 
 
 // Configuração da Sessão
@@ -174,6 +159,23 @@ app.get('/health', (_req, res) => res.type('text').send('ok'));
 app.head('/health', (_req, res) => res.type('text').send('ok')); // extra segurança
 app.get('/healthz', (_req, res) => res.type('text').send('ok'));
 app.head('/healthz', (_req, res) => res.type('text').send('ok'));
+
+// ===== [ MIDDLEWARE DE REDIRECIONAMENTO DE DOMÍNIO ] =====
+const primaryHost = process.env.PRIMARY_HOST?.replace(/^https?:\/\//, "");
+
+if (primaryHost) {
+  app.use((req, res, next) => {
+    // Redireciona apenas se o host atual for diferente do PRIMARY_HOST
+    // e se o host atual não for localhost (para desenvolvimento)
+    const host = req.hostname;
+    if (host !== primaryHost && host !== 'localhost') {
+      // Redireciona com 301 (Moved Permanently) para o domínio principal (com HTTPS)
+      return res.redirect(301, `https://${primaryHost}${req.originalUrl}`);
+    }
+    next();
+  });
+}
+// =========================================================
 
 // =============[ Esqueci minha senha • POST /auth/pro/forgot ]=============
 const RESET_DIR = path.join(process.env.DATA_DIR || "./data", "reset");
