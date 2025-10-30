@@ -1,316 +1,257 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Financeiro - Autônoma.app</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Financeiro • Painel do Profissional • Autônoma.app</title>
+  <meta name="theme-color" content="#2d6cdf">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" href="/favicon.ico">
   <link rel="stylesheet" href="/css/global.css">
   <style>
-    body {
-      background-color: #f8f9fa;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    }
+    /* Estilos copiados do painel.html */
+    .header{display:flex;align-items:center;gap:12px;padding:12px 16px}
+    .header .logo{height:32px;width:auto;display:block}
+    .header .home{margin-left:auto}
+    .wrap-max{max-width:1120px;margin:0 auto;padding:16px}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:980px){ .grid{grid-template-columns:2fr 1fr} }
+    .panel{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:14px}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .meta{color:#64748b}
+    .ok{color:#166534}
+    .pill{font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid #e5e7eb;background:#f1f5f9}
+    .divider{height:1px;background:#e5e7eb;margin:10px 0}
+    .hint{font-size:12px;color:#64748b}
+    .btn.inline{padding:6px 10px;font-size:14px}
 
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 2rem;
-    }
-
-    .header {
-      margin-bottom: 2rem;
-    }
-
-    .header h1 {
-      font-size: 2rem;
-      color: #333;
-      margin: 0;
-    }
-
-    .header p {
-      color: #666;
-      margin: 0.5rem 0 0 0;
-    }
-
+    /* Estilos específicos para a página Financeiro */
     .dashboard-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1.5rem;
-      margin-bottom: 2rem;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
     }
-
     .card-stat {
-      background: white;
+      background: #fafafa;
+      border: 1px solid #e5e7eb;
       border-radius: 12px;
-      padding: 1.5rem;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      padding: 14px;
     }
-
     .card-stat h3 {
-      color: #666;
-      font-size: 0.9rem;
-      margin: 0 0 0.5rem 0;
+      color: #64748b;
+      font-size: 12px;
+      margin: 0 0 4px 0;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
-
     .card-stat .value {
-      font-size: 2rem;
-      font-weight: bold;
-      color: #333;
+      font-size: 20px;
+      font-weight: 700;
+      color: #1f2937;
       margin: 0;
     }
-
-    .card-stat.success .value {
-      color: #10b981;
-    }
-
-    .card-stat.warning .value {
-      color: #f59e0b;
-    }
-
-    .card-stat.danger .value {
-      color: #ef4444;
-    }
-
-    .card-stat.info .value {
-      color: #2563eb;
-    }
+    .card-stat.success .value { color: #166534; }
+    .card-stat.warning .value { color: #f59e0b; }
+    .card-stat.danger .value { color: #ef4444; }
+    .card-stat.info .value { color: #2563eb; }
 
     .section {
-      background: white;
-      border-radius: 12px;
-      padding: 2rem;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      margin-bottom: 2rem;
-    }
-
-    .section h2 {
-      margin-top: 0;
-      color: #333;
-      border-bottom: 2px solid #e5e7eb;
-      padding-bottom: 1rem;
+      margin-top: 16px;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 1rem;
+      margin-top: 12px;
+      font-size: 14px;
     }
-
     table thead {
-      background-color: #f3f4f6;
+      background-color: #f8fafc;
     }
-
-    table th {
-      padding: 1rem;
+    table th, table td {
+      padding: 10px 14px;
       text-align: left;
-      font-weight: 600;
-      color: #333;
-      border-bottom: 2px solid #e5e7eb;
-    }
-
-    table td {
-      padding: 1rem;
       border-bottom: 1px solid #e5e7eb;
-      color: #666;
     }
-
+    table th {
+      font-weight: 600;
+      color: #1f2937;
+    }
+    table tr:last-child td {
+      border-bottom: none;
+    }
     table tr:hover {
-      background-color: #f9fafb;
+      background-color: #f1f5f9;
     }
 
     .badge {
       display: inline-block;
-      padding: 0.25rem 0.75rem;
-      border-radius: 12px;
-      font-size: 0.85rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
       font-weight: 600;
     }
-
-    .badge.pending {
-      background-color: #fef3c7;
-      color: #92400e;
-    }
-
-    .badge.completed {
-      background-color: #dcfce7;
-      color: #166534;
-    }
-
-    .badge.cancelled {
-      background-color: #fee2e2;
-      color: #991b1b;
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 3rem;
-      color: #666;
-    }
-
-    .empty-state h3 {
-      color: #333;
-      margin-bottom: 0.5rem;
-    }
-
-    .btn {
-      padding: 0.5rem 1rem;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      transition: all 0.3s ease;
-    }
-
-    .btn-primary {
-      background-color: #2563eb;
-      color: white;
-    }
-
-    .btn-primary:hover {
-      background-color: #1d4ed8;
-    }
-
+    .badge.pending { background-color: #fef3c7; color: #92400e; }
+    .badge.completed { background-color: #dcfce7; color: #166534; }
+    .badge.cancelled { background-color: #fee2e2; color: #991b1b; }
+    
     .chart-placeholder {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #f1f5f9;
+      border: 1px dashed #cbd5e1;
       border-radius: 12px;
-      padding: 2rem;
-      color: white;
+      padding: 20px;
       text-align: center;
-      margin-bottom: 2rem;
-    }
-
-    .chart-placeholder h3 {
-      margin-top: 0;
+      margin-bottom: 16px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
+  <header class="header">
+    <a href="/" aria-label="Início">
+      <img src="/img/logo.png" alt="Autônoma.app" class="logo" onerror="this.style.display='none'">
+    </a>
+    <div class="home">
+      <a class="btn ghost" href="/">Início</a>
+      <a class="btn outline" href="/painel_login.html">Trocar conta</a>
+      <button id="btnSair" class="btn outline" type="button">Sair</button>
+    </div>
+  </header>
+
+  <main class="wrap-max">
+    <div id="flash" class="panel" style="display:none"></div>
+
+    <div class="panel">
       <h1>Financeiro</h1>
-      <p>Acompanhe seus ganhos, pagamentos e transações</p>
-    </div>
-
-    <!-- Dashboard de Estatísticas -->
-    <div class="dashboard-grid">
-      <div class="card-stat success">
-        <h3>Ganhos Este Mês</h3>
-        <p class="value">R$ 0,00</p>
-      </div>
-      <div class="card-stat warning">
-        <h3>Pendente de Recebimento</h3>
-        <p class="value">R$ 0,00</p>
-      </div>
-      <div class="card-stat info">
-        <h3>Total Recebido</h3>
-        <p class="value">R$ 0,00</p>
-      </div>
-      <div class="card-stat danger">
-        <h3>Taxa Plataforma</h3>
-        <p class="value">0%</p>
-      </div>
-    </div>
-
-    <!-- Gráfico de Ganhos -->
-    <div class="chart-placeholder">
-      <h3>📊 Gráfico de Ganhos</h3>
-      <p>Gráfico de ganhos ao longo do tempo em construção</p>
-    </div>
-
-    <!-- Histórico de Transações -->
-    <div class="section">
-      <h2>Histórico de Transações</h2>
+      <p class="meta">Acompanhe seus ganhos, pagamentos e transações.</p>
       
-      <div id="transacoes-container">
-        <div class="empty-state">
-          <h3>Nenhuma transação encontrada</h3>
-          <p>Você ainda não possui transações registradas.</p>
+      <div class="divider"></div>
+
+      <!-- Dashboard de Estatísticas -->
+      <div class="dashboard-grid">
+        <div class="card-stat success">
+          <h3>Ganhos Este Mês</h3>
+          <p class="value" id="ganhosMes">R$ 0,00</p>
+        </div>
+        <div class="card-stat warning">
+          <h3>Pendente de Recebimento</h3>
+          <p class="value" id="pendenteRecebimento">R$ 0,00</p>
+        </div>
+        <div class="card-stat info">
+          <h3>Total Recebido</h3>
+          <p class="value" id="totalRecebido">R$ 0,00</p>
+        </div>
+        <div class="card-stat danger">
+          <h3>Taxa Plataforma</h3>
+          <p class="value" id="taxaPlataforma">0%</p>
         </div>
       </div>
 
-      <table id="tabela-transacoes" style="display: none;">
-        <thead>
-          <tr>
-            <th>Data</th>
-            <th>Descrição</th>
-            <th>Valor</th>
-            <th>Taxa</th>
-            <th>Líquido</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="tbody-transacoes">
-          <!-- Preenchido dinamicamente -->
-        </tbody>
-      </table>
-    </div>
+      <!-- Gráfico de Ganhos -->
+      <div class="chart-placeholder">
+        <h3>📊 Gráfico de Ganhos</h3>
+        <p class="hint">Gráfico de ganhos ao longo do tempo em construção.</p>
+      </div>
 
-    <!-- Plano Atual -->
-    <div class="section">
-      <h2>Seu Plano</h2>
+      <!-- Histórico de Transações -->
+      <div class="section">
+        <h2>Histórico de Transações</h2>
+        
+        <div id="transacoes-container">
+          <div class="empty-state">
+            <h3>Nenhuma transação encontrada</h3>
+            <p class="meta">Você ainda não possui transações registradas.</p>
+          </div>
+        </div>
+
+        <div class="panel" style="padding:0; margin-top:12px">
+          <table id="tabela-transacoes" style="display: none;">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Descrição</th>
+                <th>Valor</th>
+                <th>Taxa</th>
+                <th>Líquido</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-transacoes">
+              <!-- Preenchido dinamicamente -->
+            </tbody>
+          </table>
+        </div>
+      </div>
       
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-        <div>
-          <strong>Plano Ativo:</strong>
-          <p id="plano-atual">Carregando...</p>
+      <div class="divider"></div>
+
+      <!-- Plano Atual -->
+      <div class="section">
+        <h2>Seu Plano</h2>
+        
+        <div class="row" style="gap:24px; align-items:flex-start">
+          <div>
+            <strong>Plano Ativo:</strong>
+            <p id="plano-atual" class="pill">Carregando...</p>
+          </div>
+          <div>
+            <strong>Status:</strong>
+            <p id="status-plano" class="pill">Carregando...</p>
+          </div>
+          <div>
+            <strong>Válido até:</strong>
+            <p id="validade-plano" class="pill">Carregando...</p>
+          </div>
+          <div>
+            <strong>Leads/Mês:</strong>
+            <p id="leads-plano" class="pill">Carregando...</p>
+          </div>
         </div>
-        <div>
-          <strong>Status:</strong>
-          <p id="status-plano">Carregando...</p>
-        </div>
-        <div>
-          <strong>Válido até:</strong>
-          <p id="validade-plano">Carregando...</p>
-        </div>
-        <div>
-          <strong>Leads/Mês:</strong>
-          <p id="leads-plano">Carregando...</p>
-        </div>
+
+        <button class="btn inline" onclick="abrirPlanos()" style="margin-top: 12px;">
+          Alterar Plano
+        </button>
       </div>
-
-      <button class="btn btn-primary" onclick="abrirPlanos()" style="margin-top: 1rem;">
-        Alterar Plano
-      </button>
     </div>
+  </main>
 
-    <!-- Métodos de Pagamento -->
-    <div class="section">
-      <h2>Métodos de Recebimento</h2>
-      <p>Configure como você deseja receber seus pagamentos.</p>
-      
-      <div style="margin-top: 1rem;">
-        <label style="display: flex; align-items: center; margin-bottom: 1rem;">
-          <input type="radio" name="metodo-pagamento" value="pix" checked>
-          <span style="margin-left: 0.5rem;">Pix</span>
-        </label>
-        <label style="display: flex; align-items: center; margin-bottom: 1rem;">
-          <input type="radio" name="metodo-pagamento" value="banco">
-          <span style="margin-left: 0.5rem;">Transferência Bancária</span>
-        </label>
-        <label style="display: flex; align-items: center;">
-          <input type="radio" name="metodo-pagamento" value="carteira">
-          <span style="margin-left: 0.5rem;">Carteira Digital</span>
-        </label>
-      </div>
-
-      <button class="btn btn-primary" onclick="salvarMetodoPagamento()" style="margin-top: 1rem;">
-        Salvar Método
-      </button>
-    </div>
-  </div>
-
+  <script src="/js/global.js"></script>
   <script>
     // Função para carregar dados financeiros
     async function carregarDadosFinanceiros() {
       try {
-        // Carregar status do plano
-        const statusResponse = await fetch('/api/plano/status');
-        const statusData = await statusResponse.json();
+        // Simulação de dados (substituir pela chamada real à API)
+        const statusData = {
+          ok: true,
+          plano: 'premium',
+          statusAssinatura: 'Ativo',
+          validadePlano: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // +30 dias
+          totalLeadsMes: 15,
+          limiteLeadsMes: 50,
+        };
+        const historicoData = {
+          ok: true,
+          pagamentos: [
+            { criadoEm: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), valor: 150.00, taxa: 6.00, status: 'concluido' },
+            { criadoEm: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), valor: 80.00, taxa: 3.20, status: 'pendente' },
+          ]
+        };
+        
+        // const statusResponse = await fetch('/api/plano/status');
+        // const statusData = await statusResponse.json();
+        // const historicoResponse = await fetch('/api/pagamento/historico');
+        // const historicoData = await historicoResponse.json();
 
+        // 1. Preencher Estatísticas (simulação)
+        document.getElementById('ganhosMes').textContent = 'R$ 230,00';
+        document.getElementById('pendenteRecebimento').textContent = 'R$ 80,00';
+        document.getElementById('totalRecebido').textContent = 'R$ 150,00';
+        document.getElementById('taxaPlataforma').textContent = '4%';
+
+
+        // 2. Preencher Status do Plano
         if (statusData.ok) {
-          document.getElementById('plano-atual').textContent = statusData.plano?.toUpperCase() || 'Free';
+          document.getElementById('plano-atual').textContent = statusData.plano?.toUpperCase() || 'FREE';
           document.getElementById('status-plano').textContent = statusData.statusAssinatura || 'Ativo';
           document.getElementById('validade-plano').textContent = statusData.validadePlano 
             ? new Date(statusData.validadePlano).toLocaleDateString('pt-BR')
@@ -318,22 +259,22 @@
           document.getElementById('leads-plano').textContent = `${statusData.totalLeadsMes || 0} / ${statusData.limiteLeadsMes || 'Ilimitado'}`;
         }
 
-        // Carregar histórico de pagamentos
-        const historicoResponse = await fetch('/api/pagamento/historico');
-        const historicoData = await historicoResponse.json();
-
+        // 3. Preencher Histórico de Transações
         if (historicoData.ok && historicoData.pagamentos?.length > 0) {
           const tbody = document.getElementById('tbody-transacoes');
           tbody.innerHTML = '';
+          document.getElementById('transacoes-container').style.display = 'none';
+          document.getElementById('tabela-transacoes').style.display = 'table';
 
           historicoData.pagamentos.forEach(p => {
             const row = document.createElement('tr');
+            const liquido = p.valor - p.taxa;
             row.innerHTML = `
               <td>${new Date(p.criadoEm).toLocaleDateString('pt-BR')}</td>
               <td>Pagamento de serviço</td>
-              <td>R$ ${p.valor.toFixed(2)}</td>
-              <td>R$ ${p.taxa.toFixed(2)}</td>
-              <td><strong>R$ ${(p.valorComTaxa - p.taxa).toFixed(2)}</strong></td>
+              <td>R$ ${p.valor.toFixed(2).replace('.', ',')}</td>
+              <td>R$ ${p.taxa.toFixed(2).replace('.', ',')}</td>
+              <td><strong>R$ ${liquido.toFixed(2).replace('.', ',')}</strong></td>
               <td>
                 <span class="badge ${p.status === 'concluido' ? 'completed' : p.status === 'pendente' ? 'pending' : 'cancelled'}">
                   ${p.status.charAt(0).toUpperCase() + p.status.slice(1)}
@@ -342,9 +283,6 @@
             `;
             tbody.appendChild(row);
           });
-
-          document.getElementById('tabela-transacoes').style.display = 'table';
-          document.getElementById('transacoes-container').style.display = 'none';
         }
       } catch (error) {
         console.error('Erro ao carregar dados financeiros:', error);
@@ -354,13 +292,6 @@
     // Função para abrir página de planos
     function abrirPlanos() {
       window.location.href = '/planos.html';
-    }
-
-    // Função para salvar método de pagamento
-    function salvarMetodoPagamento() {
-      const metodo = document.querySelector('input[name="metodo-pagamento"]:checked').value;
-      alert(`Método de pagamento ${metodo} salvo com sucesso!`);
-      // TODO: Implementar chamada à API para salvar
     }
 
     // Carregar dados ao abrir a página

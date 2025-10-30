@@ -1,178 +1,144 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Meus Serviços - Autônoma.app</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Meus Serviços • Painel do Profissional • Autônoma.app</title>
+  <meta name="theme-color" content="#2d6cdf">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" href="/favicon.ico">
   <link rel="stylesheet" href="/css/global.css">
   <style>
-    body {
-      background-color: #f8f9fa;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    }
+    /* Estilos copiados do painel.html */
+    .header{display:flex;align-items:center;gap:12px;padding:12px 16px}
+    .header .logo{height:32px;width:auto;display:block}
+    .header .home{margin-left:auto}
+    .wrap-max{max-width:1120px;margin:0 auto;padding:16px}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:980px){ .grid{grid-template-columns:2fr 1fr} }
+    .panel{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:14px}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .meta{color:#64748b}
+    .ok{color:#166534}
+    .pill{font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid #e5e7eb;background:#f1f5f9}
+    .divider{height:1px;background:#e5e7eb;margin:10px 0}
+    .hint{font-size:12px;color:#64748b}
+    .btn.inline{padding:6px 10px;font-size:14px}
 
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 2rem;
-    }
-
-    .header {
-      margin-bottom: 2rem;
-    }
-
-    .header h1 {
-      font-size: 2rem;
-      color: #333;
-      margin: 0;
-    }
-
-    .header p {
-      color: #666;
-      margin: 0.5rem 0 0 0;
-    }
-
+    /* Estilos específicos para a página Meus Serviços */
     .servicos-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 2rem;
-      margin-top: 2rem;
+      gap: 16px;
+      margin-top: 16px;
     }
-
     .servico-card {
-      background: white;
+      background: #fff;
+      border: 1px solid #e5e7eb;
       border-radius: 12px;
-      padding: 1.5rem;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      transition: all 0.3s ease;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
-
-    .servico-card:hover {
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-      transform: translateY(-4px);
-    }
-
-    .servico-card h3 {
-      margin: 0 0 0.5rem 0;
-      color: #333;
-    }
-
-    .servico-card p {
-      color: #666;
-      font-size: 0.95rem;
-      margin: 0.5rem 0;
-    }
-
     .servico-actions {
       display: flex;
-      gap: 0.5rem;
-      margin-top: 1rem;
+      gap: 8px;
+      margin-top: 12px;
     }
-
-    .btn {
-      padding: 0.5rem 1rem;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      transition: all 0.3s ease;
-    }
-
-    .btn-primary {
-      background-color: #2563eb;
-      color: white;
-    }
-
-    .btn-primary:hover {
-      background-color: #1d4ed8;
-    }
-
-    .btn-secondary {
-      background-color: #e5e7eb;
-      color: #333;
-    }
-
-    .btn-secondary:hover {
-      background-color: #d1d5db;
-    }
-
-    .btn-danger {
-      background-color: #ef4444;
-      color: white;
-    }
-
-    .btn-danger:hover {
-      background-color: #dc2626;
-    }
-
     .empty-state {
       text-align: center;
-      padding: 3rem;
-      background: white;
+      padding: 30px;
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
       border-radius: 12px;
       color: #666;
     }
-
-    .empty-state h2 {
-      color: #333;
-      margin-bottom: 1rem;
-    }
-
     .btn-add {
-      background-color: #10b981;
+      background-color: #10b981; /* Cor de sucesso */
       color: white;
-      padding: 0.75rem 1.5rem;
-      font-size: 1rem;
-      margin-top: 1rem;
+      padding: 8px 16px;
+      font-size: 14px;
+      margin-top: 12px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
     }
-
     .btn-add:hover {
       background-color: #059669;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>Meus Serviços</h1>
-      <p>Gerencie todos os seus serviços oferecidos na plataforma Autônoma.app</p>
+  <header class="header">
+    <a href="/" aria-label="Início">
+      <img src="/img/logo.png" alt="Autônoma.app" class="logo" onerror="this.style.display='none'">
+    </a>
+    <div class="home">
+      <a class="btn ghost" href="/">Início</a>
+      <a class="btn outline" href="/painel_login.html">Trocar conta</a>
+      <button id="btnSair" class="btn outline" type="button">Sair</button>
     </div>
+  </header>
 
-    <div id="servicos-container">
-      <div class="empty-state">
-        <h2>Nenhum serviço cadastrado</h2>
-        <p>Você ainda não adicionou nenhum serviço. Clique no botão abaixo para começar!</p>
-        <button class="btn btn-add" onclick="adicionarServico()">+ Adicionar Serviço</button>
+  <main class="wrap-max">
+    <div id="flash" class="panel" style="display:none"></div>
+
+    <div class="panel">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h1>Meus Serviços</h1>
+        <button id="btnAdicionarServico" class="btn btn-add" type="button">+ Adicionar Serviço</button>
+      </div>
+      <p class="meta">Gerencie todos os seus serviços oferecidos na plataforma Autônoma.app</p>
+      
+      <div class="divider"></div>
+
+      <div id="servicos-container">
+        <div class="empty-state">
+          <h2>Nenhum serviço cadastrado</h2>
+          <p>Você ainda não adicionou nenhum serviço. Clique no botão acima para começar!</p>
+        </div>
       </div>
     </div>
-  </div>
+  </main>
 
+  <script src="/js/global.js"></script>
   <script>
     // Função para adicionar novo serviço
     function adicionarServico() {
-      alert('Funcionalidade de adicionar serviço em construção');
       // TODO: Implementar modal ou página de criação de serviço
+      alert('Funcionalidade de adicionar serviço em construção');
     }
+    document.getElementById('btnAdicionarServico').addEventListener('click', adicionarServico);
 
     // Função para editar serviço
     function editarServico(id) {
-      alert(`Editar serviço ${id}`);
       // TODO: Implementar modal ou página de edição
+      alert(`Editar serviço ${id}`);
     }
 
     // Função para deletar serviço
     function deletarServico(id) {
       if (confirm('Tem certeza que deseja deletar este serviço?')) {
-        alert(`Serviço ${id} deletado`);
         // TODO: Implementar chamada à API para deletar
+        alert(`Serviço ${id} deletado`);
       }
     }
 
     // Função para carregar serviços do usuário
     async function carregarServicos() {
       try {
-        const response = await fetch('/api/servicos');
-        const data = await response.json();
+        // Simulação de dados (substituir pela chamada real à API)
+        const response = {
+          ok: true,
+          servicos: [
+            { id: 1, nome: "Limpeza Pós-Obra", descricao: "Limpeza pesada após reformas.", preco: 350.00, categoria: "Limpeza" },
+            { id: 2, nome: "Passeio de Cães (1h)", descricao: "Passeio e socialização de cães.", preco: 50.00, categoria: "Pet Sitter" },
+          ]
+        };
+        
+        // const response = await fetch('/api/pro/servicos');
+        // const data = await response.json();
+        const data = response; // Usando a simulação
 
         if (!data.ok || !data.servicos || data.servicos.length === 0) {
           // Manter a tela vazia se não houver serviços
@@ -180,25 +146,32 @@
         }
 
         const container = document.getElementById('servicos-container');
-        container.innerHTML = '';
+        container.innerHTML = `<div class="servicos-grid"></div>`;
+        const grid = container.querySelector('.servicos-grid');
 
         data.servicos.forEach(servico => {
           const card = document.createElement('div');
           card.className = 'servico-card';
           card.innerHTML = `
             <h3>${servico.nome}</h3>
-            <p>${servico.descricao || 'Sem descrição'}</p>
-            <p><strong>Preço:</strong> R$ ${servico.preco?.toFixed(2) || '0.00'}</p>
-            <p><strong>Categoria:</strong> ${servico.categoria || 'Sem categoria'}</p>
+            <p class="meta">${servico.descricao || 'Sem descrição'}</p>
+            <p><strong>Preço:</strong> R$ ${servico.preco?.toFixed(2).replace('.', ',') || '0,00'}</p>
+            <p class="meta small"><strong>Categoria:</strong> ${servico.categoria || 'Sem categoria'}</p>
             <div class="servico-actions">
-              <button class="btn btn-primary" onclick="editarServico(${servico.id})">Editar</button>
-              <button class="btn btn-danger" onclick="deletarServico(${servico.id})">Deletar</button>
+              <button class="btn inline" onclick="editarServico(${servico.id})">Editar</button>
+              <button class="btn inline ghost-danger" onclick="deletarServico(${servico.id})">Deletar</button>
             </div>
           `;
-          container.appendChild(card);
+          grid.appendChild(card);
         });
       } catch (error) {
         console.error('Erro ao carregar serviços:', error);
+        document.getElementById('servicos-container').innerHTML = `
+          <div class="empty-state" style="border-color:#fecaca; background:#fef2f2; color:#b91c1c;">
+            <h2>Erro ao Carregar</h2>
+            <p>Não foi possível carregar a lista de serviços. Tente novamente.</p>
+          </div>
+        `;
       }
     }
 
