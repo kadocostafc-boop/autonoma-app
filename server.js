@@ -1338,7 +1338,7 @@ const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
 const DB_FILE = path.join(DATA_DIR, "profissionais.json");
 const BAIRROS_FILE = path.join(DATA_DIR, "bairros.json");
 const CIDADES_FILE = path.join(DATA_DIR, "cidades.json");
-const SERVICOS_FILE = path.join(DATA_DIR, "servicos.json");
+
 const DENUNCIAS_FILE = path.join(DATA_DIR, "denuncias.json");
 const PAYMENTS_FILE = path.join(DATA_DIR, "payments.json");
 const METRICS_FILE = path.join(DATA_DIR, "metrics.json");
@@ -4390,7 +4390,6 @@ app.post("/api/saldo/saque", requireProAuth, async (req, res) => {
 });
 
 // =========================[ SERVIÇOS DO PROFISSIONAL ]========================
-const SERVICOS_FILE = path.join(DATA_DIR, "servicos.json");
 
 app.get("/api/servicos/meus", (req, res) => {
   const user = req.session.user;
