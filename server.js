@@ -116,7 +116,7 @@ async function sendEmail(to, subject, text) {
 }
 
 const app = express();
-app.set("trust proxy", 1); // necessário para HTTPS no Railway
+app.set("trust proxy", 1);
 app.use(express.json());
 
 
@@ -130,16 +130,7 @@ const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-// TESTE DE CONEXÃO: Garante que a DATABASE_URL está sendo lida e a conexão é possível
-pool.query('SELECT NOW()', (err, res) => {
-  if (err) {
-    console.error('ERRO CRÍTICO: Falha ao conectar ao PostgreSQL. O store de sessão não funcionará.');
-    console.error('Verifique se a DATABASE_URL está correta e se o banco de dados está acessível.');
-    console.error('Detalhes do erro:', err.message);
-  } else {
-    console.log('SUCESSO: Conexão com PostgreSQL estabelecida. Store de sessão pronto.');
-  }
-});
+
 
 // Configuração do Store de Sessão
 const sessionStore = new pgSession({
@@ -158,8 +149,7 @@ app.use(
     cookie: {
       httpOnly: true,
       secure: true,
-      sameSite: "none",
-      domain: ".autonomaapp.com.br",
+      sameSite: "Lax", // Padrão mais seguro e que geralmente corrige loops de login
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 dias
     },
   })
