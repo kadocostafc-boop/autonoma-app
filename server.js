@@ -887,29 +887,28 @@ const TAX_RATE = 0.04; // 4%
 // Função para verificar e fazer downgrade automático (chamada pelo webhook)
 async function checkAndDowngradePlan(usuarioId) {
   try {
-    // TODO: Implementar com Prisma
-    // const profissional = await prisma.profissional.findUnique({
-    //   where: { usuarioId },
-    // });
+    const profissional = await prisma.profissional.findUnique({
+      where: { usuarioId },
+    });
 
-    // if (!profissional) return null;
+    if (!profissional) return null;
 
-    // // Se o plano expirou, downgrade para Free
-    // if (profissional.validadePlano && new Date(profissional.validadePlano) < new Date()) {
-    //   const updated = await prisma.profissional.update({
-    //     where: { usuarioId },
-    //     data: {
-    //       plano: 'free',
-    //       statusAssinatura: 'cancelada',
-    //       validadePlano: null,
-    //       limiteLeadsMes: 3,
-    //       totalLeadsMes: 0,
-    //     },
-    //   });
+    // Se o plano expirou, downgrade para Free
+    if (profissional.validadePlano && new Date(profissional.validadePlano) < new Date()) {
+      const updated = await prisma.profissional.update({
+        where: { usuarioId },
+        data: {
+          plano: 'free',
+          statusAssinatura: 'cancelada',
+          validadePlano: null,
+          limiteLeadsMes: 3,
+          totalLeadsMes: 0,
+        },
+      });
 
-    //   console.log(`✅ Profissional ${usuarioId} downgrade para Free (plano expirou)`);
-    //   return updated;
-    // }
+      console.log(`✅ Profissional ${usuarioId} downgrade para Free (plano expirou)`);
+      return updated;
+    }
 
     return null;
   } catch (e) {
@@ -921,24 +920,21 @@ async function checkAndDowngradePlan(usuarioId) {
 // Função para resetar leads mensais (chamada diariamente ou quando necessário)
 async function resetMonthlyLeads() {
   try {
-    // TODO: Implementar com Prisma
-    // const now = new Date();
-    // const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    // // Resetar leads de todos os profissionais no primeiro dia do mês
-    // const updated = await prisma.profissional.updateMany({
-    //   where: {
-    //     criadoEm: { lt: firstDayOfMonth },
-    //   },
-    //   data: {
-    //     totalLeadsMes: 0,
-    //   },
-    // });
+    // Resetar leads de todos os profissionais no primeiro dia do mês
+    const updated = await prisma.profissional.updateMany({
+      where: {
+        criadoEm: { lt: firstDayOfMonth },
+      },
+      data: {
+        totalLeadsMes: 0,
+      },
+    });
 
-    // console.log(`✅ Leads mensais resetados para ${updated.count} profissionais`);
-    // return updated;
-
-    return null;
+    console.log(`✅ Leads mensais resetados para ${updated.count} profissionais`);
+    return updated;
   } catch (e) {
     console.error('[ResetLeads] Erro:', e.message);
     throw e;
@@ -999,8 +995,19 @@ app.post('/api/pagamento/processar', express.json(), requireProAuth, async (req,
       valorComTaxa = valorNumerico + taxa;
     }
 
-    // TODO: Salvar pagamento no banco (JSON/Prisma)
-    // const pagamento = await prisma.pagamentoViaApp.create({...});
+    // Salvar pagamento no banco (Prisma)
+    const pagamento = await prisma.pagamentoViaApp.create({
+      data: {
+        usuarioId: usuarioId,
+        profissionalId: parseInt(profissionalId),
+        valor: valorNumerico,
+        taxa: taxa,
+        valorComTaxa: valorComTaxa,
+        status: 'pendente',
+      },
+    });
+
+    console.log(`✅ Pagamento criado: ID ${pagamento.id}, Valor: R$ ${valorComTaxa}`);
 
     return res.json({
       ok: true,
@@ -1071,16 +1078,22 @@ app.get('/api/pagamento/historico', requireProAuth, async (req, res) => {
   try {
     const usuarioId = req.session.painel.proId;
 
-    // TODO: Implementar com Prisma
-    // const pagamentos = await prisma.pagamentoViaApp.findMany({
-    //   where: { usuarioId },
-    //   orderBy: { criadoEm: 'desc' },
-    //   take: 50,
-    // });
+    const pagamentos = await prisma.pagamentoViaApp.findMany({
+      where: { usuarioId },
+      orderBy: { criadoEm: 'desc' },
+      take: 50,
+    });
 
     return res.json({
       ok: true,
-      pagamentos: [], // TODO: retornar pagamentos reais
+      pagamentos: pagamentos.map(p => ({
+        id: p.id,
+        valor: p.valor,
+        taxa: p.taxa,
+        valorComTaxa: p.valorComTaxa,
+        status: p.status,
+        criadoEm: p.criadoEm,
+      })),
     });
   } catch (e) {
     console.error('[Pagamento] Erro ao obter histórico:', e.message);
