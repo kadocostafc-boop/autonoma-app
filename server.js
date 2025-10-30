@@ -130,6 +130,17 @@ const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+// TESTE DE CONEXÃO: Garante que a DATABASE_URL está sendo lida e a conexão é possível
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('ERRO CRÍTICO: Falha ao conectar ao PostgreSQL. O store de sessão não funcionará.');
+    console.error('Verifique se a DATABASE_URL está correta e se o banco de dados está acessível.');
+    console.error('Detalhes do erro:', err.message);
+  } else {
+    console.log('SUCESSO: Conexão com PostgreSQL estabelecida. Store de sessão pronto.');
+  }
+});
+
 // Configuração do Store de Sessão
 const sessionStore = new pgSession({
   pool: pool,
