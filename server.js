@@ -157,10 +157,10 @@ app.use(
     proxy: true,
     cookie: {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      domain: ".autonomaapp.com.br",
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 dias
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      domain: '.autonomaapp.com.br',
+      maxAge: 1000 * 60 * 60 * 2, // 2 horas
     },
   })
 );
