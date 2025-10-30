@@ -26,6 +26,8 @@ const crypto = require("crypto");
 const compression = require("compression");
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
+const pg = require('pg');
+const pgSession = require('connect-pg-simple')(session);
 
 
 const QRCode = require("qrcode");
@@ -123,17 +125,30 @@ app.use(express.json());
 
 // Configuração da Sessão
 app.use(cookieParser());
+// Configuração do Pool de Conexões do PostgreSQL
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+// Configuração do Store de Sessão
+const sessionStore = new pgSession({
+  pool: pool,
+  tableName: 'session', // Nome da tabela que será criada no seu DB
+  createTableIfMissing: true,
+});
+
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),
+    store: sessionStore, // Usa o store persistente
+    secret: process.env.SESSION_SECRET || 'fallback_secret_for_dev', // Use uma variável de ambiente forte!
     resave: false,
     saveUninitialized: false,
-    proxy: true, // Adicionado para ambientes de proxy/load balancer
+    proxy: true,
     cookie: {
       httpOnly: true,
-      secure: true,             // mantém apenas via HTTPS
-      sameSite: "none",         // compatível com HTTPS externo
-      domain: ".autonomaapp.com.br", // <-- Ponto antes do domínio resolve o loop
+      secure: true,
+      sameSite: "none",
+      domain: ".autonomaapp.com.br",
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 dias
     },
   })
