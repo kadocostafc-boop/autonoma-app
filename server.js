@@ -142,9 +142,6 @@ app.use(
 // Middleware de autenticação (usando req.session.painel.proId)
 // Middleware para rotas protegidas do painel do profissional
 function requireProAuth(req, res, next) {
-  // DEBUG: Loga se a sessão está presente (para debug no Railway)
-  console.log(`[DEBUG AUTH] Session OK: ${!!req.session?.painel?.ok} | Session ID: ${req.sessionID}`);
-
   if (!req.session || !req.session.painel?.ok) {
     // 1. Salva a URL original para redirecionar após o login
     req.session.redirectTo = req.originalUrl;
