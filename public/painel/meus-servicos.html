@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meus Serviços - Autônoma.app</title>
+  <link rel="stylesheet" href="/css/global.css">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .header {
+      margin-bottom: 2rem;
+    }
+
+    .header h1 {
+      font-size: 2rem;
+      color: #333;
+      margin: 0;
+    }
+
+    .header p {
+      color: #666;
+      margin: 0.5rem 0 0 0;
+    }
+
+    .servicos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+
+    .servico-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .servico-card:hover {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      transform: translateY(-4px);
+    }
+
+    .servico-card h3 {
+      margin: 0 0 0.5rem 0;
+      color: #333;
+    }
+
+    .servico-card p {
+      color: #666;
+      font-size: 0.95rem;
+      margin: 0.5rem 0;
+    }
+
+    .servico-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background-color: #2563eb;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: #1d4ed8;
+    }
+
+    .btn-secondary {
+      background-color: #e5e7eb;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background-color: #d1d5db;
+    }
+
+    .btn-danger {
+      background-color: #ef4444;
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background-color: #dc2626;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      background: white;
+      border-radius: 12px;
+      color: #666;
+    }
+
+    .empty-state h2 {
+      color: #333;
+      margin-bottom: 1rem;
+    }
+
+    .btn-add {
+      background-color: #10b981;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      margin-top: 1rem;
+    }
+
+    .btn-add:hover {
+      background-color: #059669;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Meus Serviços</h1>
+      <p>Gerencie todos os seus serviços oferecidos na plataforma Autônoma.app</p>
+    </div>
+
+    <div id="servicos-container">
+      <div class="empty-state">
+        <h2>Nenhum serviço cadastrado</h2>
+        <p>Você ainda não adicionou nenhum serviço. Clique no botão abaixo para começar!</p>
+        <button class="btn btn-add" onclick="adicionarServico()">+ Adicionar Serviço</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Função para adicionar novo serviço
+    function adicionarServico() {
+      alert('Funcionalidade de adicionar serviço em construção');
+      // TODO: Implementar modal ou página de criação de serviço
+    }
+
+    // Função para editar serviço
+    function editarServico(id) {
+      alert(`Editar serviço ${id}`);
+      // TODO: Implementar modal ou página de edição
+    }
+
+    // Função para deletar serviço
+    function deletarServico(id) {
+      if (confirm('Tem certeza que deseja deletar este serviço?')) {
+        alert(`Serviço ${id} deletado`);
+        // TODO: Implementar chamada à API para deletar
+      }
+    }
+
+    // Função para carregar serviços do usuário
+    async function carregarServicos() {
+      try {
+        const response = await fetch('/api/servicos');
+        const data = await response.json();
+
+        if (!data.ok || !data.servicos || data.servicos.length === 0) {
+          // Manter a tela vazia se não houver serviços
+          return;
+        }
+
+        const container = document.getElementById('servicos-container');
+        container.innerHTML = '';
+
+        data.servicos.forEach(servico => {
+          const card = document.createElement('div');
+          card.className = 'servico-card';
+          card.innerHTML = `
+            <h3>${servico.nome}</h3>
+            <p>${servico.descricao || 'Sem descrição'}</p>
+            <p><strong>Preço:</strong> R$ ${servico.preco?.toFixed(2) || '0.00'}</p>
+            <p><strong>Categoria:</strong> ${servico.categoria || 'Sem categoria'}</p>
+            <div class="servico-actions">
+              <button class="btn btn-primary" onclick="editarServico(${servico.id})">Editar</button>
+              <button class="btn btn-danger" onclick="deletarServico(${servico.id})">Deletar</button>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      } catch (error) {
+        console.error('Erro ao carregar serviços:', error);
+      }
+    }
+
+    // Carregar serviços ao abrir a página
+    document.addEventListener('DOMContentLoaded', carregarServicos);
+  </script>
+</body>
+</html>

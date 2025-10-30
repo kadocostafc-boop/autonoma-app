@@ -3147,6 +3147,17 @@ app.post("/api/painel/set-pin", (req, res) => {
 
 app.post("/api/painel/logout", (req, res) => { if (req.session) req.session.painel = null; res.json({ ok: true }); });
 
+// Rota para servir páginas dinâmicas do painel
+app.get("/painel/:page", requireProAuth, (req, res) => {
+  const filePath = path.join(PUBLIC_DIR, "painel", req.params.page);
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error(`Erro ao servir /painel/${req.params.page}:`, err.message);
+      return res.status(404).json({ ok: false, error: "Página não encontrada" });
+    }
+  });
+});
+
 app.get("/api/painel/state", (req, res) => {
   const s = req.session?.painel;
   if (!s?.ok || !s.proId) return res.json({ ok: false });
