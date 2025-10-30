@@ -148,7 +148,6 @@ app.use(
     proxy: true,
     cookie: {
       httpOnly: true,
-      secure: true,
       sameSite: "Lax", // Padrão mais seguro e que geralmente corrige loops de login
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 dias
     },
