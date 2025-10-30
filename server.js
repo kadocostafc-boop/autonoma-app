@@ -114,7 +114,7 @@ async function sendEmail(to, subject, text) {
 }
 
 const app = express();
-app.set("trust proxy", true); // Movido para antes de outros middlewares
+app.set("trust proxy", 1); // necessário para HTTPS no Railway
 app.use(express.json());
 
 
@@ -128,14 +128,13 @@ app.use(
     secret: process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),
     resave: false,
     saveUninitialized: false,
+    proxy: true, // Adicionado para ambientes de proxy/load balancer
     cookie: {
-      secure: true, // obrigatório em HTTPS
-      sameSite: "none", // permite cookie entre subdomínios (minúsculo)
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 dias
       httpOnly: true,
-      // Garante que o cookie seja válido para o domínio raiz e subdomínios (ex: .autonomaapp.com.br)
-      // Simplificado: Se PRIMARY_HOST existe, usa o domínio raiz para o cookie
-      domain: process.env.PRIMARY_HOST ? process.env.PRIMARY_HOST.replace(/^www\./, "") : undefined,
+      secure: true,             // mantém apenas via HTTPS
+      sameSite: "none",         // compatível com HTTPS externo
+      domain: ".autonomaapp.com.br", // <-- Ponto antes do domínio resolve o loop
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 dias
     },
   })
 );
