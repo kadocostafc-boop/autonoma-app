@@ -3104,7 +3104,9 @@ app.post("/api/painel/login", loginLimiter, (req, res) => {
     }
 
     const ok = bcrypt.compareSync(pin, pro.pinHash);
-    if (!ok) return res.status(401).json({ ok: false, error: "pin_incorrect" }    req.session.painel = { ok: true, proId: pro.id, when: Date.now() };
+    if (!ok) return res.status(401).json({ ok: false, error: "pin_incorrect" });
+    
+    req.session.painel = { ok: true, proId: pro.id, when: Date.now() };
     req.session.usuarioId = pro.usuarioId; // Adicionar para compatibilidade com o novo requireProAuth
 
     // 1. Redireciona para onde veio, ou para o painel
@@ -3117,9 +3119,6 @@ app.post("/api/painel/login", loginLimiter, (req, res) => {
         console.error('Erro ao salvar sessão após login:', err);
         return res.status(500).json({ ok: false, error: 'Erro interno do servidor' });
       }
-      return res.json({ ok: true, redirect: redirectTo });
-    });sessão antes de redirecionar para garantir a persistência do cookie
-    req.session.save(() => {
       return res.json({ ok: true, redirect: redirectTo });
     });
   } catch (e) {
