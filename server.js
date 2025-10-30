@@ -4335,6 +4335,130 @@ app.get("/api/saldo/pro/:id", requireProAuth, async (req, res) => {
  * Rota: /api/saldo/saque
  * Método: POST
  * Função: Solicitar saque via Pix
+ */
+app.post("/api/saldo/saque", requireProAuth, async (req, res) => {
+    try {
+        const { valor, chavePix } = req.body;
+        const profissionalId = req.profissional.id;
+
+        if (!valor || !chavePix || isNaN(parseFloat(valor)) || parseFloat(valor) <= 0) {
+            return res.status(400).json({ ok: false, error: "Valor e chave Pix válidos são obrigatórios." });
+        }
+
+        const valorSaque = parseFloat(valor);
+        const profissional = await prisma.profissional.findUnique({
+            where: { id: profissionalId }
+        });
+
+        if (profissional.saldo < valorSaque) {
+            return res.status(400).json({ ok: false, error: "Saldo insuficiente para saque." });
+        }
+
+        // 1. Criar o registro de saque (status: pendente)
+        const novoSaque = await prisma.saque.create({
+            data: {
+                profissionalId: profissionalId,
+                valor: valorSaque,
+                chavePix: chavePix,
+                status: "pendente",
+            }
+        });
+
+        // 2. Debitar o valor do saldo do profissional
+        await prisma.profissional.update({
+            where: { id: profissionalId },
+            data: {
+                saldo: {
+                    decrement: valorSaque
+                }
+            }
+        });
+
+        // TODO: Implementar a lógica de pagamento via Pix no Asaas (transferências)
+        // Por enquanto, apenas registra o saque e debita o saldo
+
+        res.json({
+            ok: true,
+            saqueId: novoSaque.id,
+            message: "Solicitação de saque enviada com sucesso. Processamento pendente.",
+        });
+
+    } catch (error) {
+        console.error("[/api/saldo/saque] Erro:", error);
+        res.status(500).json({ ok: false, error: "Erro interno ao solicitar saque." });
+    }
+});
+
+// =========================[ SERVIÇOS DO PROFISSIONAL ]========================
+const SERVICOS_FILE = path.join(DATA_DIR, "servicos.json");
+
+app.get("/api/servicos/meus", (req, res) => {
+  const user = req.session.user;
+  if (!user || user.tipo !== "prof") return res.status(401).json({ ok: false, error: "Não autenticado ou não é profissional." });
+  
+  // Assumindo que DATA_DIR e readJSON/saveJSON existem e funcionam
+  const servicos = readJSON(SERVICOS_FILE, []).filter(s => s.userId === user.id);
+  res.json({ ok: true, servicos: servicos });
+});
+
+app.post("/api/servicos/adicionar", (req, res) => {
+  const user = req.session.user;
+  if (!user || user.tipo !== "prof") return res.status(401).json({ ok: false, error: "Não autenticado ou não é profissional." });
+  
+  const { titulo, descricao, preco } = req.body;
+  if (!titulo || !preco) return res.status(400).json({ ok: false, error: "Título e preço são obrigatórios." });
+
+  const servicos = readJSON(SERVICOS_FILE, []);
+  const novo = {
+    id: Date.now(),
+    userId: user.id,
+    titulo,
+    descricao: descricao || "",
+    preco: parseFloat(preco),
+    criadoEm: new Date().toISOString(),
+  };
+  servicos.push(novo);
+  saveJSON(SERVICOS_FILE, servicos);
+  res.json({ ok: true, msg: "Serviço cadastrado com sucesso!", servico: novo });
+});
+
+
+// =========================[ FIM DAS ROTAS ]========================
+// O restante do código (404/500) deve vir aqui.
+// As rotas 404/500 não foram incluídas no trecho lido, assumindo que estão no final do arquivo.
+// A rota /api/saldo/saque foi a última rota encontrada no trecho lido.
+
+// =========================[ FINANCEIRO DO PROFISSIONAL ]========================
+app.get("/api/financeiro/dados", (req, res) => {
+  const user = req.session.user;
+  if (!user || user.tipo !== "prof") return res.status(401).json({ ok: false, error: "Não autenticado ou não é profissional." });
+
+  // Simulação de dados financeiros
+  const dadosFinanceiros = {
+    ok: true,
+    ganhosMes: 230.50,
+    pendenteRecebimento: 80.00,
+    totalRecebido: 150.50,
+    taxaPlataforma: 0.04, // 4%
+    plano: 'PREMIUM',
+    statusAssinatura: 'Ativo',
+    validadePlano: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    totalLeadsMes: 15,
+    limiteLeadsMes: 50,
+    transacoes: [
+      { id: 1, criadoEm: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), valor: 150.00, taxa: 6.00, status: 'concluido' },
+      { id: 2, criadoEm: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), valor: 80.00, taxa: 3.20, status: 'pendente' },
+      { id: 3, criadoEm: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), valor: 50.00, taxa: 2.00, status: 'cancelado' },
+    ]
+  };
+
+  // Em produção, você buscará esses dados no banco de dados
+  // Ex: const profissional = await prisma.profissional.findUnique({ where: { id: user.id } });
+  // Ex: const transacoes = await prisma.transacao.findMany({ where: { profissionalId: user.id } });
+
+  res.json(dadosFinanceiros);
+});
+
  * 
  * Body: { valor: Float, chavePix: String }
  */

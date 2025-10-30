@@ -1,301 +1,85 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Financeiro • Painel do Profissional • Autônoma.app</title>
-  <meta name="theme-color" content="#2d6cdf">
-  <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="icon" href="/favicon.ico">
-  <link rel="stylesheet" href="/css/global.css">
-  <style>
-    /* Estilos copiados do painel.html */
-    .header{display:flex;align-items:center;gap:12px;padding:12px 16px}
-    .header .logo{height:32px;width:auto;display:block}
-    .header .home{margin-left:auto}
-    .wrap-max{max-width:1120px;margin:0 auto;padding:16px}
-    .grid{display:grid;grid-template-columns:1fr;gap:12px}
-    @media(min-width:980px){ .grid{grid-template-columns:2fr 1fr} }
-    .panel{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:14px}
-    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .meta{color:#64748b}
-    .ok{color:#166534}
-    .pill{font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid #e5e7eb;background:#f1f5f9}
-    .divider{height:1px;background:#e5e7eb;margin:10px 0}
-    .hint{font-size:12px;color:#64748b}
-    .btn.inline{padding:6px 10px;font-size:14px}
-
-    /* Estilos específicos para a página Financeiro */
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-    .card-stat {
-      background: #fafafa;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 14px;
-    }
-    .card-stat h3 {
-      color: #64748b;
-      font-size: 12px;
-      margin: 0 0 4px 0;
-      text-transform: uppercase;
-    }
-    .card-stat .value {
-      font-size: 20px;
-      font-weight: 700;
-      color: #1f2937;
-      margin: 0;
-    }
-    .card-stat.success .value { color: #166534; }
-    .card-stat.warning .value { color: #f59e0b; }
-    .card-stat.danger .value { color: #ef4444; }
-    .card-stat.info .value { color: #2563eb; }
-
-    .section {
-      margin-top: 16px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 12px;
-      font-size: 14px;
-    }
-    table thead {
-      background-color: #f8fafc;
-    }
-    table th, table td {
-      padding: 10px 14px;
-      text-align: left;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    table th {
-      font-weight: 600;
-      color: #1f2937;
-    }
-    table tr:last-child td {
-      border-bottom: none;
-    }
-    table tr:hover {
-      background-color: #f1f5f9;
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .badge.pending { background-color: #fef3c7; color: #92400e; }
-    .badge.completed { background-color: #dcfce7; color: #166534; }
-    .badge.cancelled { background-color: #fee2e2; color: #991b1b; }
-    
-    .chart-placeholder {
-      background: #f1f5f9;
-      border: 1px dashed #cbd5e1;
-      border-radius: 12px;
-      padding: 20px;
-      text-align: center;
-      margin-bottom: 16px;
-    }
-  </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Financeiro • Autônoma.app</title>
+  <link rel="stylesheet" href="/css/app.css">
 </head>
 <body>
-  <header class="header">
-    <a href="/" aria-label="Início">
-      <img src="/img/logo.png" alt="Autônoma.app" class="logo" onerror="this.style.display='none'">
-    </a>
-    <div class="home">
-      <a class="btn ghost" href="/">Início</a>
-      <a class="btn outline" href="/painel_login.html">Trocar conta</a>
-      <button id="btnSair" class="btn outline" type="button">Sair</button>
-    </div>
+  <header class="topbar">
+    <img src="/img/logo.svg" class="logo" alt="Autônoma">
+    <nav><a href="/painel.html">Início</a> <a href="/painel/meus-servicos.html">Meus Serviços</a> <a href="/logout">Sair</a></nav>
   </header>
 
-  <main class="wrap-max">
-    <div id="flash" class="panel" style="display:none"></div>
+  <main class="painel">
+    <h1>Financeiro</h1>
+    <p>Veja aqui suas transações, assinaturas e status de pagamentos via Asaas.</p>
 
-    <div class="panel">
-      <h1>Financeiro</h1>
-      <p class="meta">Acompanhe seus ganhos, pagamentos e transações.</p>
+    <div class="card">
+      <p>Em breve: integração completa com o Asaas para controle de cobranças e assinaturas.</p>
       
-      <div class="divider"></div>
-
-      <!-- Dashboard de Estatísticas -->
-      <div class="dashboard-grid">
-        <div class="card-stat success">
-          <h3>Ganhos Este Mês</h3>
-          <p class="value" id="ganhosMes">R$ 0,00</p>
-        </div>
-        <div class="card-stat warning">
-          <h3>Pendente de Recebimento</h3>
-          <p class="value" id="pendenteRecebimento">R$ 0,00</p>
-        </div>
-        <div class="card-stat info">
-          <h3>Total Recebido</h3>
-          <p class="value" id="totalRecebido">R$ 0,00</p>
-        </div>
-        <div class="card-stat danger">
-          <h3>Taxa Plataforma</h3>
-          <p class="value" id="taxaPlataforma">0%</p>
-        </div>
-      </div>
-
-      <!-- Gráfico de Ganhos -->
-      <div class="chart-placeholder">
-        <h3>📊 Gráfico de Ganhos</h3>
-        <p class="hint">Gráfico de ganhos ao longo do tempo em construção.</p>
-      </div>
-
-      <!-- Histórico de Transações -->
-      <div class="section">
-        <h2>Histórico de Transações</h2>
-        
-        <div id="transacoes-container">
-          <div class="empty-state">
-            <h3>Nenhuma transação encontrada</h3>
-            <p class="meta">Você ainda não possui transações registradas.</p>
-          </div>
-        </div>
-
-        <div class="panel" style="padding:0; margin-top:12px">
-          <table id="tabela-transacoes" style="display: none;">
-            <thead>
-              <tr>
-                <th>Data</th>
-                <th>Descrição</th>
-                <th>Valor</th>
-                <th>Taxa</th>
-                <th>Líquido</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="tbody-transacoes">
-              <!-- Preenchido dinamicamente -->
-            </tbody>
-          </table>
-        </div>
+      <div id="dadosFinanceiros">
+        <!-- Dados serão preenchidos via JS -->
       </div>
       
-      <div class="divider"></div>
-
-      <!-- Plano Atual -->
-      <div class="section">
-        <h2>Seu Plano</h2>
-        
-        <div class="row" style="gap:24px; align-items:flex-start">
-          <div>
-            <strong>Plano Ativo:</strong>
-            <p id="plano-atual" class="pill">Carregando...</p>
-          </div>
-          <div>
-            <strong>Status:</strong>
-            <p id="status-plano" class="pill">Carregando...</p>
-          </div>
-          <div>
-            <strong>Válido até:</strong>
-            <p id="validade-plano" class="pill">Carregando...</p>
-          </div>
-          <div>
-            <strong>Leads/Mês:</strong>
-            <p id="leads-plano" class="pill">Carregando...</p>
-          </div>
-        </div>
-
-        <button class="btn inline" onclick="abrirPlanos()" style="margin-top: 12px;">
-          Alterar Plano
-        </button>
+      <h2>Transações Recentes</h2>
+      <div id="listaTransacoes" class="card-list">
+        <!-- Transações serão preenchidas via JS -->
       </div>
     </div>
   </main>
-
-  <script src="/js/global.js"></script>
+  
   <script>
-    // Função para carregar dados financeiros
-    async function carregarDadosFinanceiros() {
-      try {
-        // Simulação de dados (substituir pela chamada real à API)
-        const statusData = {
-          ok: true,
-          plano: 'premium',
-          statusAssinatura: 'Ativo',
-          validadePlano: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // +30 dias
-          totalLeadsMes: 15,
-          limiteLeadsMes: 50,
-        };
-        const historicoData = {
-          ok: true,
-          pagamentos: [
-            { criadoEm: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), valor: 150.00, taxa: 6.00, status: 'concluido' },
-            { criadoEm: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), valor: 80.00, taxa: 3.20, status: 'pendente' },
-          ]
-        };
-        
-        // const statusResponse = await fetch('/api/plano/status');
-        // const statusData = await statusResponse.json();
-        // const historicoResponse = await fetch('/api/pagamento/historico');
-        // const historicoData = await historicoResponse.json();
+    async function carregarFinanceiro() {
+      const resp = await fetch("/api/financeiro/dados");
+      const data = await resp.json();
+      const dadosContainer = document.querySelector("#dadosFinanceiros");
+      const transacoesContainer = document.querySelector("#listaTransacoes");
 
-        // 1. Preencher Estatísticas (simulação)
-        document.getElementById('ganhosMes').textContent = 'R$ 230,00';
-        document.getElementById('pendenteRecebimento').textContent = 'R$ 80,00';
-        document.getElementById('totalRecebido').textContent = 'R$ 150,00';
-        document.getElementById('taxaPlataforma').textContent = '4%';
+      if (!data.ok) {
+        dadosContainer.innerHTML = "<p class='error'>Erro ao carregar dados financeiros.</p>";
+        return;
+      }
 
+      // 1. Preencher Dados Gerais (Simulação)
+      dadosContainer.innerHTML = `
+        <p><strong>Plano:</strong> ${data.plano} (${data.statusAssinatura})</p>
+        <p><strong>Ganhos este mês:</strong> R$ ${data.ganhosMes.toFixed(2).replace('.', ',')}</p>
+        <p><strong>Pendente de Recebimento:</strong> R$ ${data.pendenteRecebimento.toFixed(2).replace('.', ',')}</p>
+        <p><strong>Taxa da Plataforma:</strong> ${(data.taxaPlataforma * 100).toFixed(0)}%</p>
+      `;
 
-        // 2. Preencher Status do Plano
-        if (statusData.ok) {
-          document.getElementById('plano-atual').textContent = statusData.plano?.toUpperCase() || 'FREE';
-          document.getElementById('status-plano').textContent = statusData.statusAssinatura || 'Ativo';
-          document.getElementById('validade-plano').textContent = statusData.validadePlano 
-            ? new Date(statusData.validadePlano).toLocaleDateString('pt-BR')
-            : 'Sem expiração';
-          document.getElementById('leads-plano').textContent = `${statusData.totalLeadsMes || 0} / ${statusData.limiteLeadsMes || 'Ilimitado'}`;
-        }
-
-        // 3. Preencher Histórico de Transações
-        if (historicoData.ok && historicoData.pagamentos?.length > 0) {
-          const tbody = document.getElementById('tbody-transacoes');
-          tbody.innerHTML = '';
-          document.getElementById('transacoes-container').style.display = 'none';
-          document.getElementById('tabela-transacoes').style.display = 'table';
-
-          historicoData.pagamentos.forEach(p => {
-            const row = document.createElement('tr');
-            const liquido = p.valor - p.taxa;
-            row.innerHTML = `
-              <td>${new Date(p.criadoEm).toLocaleDateString('pt-BR')}</td>
-              <td>Pagamento de serviço</td>
-              <td>R$ ${p.valor.toFixed(2).replace('.', ',')}</td>
-              <td>R$ ${p.taxa.toFixed(2).replace('.', ',')}</td>
-              <td><strong>R$ ${liquido.toFixed(2).replace('.', ',')}</strong></td>
-              <td>
-                <span class="badge ${p.status === 'concluido' ? 'completed' : p.status === 'pendente' ? 'pending' : 'cancelled'}">
-                  ${p.status.charAt(0).toUpperCase() + p.status.slice(1)}
-                </span>
-              </td>
+      // 2. Preencher Transações
+      if (data.transacoes && data.transacoes.length > 0) {
+        transacoesContainer.innerHTML = data.transacoes
+          .map(t => {
+            const dataFormatada = new Date(t.criadoEm).toLocaleDateString('pt-BR');
+            const statusClass = t.status === 'concluido' ? 'success' : t.status === 'pendente' ? 'warning' : 'error';
+            const statusTexto = t.status.charAt(0).toUpperCase() + t.status.slice(1);
+            const liquido = (t.valor - t.taxa).toFixed(2).replace('.', ',');
+            
+            return `
+              <div class="item ${statusClass}">
+                <div>
+                  <strong>Transação #${t.id}</strong>
+                  <small>Data: ${dataFormatada}</small>
+                </div>
+                <div>
+                  Valor: R$ ${t.valor.toFixed(2).replace('.', ',')}
+                  <small>Líquido: R$ ${liquido}</small>
+                </div>
+                <div class="status">${statusTexto}</div>
+              </div>
             `;
-            tbody.appendChild(row);
-          });
-        }
-      } catch (error) {
-        console.error('Erro ao carregar dados financeiros:', error);
+          })
+          .join("");
+      } else {
+        transacoesContainer.innerHTML = "<p>Nenhuma transação recente.</p>";
       }
     }
 
-    // Função para abrir página de planos
-    function abrirPlanos() {
-      window.location.href = '/planos.html';
-    }
-
-    // Carregar dados ao abrir a página
-    document.addEventListener('DOMContentLoaded', carregarDadosFinanceiros);
+    document.addEventListener("DOMContentLoaded", carregarFinanceiro);
   </script>
 </body>
 </html>
