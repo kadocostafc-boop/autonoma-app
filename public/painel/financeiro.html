@@ -1,85 +1,37 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Financeiro • Autônoma.app</title>
-  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/app.css" />
 </head>
 <body>
-  <header class="topbar">
-    <img src="/img/logo.svg" class="logo" alt="Autônoma">
-    <nav><a href="/painel.html">Início</a> <a href="/painel/meus-servicos.html">Meus Serviços</a> <a href="/logout">Sair</a></nav>
+  <header class="nav-header">
+    <div class="container">
+      <a href="/" class="logo">Autônoma</a>
+      <nav>
+        <a href="/clientes.html">Início</a>
+        <a href="/top10.html">Top 10</a>
+        <a href="/painel/meus-servicos.html">Meus Serviços</a>
+        <a href="/painel/financeiro.html">Financeiro</a>
+        <a href="/logout" class="btn-outline">Sair</a>
+      </nav>
+    </div>
   </header>
 
-  <main class="painel">
+  <main class="container page">
     <h1>Financeiro</h1>
     <p>Veja aqui suas transações, assinaturas e status de pagamentos via Asaas.</p>
 
     <div class="card">
       <p>Em breve: integração completa com o Asaas para controle de cobranças e assinaturas.</p>
-      
-      <div id="dadosFinanceiros">
-        <!-- Dados serão preenchidos via JS -->
-      </div>
-      
-      <h2>Transações Recentes</h2>
-      <div id="listaTransacoes" class="card-list">
-        <!-- Transações serão preenchidas via JS -->
-      </div>
+      <p class="text-muted">Erro ao carregar dados financeiros.</p>
     </div>
   </main>
-  
-  <script>
-    async function carregarFinanceiro() {
-      const resp = await fetch("/api/financeiro/dados");
-      const data = await resp.json();
-      const dadosContainer = document.querySelector("#dadosFinanceiros");
-      const transacoesContainer = document.querySelector("#listaTransacoes");
 
-      if (!data.ok) {
-        dadosContainer.innerHTML = "<p class='error'>Erro ao carregar dados financeiros.</p>";
-        return;
-      }
-
-      // 1. Preencher Dados Gerais (Simulação)
-      dadosContainer.innerHTML = `
-        <p><strong>Plano:</strong> ${data.plano} (${data.statusAssinatura})</p>
-        <p><strong>Ganhos este mês:</strong> R$ ${data.ganhosMes.toFixed(2).replace('.', ',')}</p>
-        <p><strong>Pendente de Recebimento:</strong> R$ ${data.pendenteRecebimento.toFixed(2).replace('.', ',')}</p>
-        <p><strong>Taxa da Plataforma:</strong> ${(data.taxaPlataforma * 100).toFixed(0)}%</p>
-      `;
-
-      // 2. Preencher Transações
-      if (data.transacoes && data.transacoes.length > 0) {
-        transacoesContainer.innerHTML = data.transacoes
-          .map(t => {
-            const dataFormatada = new Date(t.criadoEm).toLocaleDateString('pt-BR');
-            const statusClass = t.status === 'concluido' ? 'success' : t.status === 'pendente' ? 'warning' : 'error';
-            const statusTexto = t.status.charAt(0).toUpperCase() + t.status.slice(1);
-            const liquido = (t.valor - t.taxa).toFixed(2).replace('.', ',');
-            
-            return `
-              <div class="item ${statusClass}">
-                <div>
-                  <strong>Transação #${t.id}</strong>
-                  <small>Data: ${dataFormatada}</small>
-                </div>
-                <div>
-                  Valor: R$ ${t.valor.toFixed(2).replace('.', ',')}
-                  <small>Líquido: R$ ${liquido}</small>
-                </div>
-                <div class="status">${statusTexto}</div>
-              </div>
-            `;
-          })
-          .join("");
-      } else {
-        transacoesContainer.innerHTML = "<p>Nenhuma transação recente.</p>";
-      }
-    }
-
-    document.addEventListener("DOMContentLoaded", carregarFinanceiro);
-  </script>
+  <footer class="footer">
+    <p>© 2025 Autônoma.app — Todos os direitos reservados.</p>
+  </footer>
 </body>
 </html>

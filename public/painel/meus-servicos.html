@@ -1,24 +1,36 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Meus Serviços • Autônoma.app</title>
-  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/app.css" />
 </head>
 <body>
-  <header class="topbar">
-    <img src="/img/logo.svg" class="logo" alt="Autônoma">
-    <nav><a href="/painel.html">Início</a> <a href="/painel/financeiro.html">Financeiro</a> <a href="/logout">Sair</a></nav>
+  <header class="nav-header">
+    <div class="container">
+      <a href="/" class="logo">Autônoma</a>
+      <nav>
+        <a href="/clientes.html">Início</a>
+        <a href="/top10.html">Top 10</a>
+        <a href="/painel/meus-servicos.html">Meus Serviços</a>
+        <a href="/painel/financeiro.html">Financeiro</a>
+        <a href="/logout" class="btn-outline">Sair</a>
+      </nav>
+    </div>
   </header>
 
-  <main class="painel">
+  <main class="container page">
     <h1>Meus Serviços</h1>
     <p>Gerencie os serviços que você oferece na plataforma Autônoma.app</p>
 
     <div id="listaServicos" class="card"></div>
-    <button id="btnAddServico" class="btn-primary">Adicionar Serviço</button>
+    <button id="btnAddServico" class="btn-primary mt-3">Adicionar Serviço</button>
   </main>
+
+  <footer class="footer">
+    <p>© 2025 Autônoma.app — Todos os direitos reservados.</p>
+  </footer>
 
   <script>
     async function carregarServicos() {
@@ -33,7 +45,14 @@
       }
       
       container.innerHTML = lista
-        .map(s => `<div class='item'><b>${s.titulo}</b><br>${s.descricao}<br><small>R$ ${s.preco.toFixed(2).replace('.', ',')}</small></div>`)
+        .map(
+          s => `
+          <div class="item">
+            <b>${s.titulo}</b><br>${s.descricao}<br>
+            <small>R$ ${s.preco.toFixed(2).replace('.', ',')}</small>
+          </div>
+        `
+        )
         .join("");
     }
 
