@@ -193,6 +193,18 @@ function loadJSONSafe(file) {
   try { return JSON.parse(fs.readFileSync(file, "utf8")); }
   catch { return {}; }
 }
+function readJSON(file, fallback) {
+  try {
+    if (!fs.existsSync(file)) return fallback;
+    const raw = fs.readFileSync(file, "utf8");
+    if (!raw) return fallback;
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error(`Erro lendo JSON ${file}:`, e);
+    return fallback;
+  }
+}
+
 function saveJSON(file, obj) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, JSON.stringify(obj, null, 2));
@@ -1320,6 +1332,9 @@ const CIDADES_FILE = path.join(DATA_DIR, "cidades.json");
 
 const DENUNCIAS_FILE = path.join(DATA_DIR, "denuncias.json");
 const PAYMENTS_FILE = path.join(DATA_DIR, "payments.json");
+const METRICS_FILE = path.join(DATA_DIR, "metrics.json");
+
+
 [PUBLIC_DIR, DATA_DIR, UPLOAD_DIR].forEach((p) => {
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
 });
