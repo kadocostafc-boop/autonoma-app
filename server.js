@@ -125,42 +125,21 @@ app.use(express.json());
 
 // Configuração da Sessão
 app.use(cookieParser());
-// Configuração do Pool de Conexões do PostgreSQL
-const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
-// TESTE DE CONEXÃO: Garante que a DATABASE_URL está sendo lida e a conexão é possível
-pool.query('SELECT NOW()', (err, res) => {
-  if (err) {
-    console.error('ERRO CRÍTICO: Falha ao conectar ao PostgreSQL. O store de sessão não funcionará.');
-    console.error('Verifique se a DATABASE_URL está correta e se o banco de dados está acessível.');
-    console.error('Detalhes do erro:', err.message);
-  } else {
-    console.log('SUCESSO: Conexão com PostgreSQL estabelecida. Store de sessão pronto.');
-  }
-});
-
-// Configuração do Store de Sessão
-const sessionStore = new pgSession({
-  pool: pool,
-  tableName: 'session', // Nome da tabela que será criada no seu DB
-  createTableIfMissing: true,
-});
-
+// Configuração da Sessão
 app.use(
   session({
-    store: sessionStore, // Usa o store persistente
-    secret: process.env.SESSION_SECRET || 'fallback_secret_for_dev', // Use uma variável de ambiente forte!
+    store: new pgSession({
+      conString: process.env.DATABASE_URL,
+      createTableIfMissing: true,
+    }),
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    proxy: true,
     cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      domain: '.autonomaapp.com.br',
       maxAge: 1000 * 60 * 60 * 2, // 2 horas
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      domain: ".autonomaapp.com.br", // cookie válido para domínio e subdomínio
     },
   })
 );
@@ -1341,8 +1320,6 @@ const CIDADES_FILE = path.join(DATA_DIR, "cidades.json");
 
 const DENUNCIAS_FILE = path.join(DATA_DIR, "denuncias.json");
 const PAYMENTS_FILE = path.join(DATA_DIR, "payments.json");
-const METRICS_FILE = path.join(DATA_DIR, "metrics.json");
-
 [PUBLIC_DIR, DATA_DIR, UPLOAD_DIR].forEach((p) => {
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
 });
@@ -3077,53 +3054,28 @@ app.get("/painel.html", requireProAuth, (_req, res) => {
   return res.sendFile(path.join(PUBLIC_DIR, "painel.html"));
 });
 
-// Login do Painel (WhatsApp + PIN)
-app.post("/api/painel/login", loginLimiter, (req, res) => {
-  try {
-    const phone = ensureBR(onlyDigits(req.body?.phone || req.body?.token || ""));
-    const pin = String(req.body?.pin || "").trim();
-    if (!phone) return res.status(400).json({ ok: false, error: "phone_required" });
+// Rota de login do profissional
+app.post("/auth/pro/login", async (req, res) => {
+  const { email, whatsapp, senha } = req.body;
+  const pro = await prisma.profissional.findFirst({
+    where: {
+      OR: [
+        { email: email?.trim() },
+        { whatsapp: whatsapp?.trim() },
+      ],
+    },
+  });
 
-    const db = readDB();
-    const pro = db.find((p) => ensureBR(onlyDigits(p.whatsapp)) === phone && !p.excluido);
-    if (!pro) return res.status(401).json({ ok: false, error: "not_found" });
-
-    // Validação do formato do PIN (4 a 6 dígitos numéricos) para login
-    if (!/^[0-9]{4,6}$/.test(pin)) {
-      return res.status(400).json({ ok: false, error: "pin_invalid_format" });
-    }
-
-    // precisa configurar PIN
-    if (!pro.pinHash) {
-      pro.mustSetPin = true;
-      writeDB(db);
-      return res.status(409).json({ ok: false, error: "pin_not_set", needPinSetup: true });
-    }
-    if (!/^\d{4,6}$/.test(pin)) {
-      return res.status(400).json({ ok: false, error: "pin_invalid_format" });
-    }
-
-    const ok = bcrypt.compareSync(pin, pro.pinHash);
-    if (!ok) return res.status(401).json({ ok: false, error: "pin_incorrect" });
-    
-    req.session.painel = { ok: true, proId: pro.id, when: Date.now() };
-    req.session.usuarioId = pro.usuarioId; // Adicionar para compatibilidade com o novo requireProAuth
-
-    // 1. Redireciona para onde veio, ou para o painel
-    const redirectTo = req.session.redirectTo || "/painel.html";
-    delete req.session.redirectTo;
-
-    // GARANTE que a sessão seja salva no PostgreSQL antes do redirecionamento
-    req.session.save((err) => {
-      if (err) {
-        console.error('Erro ao salvar sessão após login:', err);
-        return res.status(500).json({ ok: false, error: 'Erro interno do servidor' });
-      }
-      return res.json({ ok: true, redirect: redirectTo });
-    });
-  } catch (e) {
-    return res.status(500).json({ ok: false, error: String(e) });
+  if (!pro || pro.senha !== senha) {
+    return res.status(401).json({ ok: false, msg: "Credenciais inválidas." });
   }
+
+  req.session.user = { id: pro.id, email: pro.email, tipo: "prof" };
+
+  // GARANTE que a sessão seja salva antes de redirecionar
+  req.session.save(() => {
+    res.json({ ok: true, redirect: "/painel.html" });
+  });
 });
 
 // Definir ou trocar PIN (6 dígitos)
@@ -3513,6 +3465,14 @@ app.delete("/api/favoritos/:id", (req, res) => {
 });
 
 
+
+// ===========================[ Logout ]=========================
+app.get("/logout", (req, res) => {
+  req.session.destroy(() => {
+    res.clearCookie("connect.sid");
+    res.redirect("/painel_login.html");
+  });
+});
 
 // ===================[ Admin — login & dashboard ]=================
 function requireAdmin(req, res, next) { if (req.session?.isAdmin) return next(); return res.status(401).json({ ok: false }); }
