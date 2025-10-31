@@ -4458,9 +4458,7 @@ app.get("/api/financeiro/dados", (req, res) => {
   res.json(dadosFinanceiros);
 });
 
- * 
- * Body: { valor: Float, chavePix: String }
- */
+
 app.post("/api/saldo/saque", requireProAuth, async (req, res) => {
     try {
         const { valor, chavePix } = req.body;
