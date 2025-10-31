@@ -1,37 +1,92 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Financeiro • Autônoma.app</title>
-  <link rel="stylesheet" href="/css/app.css" />
+
+  <!-- SEO/PWA -->
+  <link rel="canonical" href="https://autonomaapp.com.br/painel/financeiro.html">
+  <meta name="description" content="Veja aqui suas transações, assinaturas e status de pagamentos via Asaas.">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0b1f63">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+  
+  <link rel="stylesheet" href="/css/global.css?v=2.0">
+
+  <style>
+    /* Estilos específicos para o painel */
+    :root{
+      --azul-escuro:#0b1f63; --azul-brilho:#2D81FF; --borda:#e5e7eb; --cinza:#64748b;
+    }
+    .wrap{max-width:1120px;margin:0 auto;padding:16px}
+    
+    /* Header (idêntico ao clientes.html / top10.html) */
+    .header{
+      background:var(--azul-escuro);
+      padding:12px 16px; display:flex; gap:8px; align-items:center; justify-content:flex-end;
+    }
+    .nav-btn{
+      appearance:none; border:none; cursor:pointer;
+      background:var(--azul-brilho); color:#fff; font-weight:800;
+      padding:8px 12px; border-radius:10px; text-decoration:none; font-size:14px;
+      display:inline-flex; align-items:center; justify-content:center;
+    }
+    .nav-btn:hover{ filter:brightness(.96); }
+
+    /* Conteúdo principal (dentro do wrap) */
+    .hero{background:linear-gradient(180deg,#2D81FF 0%,#1E6EF2 100%); color:#fff; border-radius:18px; padding:18px; margin-bottom:14px; box-shadow:0 10px 24px rgba(0,0,0,.10)}
+    .hero h1{margin:0 0 4px;font-size:24px;line-height:1.15;font-weight:900;text-shadow:0 1px 0 #e8f0ff,0 10px 24px rgba(0,0,0,.22)}
+    
+    /* Card/Painel (igual ao painel_login.html) */
+    .painel-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 20px;
+        box-shadow: 0 10px 24px rgba(0,0,0,.10);
+        margin-bottom: 14px;
+    }
+
+    /* Footer (igual ao clientes.html / top10.html) */
+    footer { padding: 28px 12px; background:var(--azul-escuro); margin-top:16px }
+    .foot-links { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
+    .foot-links a { color:#cde1ff; font-size:14px; text-decoration:none; }
+    .foot-links a:hover { text-decoration:underline; }
+  </style>
 </head>
 <body>
-  <header class="nav-header">
-    <div class="container">
-      <a href="/" class="logo">Autônoma</a>
-      <nav>
-        <a href="/clientes.html">Início</a>
-        <a href="/top10.html">Top 10</a>
-        <a href="/painel/meus-servicos.html">Meus Serviços</a>
-        <a href="/painel/financeiro.html">Financeiro</a>
-        <a href="/logout" class="btn-outline">Sair</a>
-      </nav>
-    </div>
+  <!-- HEADER (igual ao clientes.html) -->
+  <header class="header" role="banner" aria-label="Cabeçalho">
+    <a class="nav-btn" href="/clientes.html">Início</a>
+    <a class="nav-btn" href="/top10.html">Top 10</a>
+    <a class="nav-btn" href="/logout">Sair</a>
   </header>
 
-  <main class="container page">
-    <h1>Financeiro</h1>
-    <p>Veja aqui suas transações, assinaturas e status de pagamentos via Asaas.</p>
+  <main class="wrap" role="main">
+    <!-- HERO (fundo azul) -->
+    <section class="hero" aria-labelledby="hTitle">
+      <h1 id="hTitle">Financeiro</h1>
+      <p>Veja aqui suas transações, assinaturas e status de pagamentos via Asaas.</p>
+    </section>
 
-    <div class="card">
-      <p>Em breve: integração completa com o Asaas para controle de cobranças e assinaturas.</p>
-      <p class="text-muted">Erro ao carregar dados financeiros.</p>
+    <!-- CONTEÚDO (card branco) -->
+    <div class="painel-card">
+        <p>Em breve: integração completa com o Asaas para controle de cobranças e assinaturas.</p>
+        <p class="text-muted">Erro ao carregar dados financeiros.</p>
     </div>
   </main>
 
-  <footer class="footer">
-    <p>© 2025 Autônoma.app — Todos os direitos reservados.</p>
+  <!-- FOOTER (igual ao clientes.html) -->
+  <footer>
+    <nav class="foot-links" aria-label="Links do rodapé">
+      <a href="/termos.html">Termos</a>
+      <a href="/privacidade.html">Privacidade</a>
+      <a href="/planos.html">Planos</a>
+      <a href="/favoritos.html">Favoritos</a>
+    </nav>
   </footer>
 </body>
 </html>
