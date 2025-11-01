@@ -304,7 +304,10 @@ app.post("/auth/pro/reset", async (req, res) => {
   delete db[token];
   saveJSON(RESET_DB, db);
 
-  return res.json({ ok: true, msg: "Senha redefinida com sucesso." });ainel do Profissional (Protegidas) =====
+  return res.json({ ok: true, msg: "Senha redefinida com sucesso." });
+});
+
+// ===== Painel do Profissional (Protegidas) =====
 // Rota /painel é protegida, redireciona para o painel.html (que também é protegido)
 app.get(['/painel', '/pa'], requireProAuth, (_req, res) => {
   res.redirect(302, '/painel.html');
