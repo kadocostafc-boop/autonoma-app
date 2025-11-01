@@ -2220,7 +2220,7 @@ app.get("/api/debug/db-prof", (req, res) => {
 });
 
 // ===== NOVA ROTA: /api/profissionais (lista com filtros + distância) =====
-app.get("/api/profissionais", (req, res) => {
+app.get("/api/profissionais", async (req, res) => {
   try {
         // Busca no Prisma
     let items = await prisma.profissional.findMany({

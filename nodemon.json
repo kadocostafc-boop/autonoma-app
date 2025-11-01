@@ -1,0 +1,6 @@
+{
+  "watch": ["server.js", "routes", "controllers", "views", "prisma"],
+  "ignore": ["data", "uploads", "logs", "tmp", "node_modules", "backups"],
+  "ext": "js,json",
+  "exec": "node server.js"
+}
