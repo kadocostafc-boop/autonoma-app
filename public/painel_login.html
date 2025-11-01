@@ -178,7 +178,7 @@
 
     setLoading(true);
     try{
-      const res = await fetch('/api/painel/login', {
+      const res = await fetch('/auth/pro/login', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ phone: identifier, pin: password, rememberMe: !!remember.checked })

@@ -193,6 +193,8 @@ function loadJSONSafe(file) {
   try { return JSON.parse(fs.readFileSync(file, "utf8")); }
   catch { return {}; }
 }
+
+
 function saveJSON(file, obj) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, JSON.stringify(obj, null, 2));
@@ -218,10 +220,13 @@ app.post("/auth/pro/forgot", async (req, res) => {
       return res.status(400).json({ ok:false, error: "Digite um e-mail válido." });
     }
 
-    const users = readJSON(DB_FILE, []);
-    const user = users.find(u => u.email === identifier);
+    const user = await prisma.usuario.findUnique({
+      where: { email: identifier },
+      select: { id: true, email: true }
+    });
     if (!user) {
-      return res.status(400).json({ ok:false, error: "E-mail não encontrado." });
+      // Retorna sucesso mesmo se não encontrar para evitar enumeração de usuários
+      return res.json({ ok:true, msg: "Se encontrarmos sua conta, enviaremos um link para redefinição de senha." });
     }
 
     // 1) gera token com expiração (2 horas)
@@ -276,32 +281,33 @@ app.post("/auth/pro/reset", async (req, res) => {
   if (!token || !senha) {
     return res.status(400).json({ ok: false, error: "Token e nova senha obrigatórios" });
   }
-
   const db = loadJSONSafe(RESET_DB);
   const resetInfo = db[token];
-  const users = readJSON(DB_FILE, []);
   if (!resetInfo || resetInfo.exp < Date.now()) {
     return res.status(400).json({ ok: false, error: "Token inválido ou expirado" });
   }
 
-  const user = users.find(u => u.id === resetInfo.userId);
-  if (!user) {
-    return res.status(400).json({ ok: false, error: "Token inválido ou expirado" });
+  // Hash da nova senha
+  const hashedPassword = await bcrypt.hash(senha, 10);
+
+  try {
+    await prisma.usuario.update({
+      where: { id: resetInfo.userId },
+      data: { senha: hashedPassword }
+    });
+  } catch (e) {
+    console.error("[reset] erro ao atualizar senha:", e);
+    return res.status(500).json({ ok: false, error: "Erro ao redefinir a senha." });
   }
 
-  // Hash da nova senha
-  const bcrypt = require("bcryptjs");
-   const hashedPassword = await bcrypt.hash(senha, 10);
-  user.senha = hashedPassword;
- 
+  // Remove token e salva
   delete db[token];
   saveJSON(RESET_DB, db);
-  
-  writeJSON(DB_FILE, users);
 
-  res.json({ ok: true, message: "Senha redefinida com sucesso" });
+  return res.json({ ok: true, msg: "Senha redefinida com sucesso." });
 });
-// ===== Rotas do Painel do Profissional (Protegidas) =====
+
+// ===== Painel do Profissional (Protegidas) =====
 // Rota /painel é protegida, redireciona para o painel.html (que também é protegido)
 app.get(['/painel', '/pa'], requireProAuth, (_req, res) => {
   res.redirect(302, '/painel.html');
@@ -1320,21 +1326,15 @@ const CIDADES_FILE = path.join(DATA_DIR, "cidades.json");
 
 const DENUNCIAS_FILE = path.join(DATA_DIR, "denuncias.json");
 const PAYMENTS_FILE = path.join(DATA_DIR, "payments.json");
+const METRICS_FILE = path.join(DATA_DIR, "metrics.json");
+
+
 [PUBLIC_DIR, DATA_DIR, UPLOAD_DIR].forEach((p) => {
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
 });
 
 // === Helpers de JSON (robustos) ===
-function readJSON(file, fallback) {
-  try {
-    if (!fs.existsSync(file)) return fallback;
-    const txt = fs.readFileSync(file, 'utf8');
-    return txt ? JSON.parse(txt) : fallback;
-  } catch (e) {
-    console.warn('[readJSON]', file, e.message || e);
-    return fallback;
-  }
-}
+
 
 function writeJSON(file, data) {
   try {
@@ -1351,6 +1351,7 @@ function writeJSON(file, data) {
 if (!fs.existsSync(DB_FILE)) writeJSON(DB_FILE, []);
 if (!fs.existsSync(DENUNCIAS_FILE)) writeJSON(DENUNCIAS_FILE, []);
 if (!fs.existsSync(PAYMENTS_FILE)) writeJSON(PAYMENTS_FILE, []);
+if (!fs.existsSync(METRICS_FILE)) writeJSON(METRICS_FILE, {});
 
 // Admin / Sessão
 const ADMIN_USER = process.env.ADMIN_USER || "admin";
@@ -2221,14 +2222,54 @@ app.get("/api/debug/db-prof", (req, res) => {
 // ===== NOVA ROTA: /api/profissionais (lista com filtros + distância) =====
 app.get("/api/profissionais", (req, res) => {
   try {
-    // Ler banco de dados
-    const db = (typeof readDB === 'function' ? readDB() : readJSONSafe(DB_FILE, [])) || [];
-    if (!Array.isArray(db)) {
-      return res.status(500).json({ ok: false, error: "db_invalid" });
-    }
+        // Busca no Prisma
+    let items = await prisma.profissional.findMany({
+      where: {
+        // Filtro de exclusão e suspensão
+        usuario: {
+          is: {
+            excluido: false,
+            suspenso: false
+          }
+        }
+      },
+      include: {
+        endereco: true,
+        servicos: {
+          select: { titulo: true, preco: true },
+          take: 1,
+          orderBy: { preco: 'asc' }
+        },
+        avaliacoes: {
+          select: { nota: true, comentario: true, criadoEm: true },
+          orderBy: { criadoEm: 'desc' },
+          take: 100 // Limite para cálculo de média
+        }
+      }
+    });
 
-    // Filtrar apenas profissionais ativos (não excluídos, não suspensos)
-    let items = db.filter(p => !p.excluido && !p.suspenso);
+    // Mapear para o formato antigo para manter a compatibilidade com o código de filtro/ordenação
+    items = items.map(p => ({
+      ...p,
+      cidade: p.endereco?.cidade,
+      bairro: p.endereco?.bairro,
+      lat: p.endereco?.latitude,
+      lng: p.endereco?.longitude,
+      servico: p.servicos[0]?.titulo,
+      preco: p.servicos[0]?.preco,
+      // Adiciona a média de avaliação e o último comentário
+      rating: p.avaliacoes.length ? p.avaliacoes.reduce((acc, a) => acc + a.nota, 0) / p.avaliacoes.length : 0,
+      avalCount: p.avaliacoes.length,
+      ultimoComentario: p.avaliacoes[0]?.comentario,
+      // Adiciona campos para o filtro/ordenação
+      nomeNorm: norm(p.nome),
+      cidadeNorm: norm(p.endereco?.cidade),
+      bairroNorm: norm(p.endereco?.bairro),
+      servicoNorm: norm(p.servicos[0]?.titulo)
+    }));
+
+    // Filtro apenas profissionais ativos (não excluídos, não suspensos) - Já feito no where do Prisma, mas mantido para segurança
+    items = items.filter(p => p.usuario && !p.usuario.excluido && !p.usuario.suspenso);
 
     // ===== FILTROS =====
     const norm = (s) => String(s || "").normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
@@ -2285,9 +2326,7 @@ app.get("/api/profissionais", (req, res) => {
     // ===== CÁLCULO DE DISTÂNCIA =====
     const userLat = Number(req.query.userLat);
     const userLng = Number(req.query.userLng);
-    const hasUserCoords = Number.isFinite(userLat) && Number.isFinite(userLng);
-
-    // Função de cálculo de distância (Haversine)
+    const hasUserCoords = Number.isFinite(userLat) && Number.isFinite(userLng);    // Função de cálculo de distância (Haversine)
     function calcDistance(lat1, lng1, lat2, lng2) {
       const R = 6371; // Raio da Terra em km
       const toRad = (deg) => deg * Math.PI / 180;
@@ -2300,30 +2339,29 @@ app.get("/api/profissionais", (req, res) => {
       return R * c; // Distância em km
     }
 
-    // Mapear profissionais com distância
+    // Mapear profissionais com distância e formatar o objeto de saída
     items = items.map(p => {
       const pLat = Number(p.lat);
       const pLng = Number(p.lng);
-      
       let distanceKm = null;
       if (hasUserCoords && Number.isFinite(pLat) && Number.isFinite(pLng)) {
-        distanceKm = Math.round(calcDistance(userLat, userLng, pLat, pLng) * 10) / 10; // Arredondar para 1 casa decimal
+        distanceKm = calcDistance(userLat, userLng, pLat, pLng);
       }
-
-      // Calcular rating
-      const notas = (p.avaliacoes || []).map(a => Number(a?.nota)).filter(n => n >= 1 && n <= 5);
-      const rating = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length) : 0;
-
+      
       return {
-        id: String(p.id),
-        nome: p.nome || "",
-        foto: p.foto || p.fotoUrl || null,
-        fotoUrl: p.foto || p.fotoUrl || null,
-        descricao: (p.descricao ?? p.bio ?? "").toString(),
-        bio: (p.descricao ?? p.bio ?? "").toString(),
-        experiencia: (p.experienciaTempo ?? p.experiencia ?? "").toString(),
-        experienciaTempo: (p.experienciaTempo ?? p.experiencia ?? "").toString(),
-        servico: (p.servico ?? p.profissao ?? "").toString(),
+        id: p.id,
+        nome: p.nome,
+        servico: p.servico || "",
+        cidade: p.cidade || "",
+        bairro: p.bairro || "",
+        foto: p.fotoUrl || "",
+        rating: p.rating.toFixed(2),
+        avalCount: p.avalCount,
+        distanceKm: distanceKm ? distanceKm.toFixed(1) : null,
+        preco: p.preco || 0,
+        ultimoComentario: p.ultimoComentario || null,
+      };
+    });p.profissao ?? "").toString(),
         servicoSlug: p.servicoSlug || null,
         cidade: (p.cidade ?? "").toString(),
         bairro: (p.bairro ?? "").toString(),
@@ -3056,25 +3094,47 @@ app.get("/painel.html", requireProAuth, (_req, res) => {
 // Rota de login do profissional
 app.post("/auth/pro/login", async (req, res) => {
   const { email, whatsapp, senha } = req.body;
-  const pro = await prisma.profissional.findFirst({
-    where: {
-      OR: [
-        { email: email?.trim() },
-        { whatsapp: whatsapp?.trim() },
-      ],
-    },
-  });
 
-  if (!pro || pro.senha !== senha) {
-    return res.status(401).json({ ok: false, msg: "Credenciais inválidas." });
+  try {
+    const prof = await prisma.profissional.findFirst({
+      where: { OR: [{ email: email?.trim() }, { whatsapp: whatsapp?.trim() }] },
+    });
+
+    if (!prof) return res.status(401).json({ ok: false, msg: "Credenciais inválidas" });
+
+    // A lógica original usava comparação direta ou um campo 'pinHash' que não estava na rota.
+    // Assumindo que a senha está sendo comparada com o campo 'senha' (texto puro ou hash)
+    // Se o campo 'senha' for um hash bcrypt, a comparação deve ser feita com bcrypt.
+    // Vou usar a lógica de bcrypt que você sugeriu, assumindo que 'senha' é o hash.
+    // Se 'prof.senha' for o hash, o campo deve ser renomeado para 'hash' no schema.prisma.
+    // Como não tenho o schema, vou usar a lógica de comparação que você sugeriu,
+    // mas adaptando para o campo 'senha' que está no código atual.
+
+    // **ATENÇÃO:** A lógica de login do seu plano (bcrypt.compare(senha, prof.pinHash))
+    // usa um campo 'pinHash' que não está no código atual.
+    // Vou usar a lógica mais segura, assumindo que 'senha' é o campo do hash.
+
+    let passOk = false;
+    if (prof.senha && prof.senha.startsWith('$2a$')) { // Verifica se é um hash bcrypt
+      passOk = await bcrypt.compare(senha, prof.senha);
+    } else {
+      // Fallback para comparação de texto puro (se não for hash)
+      passOk = prof.senha === senha;
+    }
+
+    if (!passOk) return res.status(401).json({ ok: false, msg: "Credenciais inválidas" });
+
+    // Cria sessão
+    req.session.painel = { ok: true, proId: prof.id }; // Usando a estrutura de sessão do seu código
+
+    // Salva a sessão antes de redirecionar
+    req.session.save(() => {
+      res.json({ ok: true, redirect: "/painel.html" });
+    });
+  } catch (err) {
+    console.error("Erro no login:", err);
+    res.status(500).json({ ok: false, msg: "Erro interno no servidor" });
   }
-
-  req.session.user = { id: pro.id, email: pro.email, tipo: "prof" };
-
-  // GARANTE que a sessão seja salva antes de redirecionar
-  req.session.save(() => {
-    res.json({ ok: true, redirect: "/painel.html" });
-  });
 });
 
 // Definir ou trocar PIN (6 dígitos)
@@ -3403,23 +3463,30 @@ app.get("/api/favoritos", (req, res) => {
     const uid = ensureFavUID(req, res);
     const map = readFavMap();
     const ids = Array.isArray(map[uid]) ? map[uid] : [];
-    const db = readDB();
-    const items = ids
-      .map((id) => db.find((p) => Number(p.id) === Number(id) && !p.excluido))
-      .filter(Boolean)
-      .map((p) => {
-        const notas = (p.avaliacoes || []).map((a) => Number(a.nota)).filter((n) => n >= 1 && n <= 5);
-        const rating = notas.length ? notas.reduce((a, b) => a + b, 0) / notas.length : 0;
-        return {
-          id: p.id,
-          nome: p.nome,
-          servico: p.servico || p.profissao || "",
-          cidade: p.cidade || "",
-          bairro: p.bairro || "",
-          foto: p.foto || "",
-          rating,
-        };
-      });
+    const items = await prisma.profissional.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        nome: true,
+        servicos: { select: { titulo: true }, take: 1 },
+        endereco: { select: { cidade: true, bairro: true } },
+        fotoUrl: true,
+        avaliacoes: { select: { nota: true } }
+      }
+    });
+
+    const formattedItems = items.map(p => {
+      const rating = p.avaliacoes.length ? p.avaliacoes.reduce((acc, a) => acc + a.nota, 0) / p.avaliacoes.length : 0;
+      return {
+        id: p.id,
+        nome: p.nome,
+        servico: p.servicos[0]?.titulo || '',
+        cidade: p.endereco?.cidade || '',
+        bairro: p.endereco?.bairro || '',
+        foto: p.fotoUrl || '',
+        rating
+      };
+    });
     res.json({ ok: true, ids, items });
   } catch (e) {
     res.status(500).json({ ok: false, error: String(e) });
