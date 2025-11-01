@@ -10,40 +10,31 @@ datasource db {
 /// ////////////////////////////////////////////////////////////
 /// ////////////////////////////////////////////////////////////
 model Usuario {
-  id                  Int           @id @default(autoincrement())
-  nome                String
-  email               String        @unique
-  senha               String
-  tipo                String
-  criadoEm            DateTime      @default(now())
-  profissional        Profissional?
-  assinaturas         Assinatura[]
-  pagamentosViaApp    PagamentoViaApp[]
+  id           Int           @id @default(autoincrement())
+  nome         String
+  email        String        @unique
+  senha        String
+  tipo         String
+  criadoEm     DateTime      @default(now())
+  profissional Profissional?
 }
 
 /// ////////////////////////////////////////////////////////////
 /// ////////////////////////////////////////////////////////////
 model Profissional {
-  id                  Int         @id @default(autoincrement())
-  usuarioId           Int         @unique
-  nome                String
-  idade               Int
-  tempoExperiencia    Int
-  fotoUrl             String?
-  descricao           String?
-  criadoEm            DateTime    @default(now())
-  plano               String      @default("free") // free, pro, premium
-  validadePlano       DateTime?
-  statusAssinatura    String      @default("cancelada") // ativa, pendente, cancelada
-  totalLeadsMes       Int         @default(0)
-  limiteLeadsMes      Int         @default(3)
-  usaPagamentoViaApp  Boolean     @default(false)
-  assinaturaAsaasId   String?
-  avaliacoes          Avaliacao[]
-  endereco            Endereco?
-  mensagens           Mensagem[]
-  usuario             Usuario     @relation(fields: [usuarioId], references: [id])
-  servicos            Servico[]
+  id               Int         @id @default(autoincrement())
+  usuarioId        Int         @unique
+  nome             String
+  idade            Int
+  tempoExperiencia Int
+  fotoUrl          String?
+  descricao        String?
+  criadoEm         DateTime    @default(now())
+  avaliacoes       Avaliacao[]
+  endereco         Endereco?
+  mensagens        Mensagem[]
+  usuario          Usuario     @relation(fields: [usuarioId], references: [id])
+  servicos         Servico[]
 }
 
 /// ////////////////////////////////////////////////////////////
@@ -110,29 +101,17 @@ model Mensagem {
 /// ////////////////////////////////////////////////////////////
 /// ////////////////////////////////////////////////////////////
 model Assinatura {
-  id                  Int      @id @default(autoincrement())
-  usuarioId           Int
-  usuario             Usuario  @relation(fields: [usuarioId], references: [id])
-  plano               String   // free, pro, premium
-  statusAssinatura    String   @default("cancelada") // ativa, pendente, cancelada
-  validadePlano       DateTime?
-  assinaturaAsaasId   String?  @unique
-  criadoEm            DateTime @default(now())
-  atualizadoEm        DateTime @updatedAt
-  @@index([usuarioId])
+  id        Int      @id @default(autoincrement())
+  usuarioId Int
+  plano     String
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
 }
 
-model PagamentoViaApp {
-  id                  Int      @id @default(autoincrement())
-  usuarioId           Int
-  usuario             Usuario  @relation(fields: [usuarioId], references: [id])
-  profissionalId      Int
-  valor               Float
-  taxa                Float    @default(0.04) // 4%
-  valorComTaxa        Float
-  status              String   @default("pendente") // pendente, concluido, cancelado
-  criadoEm            DateTime @default(now())
-  atualizadoEm        DateTime @updatedAt
-  @@index([usuarioId])
-  @@index([profissionalId])
+model session {
+  sid    String   @id @db.VarChar
+  sess   Json     @db.Json
+  expire DateTime @db.Timestamp(6)
+
+  @@index([expire], map: "IDX_session_expire")
 }

@@ -1351,7 +1351,6 @@ function writeJSON(file, data) {
 if (!fs.existsSync(DB_FILE)) writeJSON(DB_FILE, []);
 if (!fs.existsSync(DENUNCIAS_FILE)) writeJSON(DENUNCIAS_FILE, []);
 if (!fs.existsSync(PAYMENTS_FILE)) writeJSON(PAYMENTS_FILE, []);
-if (!fs.existsSync(METRICS_FILE)) writeJSON(METRICS_FILE, {});
 
 // Admin / Sessão
 const ADMIN_USER = process.env.ADMIN_USER || "admin";
