@@ -3072,25 +3072,47 @@ app.get("/painel.html", requireProAuth, (_req, res) => {
 // Rota de login do profissional
 app.post("/auth/pro/login", async (req, res) => {
   const { email, whatsapp, senha } = req.body;
-  const pro = await prisma.profissional.findFirst({
-    where: {
-      OR: [
-        { email: email?.trim() },
-        { whatsapp: whatsapp?.trim() },
-      ],
-    },
-  });
 
-  if (!pro || pro.senha !== senha) {
-    return res.status(401).json({ ok: false, msg: "Credenciais inválidas." });
+  try {
+    const prof = await prisma.profissional.findFirst({
+      where: { OR: [{ email: email?.trim() }, { whatsapp: whatsapp?.trim() }] },
+    });
+
+    if (!prof) return res.status(401).json({ ok: false, msg: "Credenciais inválidas" });
+
+    // A lógica original usava comparação direta ou um campo 'pinHash' que não estava na rota.
+    // Assumindo que a senha está sendo comparada com o campo 'senha' (texto puro ou hash)
+    // Se o campo 'senha' for um hash bcrypt, a comparação deve ser feita com bcrypt.
+    // Vou usar a lógica de bcrypt que você sugeriu, assumindo que 'senha' é o hash.
+    // Se 'prof.senha' for o hash, o campo deve ser renomeado para 'hash' no schema.prisma.
+    // Como não tenho o schema, vou usar a lógica de comparação que você sugeriu,
+    // mas adaptando para o campo 'senha' que está no código atual.
+
+    // **ATENÇÃO:** A lógica de login do seu plano (bcrypt.compare(senha, prof.pinHash))
+    // usa um campo 'pinHash' que não está no código atual.
+    // Vou usar a lógica mais segura, assumindo que 'senha' é o campo do hash.
+
+    let passOk = false;
+    if (prof.senha && prof.senha.startsWith('$2a$')) { // Verifica se é um hash bcrypt
+      passOk = await bcrypt.compare(senha, prof.senha);
+    } else {
+      // Fallback para comparação de texto puro (se não for hash)
+      passOk = prof.senha === senha;
+    }
+
+    if (!passOk) return res.status(401).json({ ok: false, msg: "Credenciais inválidas" });
+
+    // Cria sessão
+    req.session.painel = { ok: true, proId: prof.id }; // Usando a estrutura de sessão do seu código
+
+    // Salva a sessão antes de redirecionar
+    req.session.save(() => {
+      res.json({ ok: true, redirect: "/painel.html" });
+    });
+  } catch (err) {
+    console.error("Erro no login:", err);
+    res.status(500).json({ ok: false, msg: "Erro interno no servidor" });
   }
-
-  req.session.user = { id: pro.id, email: pro.email, tipo: "prof" };
-
-  // GARANTE que a sessão seja salva antes de redirecionar
-  req.session.save(() => {
-    res.json({ ok: true, redirect: "/painel.html" });
-  });
 });
 
 // Definir ou trocar PIN (6 dígitos)
