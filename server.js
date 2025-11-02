@@ -2361,24 +2361,16 @@ app.get("/api/profissionais", async (req, res) => {
         preco: p.preco || 0,
         ultimoComentario: p.ultimoComentario || null,
       };
-    });p.profissao ?? "").toString(),
-        servicoSlug: p.servicoSlug || null,
-        cidade: (p.cidade ?? "").toString(),
-        bairro: (p.bairro ?? "").toString(),
-        lat: Number.isFinite(pLat) ? pLat : null,
-        lng: Number.isFinite(pLng) ? pLng : null,
-        distanceKm,
-        whatsapp: (p.whatsapp ?? "").toString(),
-        telefone: (p.telefone ?? "").toString(),
-        site: (p.site ?? "").toString(),
-        precoBase: (p.precoBase ?? "").toString(),
-        verificado: !!p.verificado,
-        mediaAvaliacao: Number(p.mediaAvaliacao || rating || 0),
-        totalAvaliacoes: Number(p.totalAvaliacoes || (p.avaliacoes?.length || 0)),
-        plano: p.plano || "free",
-        criadoEm: p.criadoEm || null
-      };
     });
+
+    // Remove duplicatas se houver (por ID)
+    const uniqueMap = new Map();
+    items.forEach(item => {
+      if (!uniqueMap.has(item.id)) {
+        uniqueMap.set(item.id, item);
+      }
+    });
+    items = Array.from(uniqueMap.values());
 
     // ===== ORDENAÇÃO =====
     const sortParam = String(req.query.sort || "relevance").toLowerCase();
@@ -3458,7 +3450,7 @@ function ensureFavUID(req, res) {
   return uid;
 }
 
-app.get("/api/favoritos", (req, res) => {
+app.get("/api/favoritos", async (req, res) => {
   try {
     const uid = ensureFavUID(req, res);
     const map = readFavMap();
