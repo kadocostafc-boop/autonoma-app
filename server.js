@@ -116,6 +116,15 @@ async function sendEmail(to, subject, text) {
 }
 
 const app = express();
+
+// Evita cache HTTP e garante leitura sempre atual (Railway guidance)
+app.use((req, res, next) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.set("Pragma", "no-cache");
+  res.set("Expires", "0");
+  res.set("Surrogate-Control", "no-store");
+  next();
+});
 app.set("trust proxy", 1); // necessário para HTTPS no Railway
 app.use(express.json());
 
@@ -185,20 +194,11 @@ if (primaryHost) {
 // =========================================================
 
 // =============[ Esqueci minha senha • POST /auth/pro/forgot ]=============
-const RESET_DIR = path.join(process.env.DATA_DIR || "./data", "reset");
-const RESET_DB  = path.join(RESET_DIR, "tokens.json");
+// const RESET_DIR = path.join(process.env.DATA_DIR || "./data", "reset");
+// const RESET_DB  = path.join(RESET_DIR, "tokens.json");
 
 // util: carrega/salva JSON simples
-function loadJSONSafe(file) {
-  try { return JSON.parse(fs.readFileSync(file, "utf8")); }
-  catch { return {}; }
-}
-
-
-function saveJSON(file, obj) {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, JSON.stringify(obj, null, 2));
-}
+// As funções loadJSONSafe e saveJSON foram removidas.
 
 // util: base URL (Railway/produção) para montar o link
 function baseUrlFrom(req) {
@@ -233,14 +233,14 @@ app.post("/auth/pro/forgot", async (req, res) => {
     const token = crypto.randomBytes(24).toString("hex");
     const exp   = Date.now() + 2 * 60 * 60 * 1000; // +2h
 
-    // 2) grava token no "banco" simples em disco
-    const db = loadJSONSafe(RESET_DB);
-    // limpeza básica de tokens expirados
-    for (const [t, info] of Object.entries(db)) {
-      if (!info?.exp || Date.now() > Number(info.exp)) delete db[t];
-    }
-    db[token] = { email: identifier, exp, userId: user.id };
-    saveJSON(RESET_DB, db);
+    // 2) grava token no "banco" simples em disco (TODO: Mudar para Neon DB)
+    // const db = loadJSONSafe(RESET_DB);
+    // // limpeza básica de tokens expirados
+    // for (const [t, info] of Object.entries(db)) {
+    //   if (!info?.exp || Date.now() > Number(info.exp)) delete db[t];
+    // }
+    // db[token] = { email: identifier, exp, userId: user.id };
+    // saveJSON(RESET_DB, db);
 
     // 3) monta link
     const url = `${baseUrlFrom(req)}/reset?token=${encodeURIComponent(token)}`;
@@ -281,8 +281,8 @@ app.post("/auth/pro/reset", async (req, res) => {
   if (!token || !senha) {
     return res.status(400).json({ ok: false, error: "Token e nova senha obrigatórios" });
   }
-  const db = loadJSONSafe(RESET_DB);
-  const resetInfo = db[token];
+  // const db = loadJSONSafe(RESET_DB);
+  // const resetInfo = db[token];
   if (!resetInfo || resetInfo.exp < Date.now()) {
     return res.status(400).json({ ok: false, error: "Token inválido ou expirado" });
   }
@@ -299,10 +299,9 @@ app.post("/auth/pro/reset", async (req, res) => {
     console.error("[reset] erro ao atualizar senha:", e);
     return res.status(500).json({ ok: false, error: "Erro ao redefinir a senha." });
   }
-
-  // Remove token e salva
-  delete db[token];
-  saveJSON(RESET_DB, db);
+    // 4) remove token (TODO: Mudar para Neon DB)
+    // delete db[token];
+    // saveJSON(RESET_DB, db);
 
   return res.json({ ok: true, msg: "Senha redefinida com sucesso." });
 });
@@ -1396,7 +1395,15 @@ app.get(['/painel', '/painel/', '/pa', '/pa/'], (_req, res) => {
   res.redirect(302, '/painel_login.html');
 });
 // Estático
-app.use(express.static(PUBLIC_DIR, { maxAge: "7d", fallthrough: true }));
+app.use(
+  express.static(PUBLIC_DIR, {
+    etag: false,
+    lastModified: false,
+    cacheControl: false,
+    maxAge: 0,
+    fallthrough: true
+  })
+);
 app.use("/uploads", express.static(UPLOAD_DIR, { maxAge: "30d", immutable: true }));
 
 // No-cache para /api/*
@@ -4413,8 +4420,10 @@ app.get("/api/servicos/meus", (req, res) => {
   const user = req.session.user;
   if (!user || user.tipo !== "prof") return res.status(401).json({ ok: false, error: "Não autenticado ou não é profissional." });
   
-  // Assumindo que DATA_DIR e readJSON/saveJSON existem e funcionam
-  const servicos = readJSON(SERVICOS_FILE, []).filter(s => s.userId === user.id);
+  // TODO: Implementar a leitura de serviços do profissional via Prisma/Neon DB
+  // const servicos = await prisma.servico.findMany({ where: { userId: user.id } });
+  // Por enquanto, retornando um array vazio para evitar erro de referência
+  const servicos = [];
   res.json({ ok: true, servicos: servicos });
 });
 
@@ -4425,7 +4434,9 @@ app.post("/api/servicos/adicionar", (req, res) => {
   const { titulo, descricao, preco } = req.body;
   if (!titulo || !preco) return res.status(400).json({ ok: false, error: "Título e preço são obrigatórios." });
 
-  const servicos = readJSON(SERVICOS_FILE, []);
+  // TODO: Implementar a leitura de serviços do profissional via Prisma/Neon DB
+  // const servicos = await prisma.servico.findMany();
+  const servicos = [];
   const novo = {
     id: Date.now(),
     userId: user.id,
@@ -4435,7 +4446,8 @@ app.post("/api/servicos/adicionar", (req, res) => {
     criadoEm: new Date().toISOString(),
   };
   servicos.push(novo);
-  saveJSON(SERVICOS_FILE, servicos);
+  // TODO: Implementar a gravação do novo serviço via Prisma/Neon DB
+  // await prisma.servico.create({ data: novo });
   res.json({ ok: true, msg: "Serviço cadastrado com sucesso!", servico: novo });
 });
 
