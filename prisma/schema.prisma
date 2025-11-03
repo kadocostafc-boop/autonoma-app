@@ -108,6 +108,14 @@ model Assinatura {
   criadoEm  DateTime @default(now())
 }
 
+model ResetToken {
+  token     String   @id
+  userId    Int
+  expiresAt DateTime @map("expires_at")
+
+  @@map("reset_tokens")
+}
+
 model session {
   sid    String   @id @db.VarChar
   sess   Json     @db.Json
