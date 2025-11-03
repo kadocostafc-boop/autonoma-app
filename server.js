@@ -2080,7 +2080,7 @@ app.post(
           createdAt: undefined,
         },
       });
-      const id = novoProfissional.id; // Usa o ID gerado pelo DB
+      const novoId = novoProfissional.id; // Usa o ID gerado pelo DB
 
       // ===== mantém catálogos (serviços / cidades / bairros) =====
       try {
@@ -2133,8 +2133,8 @@ app.post(
       }
 
       // ===== redireciona para o perfil =====
-      console.log('[CADASTRO] redirect ->', `/perfil.html?id=${id}`);
-      return res.redirect(`/cadastro_sucesso.html?id=${id}`);
+      console.log('[CADASTRO] redirect ->', `/perfil.html?id=${novoId}`);
+      return res.redirect(`/cadastro_sucesso.html?id=${novoId}`);
     } catch (e) {
       console.error('[ERRO /cadastro]', e);
       return res
@@ -2663,9 +2663,9 @@ app.post("/profissional/:id/avaliar", (req, res) => {
     (p.avaliacoes ||= []).push({ autor, nota, comentario, at: nowISO(), ip: getIP(req) });
     writeDB(db);
 
-    return res.redirect(`/perfil.html?id=${id}&ok=1`);
+    return res.redirect(`/perfil.html?id=${novoId}&ok=1`);
   } catch (e) {
-    return res.status(500).send(htmlMsg("Erro", String(e), `/perfil.html?id=${id}`));
+    return res.status(500).send(htmlMsg("Erro", String(e), `/perfil.html?id=${novoId}`));
   }
 });
 
