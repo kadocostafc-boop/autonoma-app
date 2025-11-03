@@ -1666,8 +1666,8 @@ app.get("/clientes", (_req, res) => res.redirect(301, "/clientes.html"));
 app.get("/cadastro", (_req, res) => res.redirect(301, "/cadastro.html"));
 
 // =========================[ Banco (JSON) ]=====================
-const readDB = () => readJSON(DB_FILE, []);
-const writeDB = (data) => writeJSON(DB_FILE, data);
+// const readDB = () => readJSON(DB_FILE, []);
+// const writeDB = (data) => writeJSON(DB_FILE, data);
 
 // Verificado (regra pragmática para UX boa)
 function computeVerified(p) {
@@ -1675,85 +1675,88 @@ function computeVerified(p) {
 }
 
 // Migração/normalização inicial
+/* 
+// Bloco de migração/normalização inicial comentado para garantir o uso exclusivo do Neon DB.
 (function fixDB() {
-  const db = readDB();
+  // const db = readDB(); // readDB removido
   let changed = false;
-  let nextId = db.reduce((m, p) => Math.max(m, Number(p.id || 0)), 0) + 1;
+  // let nextId = db.reduce((m, p) => Math.max(m, Number(p.id || 0)), 0) + 1;
 
-  for (const p of db) {
-    if (!p.id) {
-      p.id = nextId++;
-      changed = true;
-    }
-    if (typeof p.atendimentos !== "number") {
-      p.atendimentos = 0;
-      changed = true;
-    }
-    if (!Array.isArray(p.avaliacoes)) {
-      p.avaliacoes = [];
-      changed = true;
-    }
-    if (!p.createdAt) {
-      p.createdAt = nowISO();
-      changed = true;
-    }
-    if (typeof p.visitas !== "number") {
-      p.visitas = 0;
-      changed = true;
-    }
-    if (typeof p.chamadas !== "number") {
-      p.chamadas = 0;
-      changed = true;
-    }
-    if (!Array.isArray(p.visitsLog)) p.visitsLog = [];
-    if (!Array.isArray(p.callsLog)) p.callsLog = [];
-    if (!Array.isArray(p.qrLog)) p.qrLog = [];
+  // for (const p of db) {
+  //   if (!p.id) {
+  //     p.id = nextId++;
+  //     changed = true;
+  //   }
+  //   if (typeof p.atendimentos !== "number") {
+  //     p.atendimentos = 0;
+  //     changed = true;
+  //   }
+  //   if (!Array.isArray(p.avaliacoes)) {
+  //     p.avaliacoes = [];
+  //     changed = true;
+  //   }
+  //   if (!p.createdAt) {
+  //     p.createdAt = nowISO();
+  //     changed = true;
+  //   }
+  //   if (typeof p.visitas !== "number") {
+  //     p.visitas = 0;
+  //     changed = true;
+  //   }
+  //   if (typeof p.chamadas !== "number") {
+  //     p.chamadas = 0;
+  //     changed = true;
+  //   }
+  //   if (!Array.isArray(p.visitsLog)) p.visitsLog = [];
+  //   if (!Array.isArray(p.callsLog)) p.callsLog = [];
+  //   if (!Array.isArray(p.qrLog)) p.qrLog = [];
 
-    if (typeof p.suspenso !== "boolean") {
-      p.suspenso = false;
-      changed = true;
-    }
-    if (!p.suspensoMotivo) p.suspensoMotivo = "";
-    if (!p.suspensoEm && p.suspenso) p.suspensoEm = nowISO();
+  //   if (typeof p.suspenso !== "boolean") {
+  //     p.suspenso = false;
+  //     changed = true;
+  //   }
+  //   if (!p.suspensoMotivo) p.suspensoMotivo = "";
+  //   if (!p.suspensoEm && p.suspenso) p.suspensoEm = nowISO();
 
-    if (typeof p.excluido !== "boolean") {
-      p.excluido = false;
-      changed = true;
-    }
-    if (!p.excluidoEm && p.excluido) p.excluidoEm = nowISO();
+  //   if (typeof p.excluido !== "boolean") {
+  //     p.excluido = false;
+  //     changed = true;
+  //   }
+  //   if (!p.excluidoEm && p.excluido) p.excluidoEm = nowISO();
 
-    if (p.lat != null && typeof p.lat !== "number") {
-      p.lat = Number(p.lat);
-      changed = true;
-    }
-    if (p.lng != null && typeof p.lng !== "number") {
-      p.lng = Number(p.lng);
-      changed = true;
-    }
+  //   if (p.lat != null && typeof p.lat !== "number") {
+  //     p.lat = Number(p.lat);
+  //     changed = true;
+  //   }
+  //   if (p.lng != null && typeof p.lng !== "number") {
+  //     p.lng = Number(p.lng);
+  //     changed = true;
+  //   }
 
-    const newVer = computeVerified(p);
-    if (p.verificado !== newVer) {
-      p.verificado = newVer;
-      changed = true;
-    }
+  //   const newVer = computeVerified(p);
+  //   if (p.verificado !== newVer) {
+  //     p.verificado = newVer;
+  //     changed = true;
+  //   }
 
-    if (!p.plano) p.plano = "free";
-    if (typeof p.raioKm !== "number") p.raioKm = 0;
-    if (!Array.isArray(p.cidadesExtras)) p.cidadesExtras = [];
-    if (!p.radar) {
-      p.radar = { on: false, until: null, lastOnAt: null, monthlyUsed: 0, monthRef: monthRefOf() };
-      changed = true;
-    }
-    if (!p.lastPos) p.lastPos = { lat: null, lng: null, at: null };
-    if (typeof p.receiveViaApp !== "boolean") p.receiveViaApp = false;
+  //   if (!p.plano) p.plano = "free";
+  //   if (typeof p.raioKm !== "number") p.raioKm = 0;
+  //   if (!Array.isArray(p.cidadesExtras)) p.cidadesExtras = [];
+  //   if (!p.radar) {
+  //     p.radar = { on: false, until: null, lastOnAt: null, monthlyUsed: 0, monthRef: monthRefOf() };
+  //     changed = true;
+  //   }
+  //   if (!p.lastPos) p.lastPos = { lat: null, lng: null, at: null };
+  //   if (typeof p.receiveViaApp !== "boolean") p.receiveViaApp = false;
 
-    // PIN (login do profissional)
-    if (!p.pinHash) p.pinHash = null;
-    if (typeof p.mustSetPin !== "boolean") p.mustSetPin = false;
-  }
-  if (changed) writeDB(db);
+  //   // PIN (login do profissional)
+  //   if (!p.pinHash) p.pinHash = null;
+  //   if (typeof p.mustSetPin !== "boolean") p.mustSetPin = false;
+  // }
+  // if (changed) writeDB(db); // writeDB removido
   console.log("✔ Base OK (ids/logs/planos/radar/verificado).");
 })();
+*/
 
 // =========================[ Upload (multer) ]==================
 const storage = multer.diskStorage({
