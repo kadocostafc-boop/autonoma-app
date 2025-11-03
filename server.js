@@ -4416,7 +4416,7 @@ app.post("/api/saldo/saque", requireProAuth, async (req, res) => {
 
 // =========================[ SERVIÇOS DO PROFISSIONAL ]========================
 
-app.get("/api/servicos/meus", (req, res) => {
+app.get("/api/servicos/meus", async (req, res) => {
   const user = req.session.user;
   if (!user || user.tipo !== "prof") return res.status(401).json({ ok: false, error: "Não autenticado ou não é profissional." });
   
@@ -4426,7 +4426,7 @@ app.get("/api/servicos/meus", (req, res) => {
   res.json({ ok: true, servicos: servicos });
 });
 
-app.post("/api/servicos/adicionar", (req, res) => {
+app.post("/api/servicos/adicionar", async (req, res) => {
   const user = req.session.user;
   if (!user || user.tipo !== "prof") return res.status(401).json({ ok: false, error: "Não autenticado ou não é profissional." });
   
