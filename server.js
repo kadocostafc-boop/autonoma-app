@@ -2040,8 +2040,8 @@ app.post(
 
       // ==== salva no DB ====
       // lê o banco atual com fallback (assume readDB/readJSON/DB_FILE definidos no seu server.js)
-      const current = (typeof readDB === 'function' ? readDB() : readJSON(DB_FILE, []));
-      const banco = Array.isArray(current) ? current : [];
+      // const current = (typeof readDB === 'function' ? readDB() : readJSON(DB_FILE, []));
+      // const banco = Array.isArray(current) ? current : [];
 
       // regra simples anti-duplicado por (cidade + bairro + whatsapp)
       const dup = banco.find(p =>
@@ -2138,22 +2138,12 @@ app.post(
 );
 
   // Lê o banco atual com fallback
-const current = (typeof readDB === 'function' ? readDB() : readJSON(DB_FILE, []));
-const banco = Array.isArray(current) ? current : [];
+// const current = (typeof readDB === 'function' ? readDB() : readJSON(DB_FILE, []));
+// const banco = Array.isArray(current) ? current : [];
 
 
 
-// persiste (usa writeDB se existir; senão, writeJSON)
-if (typeof writeDB === 'function') {
-  try {
-    writeDB(banco);
-  } catch (e) {
-    console.error('[writeDB] falhou, usando fallback', e);
-    writeJSON(DB_FILE, banco);
-  }
-} else {
-  writeJSON(DB_FILE, banco);
-}
+// A persistência local foi removida. O código deve usar o Prisma.
 
 
 // ====== [Helpers de leitura/escrita do DB] ======
