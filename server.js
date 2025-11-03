@@ -233,14 +233,21 @@ app.post("/auth/pro/forgot", async (req, res) => {
     const token = crypto.randomBytes(24).toString("hex");
     const exp   = Date.now() + 2 * 60 * 60 * 1000; // +2h
 
-    // 2) grava token no "banco" simples em disco (TODO: Mudar para Neon DB)
-    // const db = loadJSONSafe(RESET_DB);
-    // // limpeza básica de tokens expirados
-    // for (const [t, info] of Object.entries(db)) {
-    //   if (!info?.exp || Date.now() > Number(info.exp)) delete db[t];
-    // }
-    // db[token] = { email: identifier, exp, userId: user.id };
-    // saveJSON(RESET_DB, db);
+    // 2) grava token no Neon DB
+    await prisma.resetToken.deleteMany({
+      where: {
+        expiresAt: {
+          lt: new Date(),
+        },
+      },
+    });
+    await prisma.resetToken.create({
+      data: {
+        token: token,
+        userId: user.id,
+        expiresAt: new Date(exp),
+      },
+    });
 
     // 3) monta link
     const url = `${baseUrlFrom(req)}/reset?token=${encodeURIComponent(token)}`;
@@ -281,9 +288,10 @@ app.post("/auth/pro/reset", async (req, res) => {
   if (!token || !senha) {
     return res.status(400).json({ ok: false, error: "Token e nova senha obrigatórios" });
   }
-  // const db = loadJSONSafe(RESET_DB);
-  // const resetInfo = db[token];
-  if (!resetInfo || resetInfo.exp < Date.now()) {
+  const resetInfo = await prisma.resetToken.findUnique({
+    where: { token: token },
+  });
+  if (!resetInfo || resetInfo.expiresAt < new Date()) {
     return res.status(400).json({ ok: false, error: "Token inválido ou expirado" });
   }
 
@@ -299,9 +307,10 @@ app.post("/auth/pro/reset", async (req, res) => {
     console.error("[reset] erro ao atualizar senha:", e);
     return res.status(500).json({ ok: false, error: "Erro ao redefinir a senha." });
   }
-    // 4) remove token (TODO: Mudar para Neon DB)
-    // delete db[token];
-    // saveJSON(RESET_DB, db);
+    // 4) remove token do Neon DB
+    await prisma.resetToken.delete({
+      where: { token: token },
+    });
 
   return res.json({ ok: true, msg: "Senha redefinida com sucesso." });
 });
@@ -2043,12 +2052,14 @@ app.post(
       // const current = (typeof readDB === 'function' ? readDB() : readJSON(DB_FILE, []));
       // const banco = Array.isArray(current) ? current : [];
 
-      // regra simples anti-duplicado por (cidade + bairro + whatsapp)
-      const dup = banco.find(p =>
-        String(p.cidade || '').toLowerCase() === String(novo.cidade || '').toLowerCase() &&
-        String(p.bairro || '').toLowerCase() === String(novo.bairro || '').toLowerCase() &&
-        String(p.whatsapp || '') === String(novo.whatsapp || '')
-      );
+      // 1. Verifica duplicidade no Neon DB
+      const dup = await prisma.profissional.findFirst({
+        where: {
+          cidade: novo.cidade,
+          bairro: novo.bairro,
+          whatsapp: novo.whatsapp,
+        },
+      });
 
       if (dup) {
         return res
@@ -2060,20 +2071,16 @@ app.post(
           ));
       }
 
-      // adiciona o novo registro
-      banco.push(novo);
-
-      // persiste (usa writeDB se existir; senão, writeJSON)
-      try {
-        if (typeof writeDB === 'function') {
-          writeDB(banco);
-        } else {
-          writeJSON(DB_FILE, banco);
-        }
-      } catch (e) {
-        console.error('[writeDB] falhou, usando fallback writeJSON', e);
-        try { writeJSON(DB_FILE, banco); } catch (err) { console.error('[writeJSON] falhou também', err); }
-      }
+      // 2. Adiciona o novo registro no Neon DB
+      const novoProfissional = await prisma.profissional.create({
+        data: {
+          ...novo,
+          // Garante que campos como 'id' e 'createdAt' sejam gerados pelo Prisma/DB
+          id: undefined,
+          createdAt: undefined,
+        },
+      });
+      const id = novoProfissional.id; // Usa o ID gerado pelo DB
 
       // ===== mantém catálogos (serviços / cidades / bairros) =====
       try {
@@ -2138,8 +2145,8 @@ app.post(
 );
 
   // Lê o banco atual com fallback
-// const current = (typeof readDB === 'function' ? readDB() : readJSON(DB_FILE, []));
-// const banco = Array.isArray(current) ? current : [];
+// A lógica de leitura do banco de dados local foi removida. O código deve usar o Prisma.
+// const banco = []; // Array vazio para evitar erro de referência. A lógica de cadastro deve ser reescrita para usar o Prisma.
 
 
 
@@ -4413,10 +4420,9 @@ app.get("/api/servicos/meus", (req, res) => {
   const user = req.session.user;
   if (!user || user.tipo !== "prof") return res.status(401).json({ ok: false, error: "Não autenticado ou não é profissional." });
   
-  // TODO: Implementar a leitura de serviços do profissional via Prisma/Neon DB
-  // const servicos = await prisma.servico.findMany({ where: { userId: user.id } });
-  // Por enquanto, retornando um array vazio para evitar erro de referência
-  const servicos = [];
+    const servicos = await prisma.servico.findMany({
+    where: { userId: user.id },
+  });
   res.json({ ok: true, servicos: servicos });
 });
 
@@ -4427,9 +4433,8 @@ app.post("/api/servicos/adicionar", (req, res) => {
   const { titulo, descricao, preco } = req.body;
   if (!titulo || !preco) return res.status(400).json({ ok: false, error: "Título e preço são obrigatórios." });
 
-  // TODO: Implementar a leitura de serviços do profissional via Prisma/Neon DB
+  // Não é necessário ler todos os serviços aqui, apenas criar o novo.
   // const servicos = await prisma.servico.findMany();
-  const servicos = [];
   const novo = {
     id: Date.now(),
     userId: user.id,
@@ -4438,10 +4443,15 @@ app.post("/api/servicos/adicionar", (req, res) => {
     preco: parseFloat(preco),
     criadoEm: new Date().toISOString(),
   };
-  servicos.push(novo);
-  // TODO: Implementar a gravação do novo serviço via Prisma/Neon DB
-  // await prisma.servico.create({ data: novo });
-  res.json({ ok: true, msg: "Serviço cadastrado com sucesso!", servico: novo });
+  const novoServico = await prisma.servico.create({
+    data: {
+      userId: user.id,
+      titulo,
+      descricao: descricao || "",
+      preco: parseFloat(preco),
+    },
+  });
+  res.json({ ok: true, msg: "Serviço cadastrado com sucesso!", servico: novoServico });
 });
 
 
