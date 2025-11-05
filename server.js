@@ -1930,7 +1930,7 @@ function validateCadastro(body) {
 function isDuplicate(db, novo) {
   return db.some(
     (p) =>
-          email: novo.email, &&
+      p.whatsapp === novo.whatsapp &&
       norm(p.cidade) === norm(novo.cidade) &&
       norm(p.bairro) === norm(novo.bairro) &&
       !p.excluido
