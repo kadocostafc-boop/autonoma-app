@@ -27,4 +27,4 @@ Thumbs.db
 !data/*.json
 
 # Garantir que public/ vá para o repo
-!public/**
+!public/**.env
