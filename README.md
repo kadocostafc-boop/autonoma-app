@@ -29,5 +29,5 @@ Busca inteligente por **bairro** e **tipo de serviço**, perfis verificados, ava
 - **API com paginação e filtros**
 
 ---
-
+Update buid
 ## 📂 Estrutura do Projeto
