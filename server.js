@@ -1930,7 +1930,7 @@ function validateCadastro(body) {
 function isDuplicate(db, novo) {
   return db.some(
     (p) =>
-      p.whatsapp === novo.whatsapp &&
+          email: novo.email, &&
       norm(p.cidade) === norm(novo.cidade) &&
       norm(p.bairro) === norm(novo.bairro) &&
       !p.excluido
@@ -2011,10 +2011,10 @@ app.post(
         ));
       }
 
-      // 1. Verifica duplicidade no Neon DB (apenas pelo whatsapp)
-      const dup = await prisma.profissional.findFirst({
+      // 1. Verifica duplicidade no Neon DB (pelo email do Usuario)
+      const dup = await prisma.usuario.findFirst({
         where: {
-          whatsapp: novo.whatsapp,
+          email: novo.email,
         },
       });
 
@@ -2023,7 +2023,7 @@ app.post(
           .status(400)
           .send(htmlMsg(
             'Cadastro duplicado',
-            'Já existe um profissional com este WhatsApp.',
+            'Já existe um usuário com este e-mail.',
             '/cadastro.html'
           ));
       }
