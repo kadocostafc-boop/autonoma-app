@@ -1975,56 +1975,35 @@ app.post(
       const servico = norm(req.body.servico || req.body.profissao || '');
       const servicoSlug = servico ? makeSlug(servico) : null;
 
-      // id
-      const id = Date.now().toString();
-
       // ===== monta registro final =====
       const novo = {
-        id,
         // identificação
         nome: norm(req.body.nome),
-        foto: fotoUrl,
         fotoUrl,
         // contatos
         whatsapp,
-        telefone,
         email: norm((req.body.email || '').toLowerCase()),
-        site: norm(req.body.site),
-        // localização
-        cidade: norm(req.body.cidade),
-        estado: req.body.estado || null,
-        bairro: norm(req.body.bairro),
-        lat: Number.isFinite(Number(req.body.lat)) ? Number(req.body.lat) : null,
-        lng: Number.isFinite(Number(req.body.lng)) ? Number(req.body.lng) : null,
         // profissional
-        servico,
-        servicoSlug,
-        profissao: norm(req.body.profissao),
-        // descrição/bio
+        idade: Number(req.body.idade || 0), // Adicionado campo idade
+        tempoExperiencia: Number(req.body.tempoExperiencia || 0), // Adicionado campo tempoExperiencia
         descricao: _descricao,
-        bio: _descricao,
-        // experiência
-        experiencia: _experiencia,
-        experienciaTempo: _experiencia,
-        precoBase: norm(req.body.precoBase),
-        endereco: norm(req.body.endereco),
         // sistema
-        criadoEm: new Date().toISOString(),
-        verificado: false,
-        mediaAvaliacao: 0,
-        totalAvaliacoes: 0,
-        visitas: 0,
-        // segurança (será preenchido abaixo)
-        passwordHash: null,
-        pinHash: null
+        criadoEm: new Date(), // Usar objeto Date para o Prisma
       };
 
       // ===== SENHA: pega e gera hash (se existir) =====
-      // o usuário pode enviar o campo "senha" ou "pin" (cobre ambos)
       const rawSenha = (req.body.senha || req.body.password || req.body.pin || '').toString().trim();
+      let senhaHash = null;
 
-      // Validação do formato do PIN (4 a 6 dígitos numéricos) para cadastro
-      if (rawSenha && !/^[0-9]{4,6}$/.test(rawSenha)) {
+      if (rawSenha && /^[0-9]{4,6}$/.test(rawSenha)) {
+        try {
+          const bcrypt = require('bcryptjs');
+          const salt = bcrypt.genSaltSync(10);
+          senhaHash = bcrypt.hashSync(String(rawSenha), salt);
+        } catch (e) {
+          console.warn('[password] falhou, ignorando hash:', e);
+        }
+      } else if (rawSenha) {
         return res.status(400).send(htmlMsg(
           'Erro no Cadastro',
           'O PIN deve conter entre 4 e 6 dígitos numéricos.',
@@ -2032,31 +2011,9 @@ app.post(
         ));
       }
 
-      if (rawSenha) {
-        try {
-          const bcrypt = require('bcryptjs');
-          const salt = bcrypt.genSaltSync(10);
-          const hashed = bcrypt.hashSync(String(rawSenha), salt);
-          // salva em ambos os campos só por compatibilidade
-          novo.passwordHash = hashed;
-          novo.pinHash = hashed;
-        } catch (e) {
-          console.warn('[password] falhou, ignorando hash:', e);
-          novo.passwordHash = null;
-          novo.pinHash = null;
-        }
-      }
-
-      // ==== salva no DB ====
-      // lê o banco atual com fallback (assume readDB/readJSON/DB_FILE definidos no seu server.js)
-      // const current = (typeof readDB === 'function' ? readDB() : readJSON(DB_FILE, []));
-      // const banco = Array.isArray(current) ? current : [];
-
-      // 1. Verifica duplicidade no Neon DB
+      // 1. Verifica duplicidade no Neon DB (apenas pelo whatsapp)
       const dup = await prisma.profissional.findFirst({
         where: {
-          cidade: novo.cidade,
-          bairro: novo.bairro,
           whatsapp: novo.whatsapp,
         },
       });
@@ -2066,36 +2023,66 @@ app.post(
           .status(400)
           .send(htmlMsg(
             'Cadastro duplicado',
-            'Já existe um profissional com o mesmo WhatsApp neste bairro/cidade.',
+            'Já existe um profissional com este WhatsApp.',
             '/cadastro.html'
           ));
       }
 
-      // 2. Adiciona o novo registro no Neon DB
-      const novoProfissional = await prisma.profissional.create({
+      // 2. Cria o usuário e o profissional em uma transação
+      const novoUsuario = await prisma.usuario.create({
         data: {
-          ...novo,
-          // Garante que campos como 'id' e 'createdAt' sejam gerados pelo Prisma/DB
-          id: undefined,
-          createdAt: undefined,
+          nome: novo.nome,
+          email: novo.email,
+          senha: senhaHash || '', // Senha pode ser vazia se não for fornecida
+          tipo: 'profissional',
+          profissional: {
+            create: {
+              nome: novo.nome,
+              idade: novo.idade,
+              tempoExperiencia: novo.tempoExperiencia,
+              fotoUrl: novo.fotoUrl,
+              descricao: novo.descricao,
+              // Relacionamento com Endereco
+              endereco: {
+                create: {
+                  cidade: norm(req.body.cidade),
+                  bairro: norm(req.body.bairro),
+                  estado: norm(req.body.estado || ''),
+                  latitude: Number.isFinite(Number(req.body.lat)) ? Number(req.body.lat) : null,
+                  longitude: Number.isFinite(Number(req.body.lng)) ? Number(req.body.lng) : null,
+                }
+              },
+              // Relacionamento com Servico (assumindo que o cadastro inicial não cria serviços)
+              // Se o formulário de cadastro incluir serviços, a lógica deve ser adaptada.
+              // Por enquanto, vamos criar apenas o profissional.
+            }
+          }
         },
+        include: {
+          profissional: {
+            select: {
+              id: true
+            }
+          }
+        }
       });
-      const novoId = novoProfissional.id; // Usa o ID gerado pelo DB
+
+      const novoId = novoUsuario.profissional.id; // Usa o ID do profissional gerado pelo DB
 
       // ===== mantém catálogos (serviços / cidades / bairros) =====
       try {
         // serviços: string[] ou [{nome,slug}]
-        if (novo.servico) {
+        if (servico) {
           let servs = readJSON(SERVICOS_FILE, []);
           if (!Array.isArray(servs)) servs = [];
           const exists = servs.some(s =>
-            (typeof s === 'string' ? s : String(s?.nome || '')).toLowerCase() === novo.servico.toLowerCase()
+            (typeof s === 'string' ? s : String(s?.nome || '')).toLowerCase() === servico.toLowerCase()
           );
           if (!exists) {
             if (servs.length && typeof servs[0] === 'object') {
-              servs.push({ nome: novo.servico, slug: novo.servicoSlug || makeSlug(novo.servico) });
+              servs.push({ nome: servico, slug: servicoSlug || makeSlug(servico) });
             } else {
-              servs.push(novo.servico);
+              servs.push(servico);
             }
             servs.sort((a, b) =>
               (typeof a === 'string' ? a : a.nome).localeCompare(typeof b === 'string' ? b : b.nome, 'pt-BR')
@@ -2105,24 +2092,24 @@ app.post(
         }
 
         // cidades: string[]
-        if (novo.cidade) {
+        if (norm(req.body.cidade)) {
           let cidades = readJSON(CIDADES_FILE, []);
           if (!Array.isArray(cidades)) cidades = [];
-          if (!cidades.some(c => String(c).toLowerCase() === novo.cidade.toLowerCase())) {
-            cidades.push(novo.cidade);
+          if (!cidades.some(c => String(c).toLowerCase() === norm(req.body.cidade).toLowerCase())) {
+            cidades.push(norm(req.body.cidade));
             cidades.sort((a, b) => String(a).localeCompare(String(b), 'pt-BR'));
             writeJSON(CIDADES_FILE, cidades);
           }
         }
 
         // bairros: { [cidade]: string[] }
-        if (novo.cidade && novo.bairro) {
+        if (norm(req.body.cidade) && norm(req.body.bairro)) {
           let bairrosMap = readJSON(BAIRROS_FILE, {});
           if (!bairrosMap || typeof bairrosMap !== 'object') bairrosMap = {};
-          const key = novo.cidade;
+          const key = norm(req.body.cidade);
           const arr = Array.isArray(bairrosMap[key]) ? bairrosMap[key] : [];
-          if (!arr.some(b => String(b).toLowerCase() === novo.bairro.toLowerCase())) {
-            arr.push(novo.bairro);
+          if (!arr.some(b => String(b).toLowerCase() === norm(req.body.bairro).toLowerCase())) {
+            arr.push(norm(req.body.bairro));
             arr.sort((a, b) => String(a).localeCompare(String(b), 'pt-BR'));
             bairrosMap[key] = arr;
             writeJSON(BAIRROS_FILE, bairrosMap);
