@@ -117,6 +117,33 @@ async function sendEmail(to, subject, text) {
 
 const app = express();
 
+// ======================= MIGRATION EM PRODUÇÃO (USAR 1 VEZ) ==========================
+app.get("/run-migrations", async (req, res) => {
+  try {
+    const { exec } = require("child_process");
+
+    exec("npx prisma migrate deploy", (err, stdout, stderr) => {
+      if (err) {
+        console.error("Erro ao rodar migrate deploy:", err);
+        return res.send("<pre>ERRO AO RODAR MIGRATION:\n" + err.message + "</pre>");
+      }
+
+      return res.send(
+        "<pre>MIGRATIONS APLICADAS COM SUCESSO!\n" +
+        stdout +
+        "\n" +
+        stderr +
+        "\nVocê já pode remover esta rota.</pre>"
+      );
+    });
+  } catch (e) {
+    console.error("Erro geral:", e);
+    return res.send("<pre>ERRO GERAL:\n" + e.message + "</pre>");
+  }
+});
+// =====================================================================================
+
+
 // Evita cache HTTP e garante leitura sempre atual (Railway guidance)
 app.use((req, res, next) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
