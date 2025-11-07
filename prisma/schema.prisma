@@ -4,41 +4,54 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL") // use a URL com -pooler no Railway/Neon
 }
 
-/// ////////////////////////////////////////////////////////////
-/// ////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+// USUÁRIO (credenciais de acesso)
+//////////////////////////////////////////////////////////////
 model Usuario {
   id           Int           @id @default(autoincrement())
   nome         String
-  email        String        @unique
-  senha        String
-  tipo         String
+  email        String        @unique // login por e-mail
+  whatsapp     String?       @unique // login por WhatsApp (DDD+numero, só dígitos)
+  senha        String // hash bcrypt
+  tipo         String        @default("pro") // "pro" | "admin" | ...
   criadoEm     DateTime      @default(now())
   profissional Profissional?
 }
 
-/// ////////////////////////////////////////////////////////////
-/// ////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+// PROFISSIONAL (perfil público)
+//////////////////////////////////////////////////////////////
 model Profissional {
-  id               Int         @id @default(autoincrement())
-  usuarioId        Int         @unique
+  id               Int      @id @default(autoincrement())
+  usuarioId        Int      @unique
   nome             String
-  idade            Int
-  tempoExperiencia Int
+  whatsappPublico  String?  @unique // número exibido no perfil (pode ser igual ao do usuário)
+  idade            Int?     @default(0)
+  tempoExperiencia Int?     @default(0)
   fotoUrl          String?
   descricao        String?
-  criadoEm         DateTime    @default(now())
-  avaliacoes       Avaliacao[]
-  endereco         Endereco?
-  mensagens        Mensagem[]
-  usuario          Usuario     @relation(fields: [usuarioId], references: [id])
-  servicos         Servico[]
+  criadoEm         DateTime @default(now())
+
+  // Sinais/flags e métricas usadas no perfil
+  verificado Boolean @default(false)
+  visitas    Int     @default(0)
+  chamadas   Int     @default(0)
+  mediaNota  Float   @default(0)
+
+  // Relações
+  avaliacoes Avaliacao[]
+  endereco   Endereco?
+  mensagens  Mensagem[]
+  usuario    Usuario     @relation(fields: [usuarioId], references: [id])
+  servicos   Servico[]
 }
 
-/// ////////////////////////////////////////////////////////////
-/// ////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+// ENDEREÇO (cidade/bairro mostrados no perfil e busca)
+//////////////////////////////////////////////////////////////
 model Endereco {
   id             Int          @id @default(autoincrement())
   profissionalId Int          @unique
@@ -48,33 +61,39 @@ model Endereco {
   latitude       Float?
   longitude      Float?
   profissional   Profissional @relation(fields: [profissionalId], references: [id])
+
+  @@index([cidade, bairro])
 }
 
-/// ////////////////////////////////////////////////////////////
-/// ////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+// CATEGORIA / SERVIÇO (lista no perfil e na busca)
+//////////////////////////////////////////////////////////////
 model Categoria {
   id       Int       @id @default(autoincrement())
   nome     String    @unique
   servicos Servico[]
 }
 
-/// ////////////////////////////////////////////////////////////
-/// ////////////////////////////////////////////////////////////
 model Servico {
-  id             Int          @id @default(autoincrement())
+  id             Int      @id @default(autoincrement())
   profissionalId Int
   categoriaId    Int
   titulo         String
   descricao      String
   preco          Float
-  publicado      Boolean      @default(true)
-  criadoEm       DateTime     @default(now())
-  categoria      Categoria    @relation(fields: [categoriaId], references: [id])
-  profissional   Profissional @relation(fields: [profissionalId], references: [id])
+  publicado      Boolean  @default(true)
+  criadoEm       DateTime @default(now())
+
+  categoria    Categoria    @relation(fields: [categoriaId], references: [id])
+  profissional Profissional @relation(fields: [profissionalId], references: [id])
+
+  @@index([profissionalId])
+  @@index([categoriaId])
 }
 
-/// ////////////////////////////////////////////////////////////
-/// ////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+// AVALIAÇÕES (nota média usada no perfil)
+//////////////////////////////////////////////////////////////
 model Avaliacao {
   id             Int          @id @default(autoincrement())
   profissionalId Int
@@ -83,10 +102,13 @@ model Avaliacao {
   clienteNome    String
   criadoEm       DateTime     @default(now())
   profissional   Profissional @relation(fields: [profissionalId], references: [id])
+
+  @@index([profissionalId])
 }
 
-/// ////////////////////////////////////////////////////////////
-/// ////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+// CONTATO / MENSAGENS RÁPIDAS
+//////////////////////////////////////////////////////////////
 model Mensagem {
   id             Int          @id @default(autoincrement())
   profissionalId Int
@@ -96,10 +118,13 @@ model Mensagem {
   respondido     Boolean      @default(false)
   criadoEm       DateTime     @default(now())
   profissional   Profissional @relation(fields: [profissionalId], references: [id])
+
+  @@index([profissionalId, respondido])
 }
 
-/// ////////////////////////////////////////////////////////////
-/// ////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+// ASSINATURA (planos – preparado)
+//////////////////////////////////////////////////////////////
 model Assinatura {
   id        Int      @id @default(autoincrement())
   usuarioId Int
@@ -108,6 +133,9 @@ model Assinatura {
   criadoEm  DateTime @default(now())
 }
 
+//////////////////////////////////////////////////////////////
+// RESET DE SENHA + SESSÃO (compatível com app atual)
+//////////////////////////////////////////////////////////////
 model ResetToken {
   token     String   @id
   userId    Int
