@@ -117,6 +117,7 @@ async function sendEmail(to, subject, text) {
 
 const app = express();
 
+
 // Evita cache HTTP e garante leitura sempre atual (Railway guidance)
 app.use((req, res, next) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
