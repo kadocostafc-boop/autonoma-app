@@ -3858,7 +3858,43 @@ app.get("/api/admin/_dump_all", requireAdmin, (_req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.send(JSON.stringify(dump, null, 2));
 });
+// =========================[ CADASTRO DE PROFISSIONAL ]=========================
 
+app.post("/api/profissionais", upload.single("foto"), express.urlencoded({ extended: true }), (req, res) => {
+  try {
+    const { nome, email, whatsapp, senha, cidade, bairro, servico, bio } = req.body || {};
+    if (!nome || !email || !whatsapp || !senha || !cidade || !bairro) {
+      return res.json({ ok: false, error: "Todos os campos obrigatórios devem ser preenchidos." });
+    }
+
+    const db = readDB();
+    const id = Date.now().toString();
+
+    const novo = {
+      id,
+      nome,
+      email,
+      whatsapp,
+      senha,
+      cidade,
+      bairro,
+      servico,
+      bio,
+      verificado: false,
+      foto: req.file ? "/uploads/" + req.file.filename : "/icons/icon-192.png",
+      dataCadastro: new Date().toISOString(),
+      avaliacoes: []
+    };
+
+    db.push(novo);
+    writeDB(db);
+
+    res.json({ ok: true, msg: "Cadastro realizado com sucesso!", id });
+  } catch (e) {
+    console.error("Erro no cadastro:", e);
+    res.status(500).json({ ok: false, error: "Erro interno no servidor." });
+  }
+});
 // === Compat extra de avaliações ===
 app.get("/api/profissional/:id/avaliacoes", (req, res) => {
   const id = String(req.params.id || "");
