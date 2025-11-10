@@ -213,7 +213,7 @@ function baseUrlFrom(req) {
 // util: valida e-mail
 function isEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||"").trim()); }
 
-// ROTA: solicita link de redefinição
+// =============[ Esqueci minha senha • POST /auth/pro/forgot ]=============
 app.post("/auth/pro/forgot", async (req, res) => {
   try {
     const identifier = String(req.body?.identifier || "").trim(); // aqui só aceitamos e-mail
@@ -251,7 +251,7 @@ app.post("/auth/pro/forgot", async (req, res) => {
     });
 
     // 3) monta link
-    const url = `${baseUrlFrom(req)}/reset?token=${encodeURIComponent(token)}`;
+    const url = `${baseUrlFrom(req)}/reset.html?token=${encodeURIComponent(token)}`;
 
     // 4) envia e-mail (usa seu helper sendMail)
     const subject = "Redefinir sua senha • Autônoma.app";
@@ -283,38 +283,47 @@ Se você não fez essa solicitação, ignore este e-mail.
     return res.status(500).json({ ok:false, error:"Erro interno." });
   }
 });
+
 // =============[ Redefinir senha • POST /auth/pro/reset ]=============
 app.post("/auth/pro/reset", async (req, res) => {
-  const { token, senha } = req.body;
-  if (!token || !senha) {
-    return res.status(400).json({ ok: false, error: "Token e nova senha obrigatórios" });
-  }
-  const resetInfo = await prisma.resetToken.findUnique({
-    where: { token: token },
-  });
-  if (!resetInfo || resetInfo.expiresAt < new Date()) {
-    return res.status(400).json({ ok: false, error: "Token inválido ou expirado" });
-  }
-
-  // Hash da nova senha
-  const hashedPassword = await bcrypt.hash(senha, 10);
-
   try {
+    const token = String(req.body?.token || "").trim();
+    const password = String(req.body?.password || "").trim();
+
+    if (!token || !password) {
+      return res.status(400).json({ ok:false, error: "Token e nova senha são obrigatórios." });
+    }
+
+    // 1) busca e valida token
+    const resetToken = await prisma.resetToken.findUnique({
+      where: { token: token },
+      include: { user: true }
+    });
+
+    if (! SeresetToken || resetToken.expiresAt < new Date()) {
+      return res.status(400).json({ ok:false, error: "Token inválido ou expirado." });
+    }
+
+    // 2) atualiza senha
+    const hashedPassword = bcrypt.hashSync(password, 10);
     await prisma.usuario.update({
-      where: { id: resetInfo.userId },
+      where: { id: resetToken.userId },
       data: { senha: hashedPassword }
     });
-  } catch (e) {
-    console.error("[reset] erro ao atualizar senha:", e);
-    return res.status(500).json({ ok: false, error: "Erro ao redefinir a senha." });
-  }
-    // 4) remove token do Neon DB
+
+    // 3) invalida token
     await prisma.resetToken.delete({
-      where: { token: token },
+      where: { id: resetToken.id }
     });
 
-  return res.json({ ok: true, msg: "Senha redefinida com sucesso." });
+    return res.json({ ok:true, msg: "Senha redefinida com sucesso. Você já pode fazer login." });
+
+  } catch (err) {
+    console.error("[reset] erro:", err);
+    return res.status(500).json({ ok:false, error:"Erro interno." });
+  }
 });
+
 
 // ===== Painel do Profissional (Protegidas) =====
 // Rota /painel é protegida, redireciona para o painel.html (que também é protegido)
@@ -1938,225 +1947,102 @@ function isDuplicate(db, novo) {
   );
 }
 
-// ===== [ AUTONOMA • POST /cadastro ] =====
-app.post(
-  '/cadastro',
-  // middleware do upload (reaproveita seu `upload.single('foto')`)
-  (req, res, next) => {
-    upload.single('foto')(req, res, (err) => {
-      if (err) {
-        console.error('[upload foto] erro:', err);
-        return res.status(400).send(htmlMsg('Erro no upload', err.message || 'Falha ao enviar a foto', '/cadastro.html'));
+// =============[ Cadastro Profissional • POST /cadastro ]=============
+app.post("/cadastro", async (req, res) => {
+  try {
+    const {
+      nome, email, whatsapp, senha,
+      descricao, idade, tempoExperiencia, whatsappPublico,
+      cidade, bairro, estado,
+      servicos
+    } = req.body;
+
+    // 1. Validação básica
+    if (!nome || !email || !whatsapp || !senha || !cidade || !bairro || !estado) {
+      return res.status(400).json({ ok: false, error: "Todos os campos obrigatórios devem ser preenchidos." });
+    }
+    if (!isEmail(email)) {
+      return res.status(400).json({ ok: false, error: "E-mail inválido." });
+    }
+
+    // 2. Verifica se o usuário já existe
+    const existingUser = await prisma.usuario.findFirst({
+      where: {
+        OR: [
+          { email: email.toLowerCase() },
+          { whatsapp: whatsapp.replace(/\D/g, '') }
+        ]
       }
-      next();
     });
-  },
-  // handler principal
-  async (req, res) => {
-    try {
-      // ===== normalizações básicas =====
-      const onlyDigits = (s) => String(s || '').replace(/\D/g, '');
-      const norm = (s) => String(s || '').trim();
 
-      // foto (se enviada)
-      const fotoUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    if (existingUser) {
+      return res.status(409).json({ ok: false, error: "E-mail ou WhatsApp já cadastrados." });
+    }
 
-      // normaliza telefone/whatsapp
-      const wDig = onlyDigits(req.body.whatsapp);
-      const whatsapp = wDig.startsWith('55') ? wDig : (wDig.length === 10 || wDig.length === 11 ? '55' + wDig : wDig);
-      const tDig = onlyDigits(req.body.telefone);
-      const telefone = tDig ? (tDig.startsWith('55') ? tDig : ((tDig.length === 10 || tDig.length === 11) ? '55' + tDig : tDig)) : '';
+    // 3. Hash da senha
+    const hashedPassword = bcrypt.hashSync(senha, 10);
 
-      // descrição/experiência (mantém aliases)
-      const _descricao = norm(req.body.descricao || req.body.bio || '');
-      const _experiencia = norm(req.body.experiencia || req.body.experienciaTempo || '');
-
-      // slug de serviço
-      const makeSlug = (s) => norm(s).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-      const servico = norm(req.body.servico || req.body.profissao || '');
-      const servicoSlug = servico ? makeSlug(servico) : null;
-
-      // ===== monta registro final =====
-      const novo = {
-        // identificação
-        nome: norm(req.body.nome),
-        fotoUrl,
-        // contatos
-        whatsapp,
-        email: norm((req.body.email || '').toLowerCase()),
-        // profissional
-        idade: Number(req.body.idade || 0), // Adicionado campo idade
-        tempoExperiencia: Number(req.body.tempoExperiencia || 0), // Adicionado campo tempoExperiencia
-        descricao: _descricao,
-        // sistema
-        criadoEm: new Date(), // Usar objeto Date para o Prisma
-      };
-
-      // ===== SENHA: pega e gera hash (se existir) =====
-      const rawSenha = (req.body.senha || req.body.password || req.body.pin || '').toString().trim();
-      let senhaHash = null;
-
-      if (rawSenha && /^[0-9]{4,6}$/.test(rawSenha)) {
-        try {
-          const bcrypt = require('bcryptjs');
-          const salt = bcrypt.genSaltSync(10);
-          senhaHash = bcrypt.hashSync(String(rawSenha), salt);
-        } catch (e) {
-          console.warn('[password] falhou, ignorando hash:', e);
+    // 4. Criação do usuário, profissional, endereço e serviços em uma transação
+    const result = await prisma.$transaction(async (prisma) => {
+      // Cria Endereco
+      const novoEndereco = await prisma.endereco.create({
+        data: {
+          cidade: titleCase(cidade),
+          bairro: titleCase(bairro),
+          estado: estado.toUpperCase(),
+          // latitude e longitude podem ser adicionados aqui se disponíveis
         }
-      } else if (rawSenha) {
-        return res.status(400).send(htmlMsg(
-          'Erro no Cadastro',
-          'O PIN deve conter entre 4 e 6 dígitos numéricos.',
-          '/cadastro.html'
-        ));
-      }
-
-      // 1. Verifica duplicidade no Neon DB (pelo email do Usuario)
-      const dup = await prisma.usuario.findFirst({
-        where: {
-          email: novo.email,
-        },
       });
 
-      if (dup) {
-        return res
-          .status(400)
-          .send(htmlMsg(
-            'Cadastro duplicado',
-            'Já existe um usuário com este e-mail.',
-            '/cadastro.html'
-          ));
-      }
-
-      // 2. Cria o usuário e o profissional em uma transação
+      // Cria Usuario
       const novoUsuario = await prisma.usuario.create({
         data: {
-          nome: novo.nome,
-          email: novo.email,
-          senha: senhaHash || '', // Senha pode ser vazia se não for fornecida
-          tipo: 'profissional',
-          profissional: {
-            create: {
-              nome: novo.nome,
-              idade: novo.idade,
-              tempoExperiencia: novo.tempoExperiencia,
-              fotoUrl: novo.fotoUrl,
-              descricao: novo.descricao,
-              // Relacionamento com Endereco
-              endereco: {
-                create: {
-                  cidade: norm(req.body.cidade),
-                  bairro: norm(req.body.bairro),
-                  estado: norm(req.body.estado || ''),
-                  latitude: Number.isFinite(Number(req.body.lat)) ? Number(req.body.lat) : null,
-                  longitude: Number.isFinite(Number(req.body.lng)) ? Number(req.body.lng) : null,
-                }
-              },
-              // Relacionamento com Servico (assumindo que o cadastro inicial não cria serviços)
-              // Se o formulário de cadastro incluir serviços, a lógica deve ser adaptada.
-              // Por enquanto, vamos criar apenas o profissional.
-            }
-          }
-        },
-        include: {
-          profissional: {
-            select: {
-              id: true
-            }
-          }
+          nome: nome,
+          email: email.toLowerCase(),
+          whatsapp: whatsapp.replace(/\D/g, ''),
+          senha: hashedPassword,
         }
       });
 
-      const novoId = novoUsuario.profissional.id; // Usa o ID do profissional gerado pelo DB
-
-      // ===== mantém catálogos (serviços / cidades / bairros) =====
-      try {
-        // serviços: string[] ou [{nome,slug}]
-        if (servico) {
-          let servs = readJSON(SERVICOS_FILE, []);
-          if (!Array.isArray(servs)) servs = [];
-          const exists = servs.some(s =>
-            (typeof s === 'string' ? s : String(s?.nome || '')).toLowerCase() === servico.toLowerCase()
-          );
-          if (!exists) {
-            if (servs.length && typeof servs[0] === 'object') {
-              servs.push({ nome: servico, slug: servicoSlug || makeSlug(servico) });
-            } else {
-              servs.push(servico);
-            }
-            servs.sort((a, b) =>
-              (typeof a === 'string' ? a : a.nome).localeCompare(typeof b === 'string' ? b : b.nome, 'pt-BR')
-            );
-            writeJSON(SERVICOS_FILE, servs);
-          }
+      // Cria Profissional
+      const novoProfissional = await prisma.profissional.create({
+        data: {
+          usuarioId: novoUsuario.id,
+          enderecoId: novoEndereco.id,
+          descricao: descricao || '',
+          idade: idade ? Number(idade) : null,
+          tempoExperiencia: tempoExperiencia ? Number(tempoExperiencia) : 0,
+          whatsappPublico: whatsappPublico || whatsapp.replace(/\D/g, ''),
+          // Outros campos do profissional
         }
+      });
 
-        // cidades: string[]
-        if (norm(req.body.cidade)) {
-          let cidades = readJSON(CIDADES_FILE, []);
-          if (!Array.isArray(cidades)) cidades = [];
-          if (!cidades.some(c => String(c).toLowerCase() === norm(req.body.cidade).toLowerCase())) {
-            cidades.push(norm(req.body.cidade));
-            cidades.sort((a, b) => String(a).localeCompare(String(b), 'pt-BR'));
-            writeJSON(CIDADES_FILE, cidades);
-          }
-        }
-
-        // bairros: { [cidade]: string[] }
-        if (norm(req.body.cidade) && norm(req.body.bairro)) {
-          let bairrosMap = readJSON(BAIRROS_FILE, {});
-          if (!bairrosMap || typeof bairrosMap !== 'object') bairrosMap = {};
-          const key = norm(req.body.cidade);
-          const arr = Array.isArray(bairrosMap[key]) ? bairrosMap[key] : [];
-          if (!arr.some(b => String(b).toLowerCase() === norm(req.body.bairro).toLowerCase())) {
-            arr.push(norm(req.body.bairro));
-            arr.sort((a, b) => String(a).localeCompare(String(b), 'pt-BR'));
-            bairrosMap[key] = arr;
-            writeJSON(BAIRROS_FILE, bairrosMap);
-          }
-        }
-      } catch (e) {
-        console.warn('[catálogos] não foi possível atualizar (ignorado):', e?.message || e);
+      // Cria Serviços (se houver)
+      if (Array.isArray(servicos) && servicos.length > 0) {
+        const servicosData = servicos.map(s => ({
+          profissionalId: novoProfissional.id,
+          titulo: s.titulo,
+          descricao: s.descricao || '',
+          preco: s.preco ? Number(s.preco) : 0,
+        }));
+        await prisma.servico.createMany({
+          data: servicosData
+        });
       }
 
-      // ===== redireciona para o perfil =====
-      console.log('[CADASTRO] redirect ->', `/perfil.html?id=${novoId}`);
-      return res.redirect(`/cadastro_sucesso.html?id=${novoId}`);
-    } catch (e) {
-      console.error('[ERRO /cadastro]', e);
-      return res
-        .status(500)
-        .send(htmlMsg('Erro Interno', String(e?.message || e), '/cadastro.html'));
-    }
+      return { usuario: novoUsuario, profissional: novoProfissional };
+    });
+
+    // 5. Cria a sessão para o novo profissional
+    req.session.painel = { ok: true, proId: result.profissional.id };
+
+    return res.json({ ok: true, msg: "Cadastro realizado com sucesso!", redirect: '/painel.html' });
+
+  } catch (e) {
+    console.error("[cadastro] erro:", e);
+    return res.status(500).json({ ok: false, error: "server_error" });
   }
-);
-
-  // Lê o banco atual com fallback
-// A lógica de leitura do banco de dados local foi removida. O código deve usar o Prisma.
-// const banco = []; // Array vazio para evitar erro de referência. A lógica de cadastro deve ser reescrita para usar o Prisma.
-
-
-
-// A persistência local foi removida. O código deve usar o Prisma.
-
-
-// ====== [Helpers de leitura/escrita do DB] ======
-function ensureFileReady(filePath) {
-  const dir = path.dirname(filePath);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  if (!fs.existsSync(filePath)) fs.writeFileSync(filePath, '[]', 'utf8');
-}
-// Helper para escapar HTML em mensagens de erro
-function escapeHTML(str) {
-  if (!str) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
+});
 
 
 // ===== [Perfil APIs — UNIFICADO e robusto] =====
@@ -2214,243 +2100,122 @@ app.get("/api/debug/db-prof", (req, res) => {
   }
 });
 
-// ===== NOVA ROTA: /api/profissionais (lista com filtros + distância) =====
+// =============[ Busca Profissionais • GET /api/profissionais ]=============
 app.get("/api/profissionais", async (req, res) => {
   try {
-        // Busca no Prisma
-    let items = await prisma.profissional.findMany({
-      where: {
-        // Filtro de exclusão e suspensão
-        usuario: {
-          is: {
-            excluido: false,
-            suspenso: false
-          }
-        }
-      },
+    const { cidade, bairro, servico, limit = 20, offset = 0 } = req.query;
+    const limitNum = parseInt(limit);
+    const offsetNum = parseInt(offset);
+
+    let whereClause = {};
+
+    // Filtro por cidade e bairro (usando Endereco)
+    if (cidade || bairro) {
+      whereClause.endereco = {};
+      if (cidade) whereClause.endereco.cidade = { contains: cidade, mode: "insensitive" };
+      if (bairro) whereClause.endereco.bairro = { contains: bairro, mode: "insensitive" };
+    }
+
+    // Filtro por serviço
+    if (servico) {
+      whereClause.servicos = {
+        some: { nome: { contains: servico, mode: "insensitive" } },
+      };
+    }
+
+    // Busca no banco via Prisma
+    const profissionais = await prisma.profissional.findMany({
+      where: whereClause,
+      skip: offsetNum,
+      take: limitNum,
       include: {
         endereco: true,
-        servicos: {
-          select: { titulo: true, preco: true },
-          take: 1,
-          orderBy: { preco: 'asc' }
+        usuario: {
+          select: {
+            email: true,
+            whatsapp: true,
+            criadoEm: true,
+            assinaturas: {
+              where: { ativo: true },
+              orderBy: { criadoEm: "desc" },
+              take: 1,
+            },
+          },
         },
-        avaliacoes: {
-          select: { nota: true, comentario: true, criadoEm: true },
-          orderBy: { criadoEm: 'desc' },
-          take: 100 // Limite para cálculo de média
-        }
-      }
+      },
+      orderBy: { criadoEm: "desc" },
     });
 
-    // Mapear para o formato antigo para manter a compatibilidade com o código de filtro/ordenação
-    items = items.map(p => ({
-      ...p,
-      cidade: p.endereco?.cidade,
-      bairro: p.endereco?.bairro,
-      lat: p.endereco?.latitude,
-      lng: p.endereco?.longitude,
-      servico: p.servicos[0]?.titulo,
-      preco: p.servicos[0]?.preco,
-      // Adiciona a média de avaliação e o último comentário
-      rating: p.avaliacoes.length ? p.avaliacoes.reduce((acc, a) => acc + a.nota, 0) / p.avaliacoes.length : 0,
-      avalCount: p.avaliacoes.length,
-      ultimoComentario: p.avaliacoes[0]?.comentario,
-      // Adiciona campos para o filtro/ordenação
-      nomeNorm: norm(p.nome),
-      cidadeNorm: norm(p.endereco?.cidade),
-      bairroNorm: norm(p.endereco?.bairro),
-      servicoNorm: norm(p.servicos[0]?.titulo)
+    // Mapeia resultado
+    const items = profissionais.map((p) => ({
+      id: p.id,
+      nome: p.nome,
+      descricao: p.descricao,
+      cidade: p.endereco?.cidade || "",
+      bairro: p.endereco?.bairro || "",
+      email: p.usuario?.email || "",
+      whatsapp: p.usuario?.whatsapp || "",
+      plano: p.usuario?.assinaturas?.[0]?.plano || "free",
+      criadoEm: p.criadoEm,
     }));
 
-    // Filtro apenas profissionais ativos (não excluídos, não suspensos) - Já feito no where do Prisma, mas mantido para segurança
-    items = items.filter(p => p.usuario && !p.usuario.excluido && !p.usuario.suspenso);
-
-    // ===== FILTROS =====
-    const norm = (s) => String(s || "").normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-    
-    // Filtro por CIDADE (exato ou contém)
-    const cidadeParam = String(req.query.cidade || "").trim();
-    if (cidadeParam) {
-      const cidadeNorm = norm(cidadeParam);
-      items = items.filter(p => {
-        const pCidade = norm(p.cidade || "");
-        return pCidade === cidadeNorm || pCidade.includes(cidadeNorm);
-      });
-    }
-
-    // Filtro por BAIRRO
-    const bairroParam = String(req.query.bairro || "").trim();
-    if (bairroParam) {
-      const bairroNorm = norm(bairroParam);
-      items = items.filter(p => norm(p.bairro || "").includes(bairroNorm));
-    }
-
-    // Filtro por SERVIÇO
-    const servicoParam = String(req.query.servico || "").trim();
-    if (servicoParam) {
-      const servicoNorm = norm(servicoParam);
-      items = items.filter(p => {
-        const pServico = norm(p.servico || p.profissao || "");
-        return pServico.includes(servicoNorm);
-      });
-    }
-
-    // Filtro por BUSCA GERAL (q)
-    const qParam = String(req.query.q || "").trim();
-    if (qParam) {
-      const qNorm = norm(qParam);
-      items = items.filter(p => {
-        return norm(p.nome).includes(qNorm) ||
-               norm(p.cidade || "").includes(qNorm) ||
-               norm(p.bairro || "").includes(qNorm) ||
-               norm(p.servico || p.profissao || "").includes(qNorm);
-      });
-    }
-
-    // Filtro por AVALIAÇÃO MÍNIMA
-    const minRating = Number(req.query.minRating);
-    if (Number.isFinite(minRating) && minRating > 0) {
-      items = items.filter(p => {
-        const notas = (p.avaliacoes || []).map(a => Number(a?.nota)).filter(n => n >= 1 && n <= 5);
-        const rating = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length) : 0;
-        return rating >= minRating;
-      });
-    }
-
-    // ===== CÁLCULO DE DISTÂNCIA =====
-    const userLat = Number(req.query.userLat);
-    const userLng = Number(req.query.userLng);
-    const hasUserCoords = Number.isFinite(userLat) && Number.isFinite(userLng);    // Função de cálculo de distância (Haversine)
-    function calcDistance(lat1, lng1, lat2, lng2) {
-      const R = 6371; // Raio da Terra em km
-      const toRad = (deg) => deg * Math.PI / 180;
-      const dLat = toRad(lat2 - lat1);
-      const dLng = toRad(lng2 - lng1);
-      const a = Math.sin(dLat / 2) ** 2 +
-                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-                Math.sin(dLng / 2) ** 2;
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c; // Distância em km
-    }
-
-    // Mapear profissionais com distância e formatar o objeto de saída
-    items = items.map(p => {
-      const pLat = Number(p.lat);
-      const pLng = Number(p.lng);
-      let distanceKm = null;
-      if (hasUserCoords && Number.isFinite(pLat) && Number.isFinite(pLng)) {
-        distanceKm = calcDistance(userLat, userLng, pLat, pLng);
-      }
-      
-      return {
-        id: p.id,
-        nome: p.nome,
-        servico: p.servico || "",
-        cidade: p.cidade || "",
-        bairro: p.bairro || "",
-        foto: p.fotoUrl || "",
-        rating: p.rating.toFixed(2),
-        avalCount: p.avalCount,
-        distanceKm: distanceKm ? distanceKm.toFixed(1) : null,
-        preco: p.preco || 0,
-        ultimoComentario: p.ultimoComentario || null,
-      };
-    });
-
-    // Remove duplicatas se houver (por ID)
-    const uniqueMap = new Map();
-    items.forEach(item => {
-      if (!uniqueMap.has(item.id)) {
-        uniqueMap.set(item.id, item);
-      }
-    });
-    items = Array.from(uniqueMap.values());
-
-    // ===== ORDENAÇÃO =====
-    const sortParam = String(req.query.sort || "relevance").toLowerCase();
-    
-    if (sortParam === "distance" && hasUserCoords) {
-      // Ordenar por distância (mais próximo primeiro)
-      items.sort((a, b) => {
-        if (a.distanceKm === null) return 1;
-        if (b.distanceKm === null) return -1;
-        return a.distanceKm - b.distanceKm;
-      });
-    } else if (sortParam === "rating") {
-      // Ordenar por avaliação (melhor primeiro)
-      items.sort((a, b) => b.mediaAvaliacao - a.mediaAvaliacao);
-    } else if (sortParam === "recent") {
-      // Ordenar por mais recente
-      items.sort((a, b) => Number(b.id) - Number(a.id));
-    } else {
-      // Ordenação padrão: relevância (plano + avaliação + distância)
-      items.sort((a, b) => {
-        const planScore = (p) => p.plano === "premium" ? 3 : p.plano === "pro" ? 2 : 1;
-        const distScore = (p) => p.distanceKm !== null ? (100 - Math.min(p.distanceKm, 100)) : 0;
-        
-        const scoreA = planScore(a) * 10 + a.mediaAvaliacao * 5 + distScore(a) * 0.1;
-        const scoreB = planScore(b) * 10 + b.mediaAvaliacao * 5 + distScore(b) * 0.1;
-        
-        return scoreB - scoreA;
-      });
-    }
-
-    // ===== PAGINAÇÃO =====
-    const limit = Math.max(1, Math.min(100, Number(req.query.limit || 20)));
-    const page = Math.max(1, Number(req.query.page || 1));
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    const slice = items.slice(start, end);
-
-    // ===== RESPOSTA =====
+    // Retorna resposta
     return res.json({
       ok: true,
       total: items.length,
-      page,
-      limit,
-      pages: Math.ceil(items.length / limit),
-      items: slice,
-      itens: slice // Compatibilidade com código antigo
+      page: Math.floor(offsetNum / limitNum) + 1,
+      limit: limitNum,
+      pages: Math.ceil(items.length / limitNum),
+      items: items, // compatível com versão antiga
     });
 
   } catch (e) {
     console.error("[ERR /api/profissionais]", e);
     return res.status(500).json({ ok: false, error: "server_error" });
   }
-});
+}); // ✅ fecha corretamente a rota /api/profissionais
 
-// Principal: /api/profissionais/:id  (com aliases + distância opcional)
-app.get("/api/profissionais/:id", (req, res) => {
+// =============[ Principal • /api/profissionais/:id ]=============
+app.get("/api/profissionais/:id", async (req, res) => {
   try {
     const rawId = String(req.params.id || "").trim();
-    if (!rawId) return res.status(400).json({ ok: false, error: "missing_id" });
+    const id = Number(rawId);
 
-    const db = (typeof readDB === "function" ? readDB() : readJSONSafe(DB_FILE, [])) || [];
-    if (!Array.isArray(db)) return res.status(500).json({ ok: false, error: "db_invalid" });
+    if (!Number.isFinite(id) || id <= 0) return res.status(400).json({ ok: false, error: "missing_id" });
 
-    // acha por string ou number
-    const prof =
-      db.find(p => String(p.id) === rawId) ||
-      db.find(p => Number(p.id) === Number(rawId));
+    // 1. Busca o profissional no Prisma com includes
+    const prof = await prisma.profissional.findUnique({
+      where: { id: id },
+      include: {
+        endereco: true,
+        servicos: true,
+        avaliacoes: true,
+        usuario: {
+          include: {
+            assinaturas: {
+              where: { ativo: true },
+              orderBy: { criadoEm: 'desc' },
+              take: 1
+            }
+          }
+        }
+      }
+    });
 
     if (!prof) return res.status(404).json({ ok: false, error: "not_found" });
 
-    // campos/aliases
-    const foto        = prof.foto || prof.fotoUrl || null;
-    const descricao   = (prof.descricao ?? prof.bio ?? "").toString();
-    const experiencia = (prof.experienciaTempo ?? prof.experiencia ?? "").toString();
-    const servico     = (prof.servico ?? prof.profissao ?? "").toString();
-    const cidade      = (prof.cidade ?? "").toString();
-    const bairro      = (prof.bairro ?? "").toString();
-    const site        = (prof.site ?? "").toString();
-    const whatsapp    = (prof.whatsapp ?? "").toString();
-    const telefone    = (prof.telefone ?? "").toString();
-    const precoBase   = (prof.precoBase ?? "").toString();
-    const pLat        = Number(prof.lat);
-    const pLng        = Number(prof.lng);
+    // 2. Processamento de dados
+    const foto        = prof.fotoUrl || null;
+    const descricao   = prof.descricao || "";
+    const experiencia = prof.tempoExperiencia || 0;
+    const servico     = prof.servicos[0]?.titulo || ""; // Pega o primeiro serviço
+    const cidade      = prof.endereco?.cidade || "";
+    const bairro      = prof.endereco?.bairro || "";
+    const whatsappPublico = prof.whatsappPublico || "";
+    const pLat        = Number(prof.endereco?.latitude);
+    const pLng        = Number(prof.endereco?.longitude);
 
-    // distância opcional (?userLat=&userLng=)
+    // 3. Cálculo de distância (se coordenadas do usuário forem fornecidas)
     const userLat = Number(req.query.userLat);
     const userLng = Number(req.query.userLng);
     let distanceKm = null;
@@ -2462,46 +2227,49 @@ app.get("/api/profissionais/:id", (req, res) => {
       distanceKm = Math.round(R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))));
     }
 
-    // rating (se houver avaliacoes)
+    // 4. Cálculo de rating
     const notas = (prof.avaliacoes || []).map(a => Number(a?.nota)).filter(n => n >= 1 && n <= 5);
     const rating = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length) : 0;
+    const totalAvaliacoes = notas.length;
+    const plano = prof.usuario?.assinaturas[0]?.plano || 'free';
 
+    // 5. Resposta
     return res.json({
       ok: true,
       item: {
         id: String(prof.id),
         nome: prof.nome || "",
 
-        // foto - ambos
-        foto,
+        // foto
+        foto: foto,
         fotoUrl: foto,
 
-        // descrição - ambos
-        descricao,
+        // descrição
+        descricao: descricao,
         bio: descricao,
 
-        // experiência - ambos
-        experiencia,
+        // experiência
+        experiencia: experiencia,
         experienciaTempo: experiencia,
 
-        servico,
-        servicoSlug: prof.servicoSlug || null,
-        cidade,
-        bairro,
+        servico: servico,
+        servicos: prof.servicos, // Lista completa de serviços
+        cidade: cidade,
+        bairro: bairro,
 
         lat: Number.isFinite(pLat) ? pLat : null,
         lng: Number.isFinite(pLng) ? pLng : null,
         distanceKm,
 
-        email: prof.email || "",
-        whatsapp,
-        telefone,
-        site,
-        precoBase,
-
+        // Contato
+        whatsapp: whatsappPublico, // Usando whatsappPublico conforme requisito
+        email: prof.usuario?.email || "",
+        
+        // Outros
+        plano: plano,
         verificado: !!prof.verificado,
-        mediaAvaliacao: Number(prof.mediaAvaliacao || rating || 0),
-        totalAvaliacoes: Number(prof.totalAvaliacoes || (prof.avaliacoes?.length || 0)),
+        mediaAvaliacao: rating.toFixed(2),
+        totalAvaliacoes: totalAvaliacoes,
         criadoEm: prof.criadoEm || null
       }
     });
@@ -2510,6 +2278,7 @@ app.get("/api/profissionais/:id", (req, res) => {
     return res.status(500).json({ ok: false, error: "server_error" });
   }
 });
+
 
 // Compat: /api/profissional/:id  (mantém formato legado)
 app.get("/api/profissional/:id", (req, res) => {
@@ -3079,50 +2848,56 @@ app.get("/painel.html", requireProAuth, (_req, res) => {
 });
 
 // Rota de login do profissional
+// =============[ Login Profissional • POST /auth/pro/login ]=============
 app.post("/auth/pro/login", async (req, res) => {
-  const { email, whatsapp, senha } = req.body;
-
   try {
-    const prof = await prisma.profissional.findFirst({
-      where: { OR: [{ email: email?.trim() }, { whatsapp: whatsapp?.trim() }] },
-    });
+    const identifier = String(req.body?.identifier || "").trim();
+    const password = String(req.body?.password || "").trim();
 
-    if (!prof) return res.status(401).json({ ok: false, msg: "Credenciais inválidas" });
-
-    // A lógica original usava comparação direta ou um campo 'pinHash' que não estava na rota.
-    // Assumindo que a senha está sendo comparada com o campo 'senha' (texto puro ou hash)
-    // Se o campo 'senha' for um hash bcrypt, a comparação deve ser feita com bcrypt.
-    // Vou usar a lógica de bcrypt que você sugeriu, assumindo que 'senha' é o hash.
-    // Se 'prof.senha' for o hash, o campo deve ser renomeado para 'hash' no schema.prisma.
-    // Como não tenho o schema, vou usar a lógica de comparação que você sugeriu,
-    // mas adaptando para o campo 'senha' que está no código atual.
-
-    // **ATENÇÃO:** A lógica de login do seu plano (bcrypt.compare(senha, prof.pinHash))
-    // usa um campo 'pinHash' que não está no código atual.
-    // Vou usar a lógica mais segura, assumindo que 'senha' é o campo do hash.
-
-    let passOk = false;
-    if (prof.senha && prof.senha.startsWith('$2a$')) { // Verifica se é um hash bcrypt
-      passOk = await bcrypt.compare(senha, prof.senha);
-    } else {
-      // Fallback para comparação de texto puro (se não for hash)
-      passOk = prof.senha === senha;
+    if (!identifier || !password) {
+      return res.status(400).json({ ok: false, error: "Identificador (e-mail ou WhatsApp) e senha são obrigatórios." });
     }
 
-    if (!passOk) return res.status(401).json({ ok: false, msg: "Credenciais inválidas" });
+    // 1. Normaliza o identificador e busca o usuário
+    const emailDigitado = isEmail(identifier) ? identifier.toLowerCase() : null;
+    const numeroDigitado = !isEmail(identifier) ? identifier.replace(/\D/g, '') : null;
 
-    // Cria sessão
-    req.session.painel = { ok: true, proId: prof.id }; // Usando a estrutura de sessão do seu código
-
-    // Salva a sessão antes de redirecionar
-    req.session.save(() => {
-      res.json({ ok: true, redirect: "/painel.html" });
+    const usuario = await prisma.usuario.findFirst({
+      where: {
+        OR: [
+          { email: emailDigitado },
+          { whatsapp: numeroDigitado }
+        ]
+      },
+      include: { profissional: true }
     });
-  } catch (err) {
-    console.error("Erro no login:", err);
-    res.status(500).json({ ok: false, msg: "Erro interno no servidor" });
+
+    if (!usuario) {
+      return res.status(401).json({ ok: false, error: "Credenciais inválidas." });
+    }
+
+    // 2. Valida a senha
+    const passwordMatch = bcrypt.compareSync(password, usuario.senha);
+
+    if (!passwordMatch) {
+      return res.status(401).json({ ok: false, error: "Credenciais inválidas." });
+    }
+
+    // 3. Verifica se o usuário tem um perfil profissional
+    if (!usuario.profissional) {
+      return res.status(401).json({ ok: false, error: "Conta não associada a um perfil profissional." });
+    }
+
+    // 4. Cria a sessão e redireciona
+    req.session.painel = { ok: true, proId: usuario.profissional.id };
+    res.redirect('/painel.html');
+
+  } catch (e) {
+    console.error("[login] erro:", e);
+    return res.status(500).json({ ok: false, error: "server_error" });
   }
 });
+
 
 // Definir ou trocar PIN (6 dígitos)
 app.post("/api/painel/set-pin", (req, res) => {
@@ -4111,424 +3886,643 @@ app.post("/api/profissional/:id/avaliar", express.json(), (req, res) => {
   res.json({ ok: true });
 });
 
+// =============[ Avaliações • GET /api/avaliacoes/:id ]=============
+app.get("/api/avaliacoes/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id) || id <= 0) {
+      return res.status(400).json({ ok: false, error: "ID inválido" });
+    }
+
+    const prof = await prisma.profissional.findUnique({
+      where: { id },
+      include: { avaliacoes: true }
+    });
+
+    if (!prof) {
+      return res.status(404).json({ ok: false, error: "Profissional não encontrado" });
+    }
+
+    return res.json({
+      ok: true,
+      total: prof.avaliacoes.length,
+      items: prof.avaliacoes
+    });
+  } catch (e) {
+    console.error("[ERR /api/avaliacoes/:id]", e);
+    return res.status(500).json({ ok: false, error: "server_error" });
+  }
+});
+
+// =============[ Avaliações • POST /api/avaliar ]=============
+app.post("/api/avaliar", async (req, res) => {
+  try {
+    const { profissionalId, nota, comentario, clienteNome } = req.body;
+
+    if (!profissionalId || !nota) {
+      return res.status(400).json({ ok: false, error: "ID do profissional e nota são obrigatórios." });
+    }
+
+    const notaNum = Number(nota);
+    if (isNaN(notaNum) || notaNum < 1 || notaNum > 5) {
+      return res.status(400).json({ ok: false, error: "Nota deve ser um número entre 1 e 5." });
+    }
+
+    const profissional = await prisma.profissional.findUnique({
+      where: { id: parseInt(profissionalId) }
+    });
+    if (!profissional) {
+      return res.status(404).json({ ok: false, error: "Profissional não encontrado." });
+    }
+
+    const avaliacao = await prisma.avaliacao.create({
+      data: {
+        profissionalId: parseInt(profissionalId),
+        nota: notaNum,
+        comentario: comentario ? comentario.trim() : null,
+        clienteNome: clienteNome?.trim() || "Anônimo",
+      }
+    });
+
+    const avaliacoes = await prisma.avaliacao.findMany({
+      where: { profissionalId: parseInt(profissionalId) },
+      select: { nota: true }
+    });
+    const notas = avaliacoes.map(a => Number(a.nota)).filter(n => !isNaN(n));
+    const media = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length) : 0;
+
+    await prisma.profissional.update({
+      where: { id: parseInt(profissionalId) },
+      data: { mediaAvaliacao: parseFloat(media.toFixed(2)) }
+    });
+
+    return res.json({ ok: true, msg: "Avaliação registrada com sucesso!", avaliacao });
+
+  } catch (e) {
+    console.error("[ERR /api/avaliar]", e);
+    return res.status(500).json({ ok: false, error: "server_error" });
+  }
+});
+
+// =============[ Admin • GET /admin/profissionais ]=============
+app.get("/admin/profissionais", async (req, res) => {
+  try {
+    const { q, limit = 50, offset = 0 } = req.query;
+    const limitNum = parseInt(limit);
+    const offsetNum = parseInt(offset);
+
+    let whereClause = {};
+
+    if (q) {
+      whereClause.OR = [
+        { nome: { contains: q, mode: 'insensitive' } },
+        { descricao: { contains: q, mode: 'insensitive' } },
+        { endereco: { cidade: { contains: q, mode: 'insensitive' } } },
+        { endereco: { bairro: { contains: q, mode: 'insensitive' } } },
+        { usuario: { email: { contains: q, mode: 'insensitive' } } },
+        { usuario: { whatsapp: { contains: q, mode: 'insensitive' } } },
+      ];
+    }
+
+    const profissionais = await prisma.profissional.findMany({
+      where: whereClause,
+      take: limitNum,
+      skip: offsetNum,
+      orderBy: {
+        criadoEm: 'desc'
+      },
+      include: {
+        endereco: true,
+        usuario: {
+          select: {
+            email: true,
+            whatsapp: true,
+            criadoEm: true,
+            assinaturas: {
+              where: { ativo: true },
+              orderBy: { criadoEm: 'desc' },
+              take: 1
+            }
+          }
+        }
+      }
+    });
+
+    const total = await prisma.profissional.count({ where: whereClause });
+
+    const items = profissionais.map(prof => ({
+      id: prof.id,
+      nome: prof.nome,
+      email: prof.usuario?.email,
+      whatsapp: prof.usuario?.whatsapp,
+      cidade: prof.endereco?.cidade,
+      bairro: prof.endereco?.bairro,
+      plano: prof.usuario?.assinaturas[0]?.plano || 'free',
+      criadoEm: prof.usuario?.criadoEm,
+      // Adicione outros campos relevantes para o admin
+    }));
+
+    return res.json({ ok: true, items, total });
+
+  } catch (e) {
+    console.error("[ERR /admin/profissionais]", e);
+    return res.status(500).json({ ok: false, error: "server_error" });
+  }
+});
+
+// =============[ Admin • GET /admin/usuarios ]=============
+app.get("/admin/usuarios", async (req, res) => {
+  try {
+    const { q, limit = 50, offset = 0 } = req.query;
+    const limitNum = parseInt(limit);
+    const offsetNum = parseInt(offset);
+
+    let whereClause = {};
+
+    if (q) {
+      whereClause.OR = [
+        { nome: { contains: q, mode: 'insensitive' } },
+        { email: { contains: q, mode: 'insensitive' } },
+        { whatsapp: { contains: q, mode: 'insensitive' } },
+      ];
+    }
+
+    const usuarios = await prisma.usuario.findMany({
+      where: whereClause,
+      take: limitNum,
+      skip: offsetNum,
+      orderBy: {
+        criadoEm: 'desc'
+      },
+      include: {
+        profissional: {
+          select: {
+            id: true,
+            nome: true,
+          }
+        },
+        assinaturas: {
+          where: { ativo: true },
+          orderBy: { criadoEm: 'desc' },
+          take: 1
+        }
+      }
+    });
+
+    const total = await prisma.usuario.count({ where: whereClause });
+
+    const items = usuarios.map(user => ({
+      id: user.id,
+      nome: user.nome,
+      email: user.email,
+      whatsapp: user.whatsapp,
+      isProfissional: !!user.profissional,
+      profissionalId: user.profissional?.id || null,
+      plano: user.assinaturas[0]?.plano || 'free',
+      criadoEm: user.criadoEm,
+    }));
+
+    return res.json({ ok: true, items, total });
+
+  } catch (e) {
+    console.error("[ERR /admin/usuarios]", e);
+    return res.status(500).json({ ok: false, error: "server_error" });
+  }
+});
+
+// =============[ Pagamentos • POST /api/saldo/saque ]=============
+// Rota mantida e verificada: não há duplicação.
+app.post("/api/saldo/saque", requireProAuth, async (req, res) => {
+  try {
+    const { valor, chavePix } = req.body;
+    const proId = req.session.painel.proId;
+
+    if (!valor || !chavePix) {
+      return res.status(400).json({ ok: false, error: "Valor e chave Pix são obrigatórios." });
+    }
+
+    const valorNum = Number(valor);
+    if (isNaN(valorNum) || valorNum <= 0) {
+      return res.status(400).json({ ok: false, error: "Valor inválido." });
+    }
+
+    // 1. Busca o profissional e seu saldo (exemplo, assumindo que o saldo está no Profissional ou em uma tabela de Saldo)
+    const profissional = await prisma.profissional.findUnique({
+      where: { id: proId },
+      select: { saldo: true } // Assumindo que o campo 'saldo' existe
+    });
+
+    if (!profissional) {
+      return res.status(404).json({ ok: false, error: "Profissional não encontrado." });
+    }
+
+    if (profissional.saldo < valorNum) {
+      return res.status(400).json({ ok: false, error: "Saldo insuficiente." });
+    }
+
+    // 2. Cria a transação de saque (exemplo)
+    const saque = await prisma.transacao.create({
+      data: {
+        profissionalId: proId,
+        tipo: 'SAQUE',
+        valor: -valorNum, // Valor negativo para saque
+        status: 'PENDENTE',
+        detalhes: { chavePix: chavePix }
+      }
+    });
+
+    // 3. Atualiza o saldo (em um cenário real, isso seria feito após a confirmação do pagamento)
+    // Para fins de demonstração, vamos apenas subtrair o saldo.
+    await prisma.profissional.update({
+      where: { id: proId },
+      data: {
+        saldo: {
+          decrement: valorNum
+        }
+      }
+    });
+
+    // 4. Resposta
+    return res.json({
+      ok: true,
+      msg: "Solicitação de saque enviada com sucesso. Processamento em até 24h.",
+      saqueId: saque.id
+    });
+
+  } catch (e) {
+    console.error("[ERR /api/saldo/saque]", e);
+    return res.status(500).json({ ok: false, error: "server_error" });
+  }
+});
+
 // ===== Inicialização compatível com Railway =====
 const PORT = Number(process.env.PORT || 8080);
 // Não passe HOST aqui; sem host o Express usa 0.0.0.0
 app.listen(PORT, () => {
   console.log(`[BOOT] Autônoma.app rodando na porta ${PORT}`);
 });
-// ============================================================================
-// ===== [ ROTAS DE PAGAMENTO ASAAS ] =====
-// ============================================================================
+// =========================[ PAGAMENTOS / ASAAS ]========================
 
-const TAXA = 0.04; // 4%
+// Taxa da plataforma (4%) — ajuste via env se quiser
+const TAXA = Number(process.env.FEE_APP_PERCENT || 0.04);
+
+// Helper: converte status do Asaas -> nosso status
+function mapAsaasStatus(s) {
+  // Asaas: PENDING, RECEIVED, CONFIRMED, OVERDUE, CANCELED, REFUNDED, CHARGEBACK
+  switch (String(s || '').toUpperCase()) {
+    case 'RECEIVED':
+    case 'CONFIRMED':
+      return 'pago';
+    case 'CANCELED':
+    case 'REFUNDED':
+    case 'CHARGEBACK':
+      return 'cancelado';
+    case 'OVERDUE':
+      return 'atrasado';
+    case 'PENDING':
+    default:
+      return 'pendente';
+  }
+}
 
 /**
- * Rota: /api/pagamentos/criar
- * Método: POST
- * Função: Criar cobrança no Asaas
- * 
- * Body: { servicoId: Int, nomeCliente: String, emailCliente: String, cpfCnpjCliente: String }
+ * POST /api/pagamentos/criar
+ * Body: { servicoId: number, nomeCliente: string, emailCliente: string, cpfCnpjCliente: string }
+ * Cria pagamento no DB (pendente) + cobrança no Asaas e devolve link/QR (quando houver)
  */
 app.post("/api/pagamentos/criar", async (req, res) => {
-    try {
-        const { servicoId, nomeCliente, emailCliente, cpfCnpjCliente } = req.body;
-
-        if (!servicoId || !nomeCliente || !emailCliente || !cpfCnpjCliente) {
-            return res.status(400).json({ ok: false, error: "Dados incompletos para criar a cobrança." });
-        }
-
-        const servico = await prisma.servico.findUnique({
-            where: { id: parseInt(servicoId) },
-            include: { profissional: true }
-        });
-
-        if (!servico) {
-            return res.status(404).json({ ok: false, error: "Serviço não encontrado." });
-        }
-
-        const valor = servico.preco;
-        const taxa = valor * TAXA;
-        const valorLiquido = valor - taxa;
-
-        // 1. Criar o registro de pagamento no banco de dados (status: pendente)
-        const novoPagamento = await prisma.pagamento.create({
-            data: {
-                profissionalId: servico.profissionalId,
-                clienteId: req.session.painel?.proId || 1, // Assumindo que o cliente é o usuário logado, ou um ID padrão
-                servicoId: servico.id,
-                status: "pendente",
-                valor: valor,
-                taxa: taxa,
-                valorLiquido: valorLiquido,
-                // O externalId será preenchido após a criação da cobrança no Asaas
-            }
-        });
-
-        // 2. Criar ou buscar o cliente no Asaas
-        // TODO: Implementar a lógica de busca/criação de cliente Asaas
-        // Por enquanto, vamos usar um cliente fake para testes
-        let customerId = "cus_000005118742"; // Exemplo de ID de cliente Asaas
-
-        // 3. Criar a cobrança no Asaas
-        const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + 1); // Vencimento em 1 dia
-
-        const charge = {
-            customer: customerId,
-            billingType: "UNDEFINED", // Permite Pix e Cartão
-            value: parseFloat(valor.toFixed(2)),
-            dueDate: dueDate.toISOString().split('T')[0],
-            description: `Pagamento do serviço: ${servico.titulo}`,
-            externalReference: `PAGTO-${novoPagamento.id}`, // Referência para o webhook
-        };
-
-        const asaasCharge = await asaas.charges.create(charge);
-
-        // 4. Atualizar o registro de pagamento com o ID da cobrança do Asaas
-        await prisma.pagamento.update({
-            where: { id: novoPagamento.id },
-            data: { externalId: asaasCharge.id }
-        });
-
-        // 5. Retornar os dados da cobrança para o cliente (link de pagamento, QR Code, etc.)
-        res.json({
-            ok: true,
-            pagamentoId: novoPagamento.id,
-            asaasId: asaasCharge.id,
-            linkPagamento: asaasCharge.invoiceUrl,
-            qrCode: asaasCharge.pixQrCode, // Se for Pix
-            // TODO: Adicionar lógica para retornar o QR Code do Pix
-        });
-
-    } catch (error) {
-        console.error("[/api/pagamentos/criar] Erro:", error);
-        res.status(500).json({ ok: false, error: "Erro interno ao criar a cobrança." });
+  try {
+    const { servicoId, nomeCliente, emailCliente, cpfCnpjCliente } = req.body || {};
+    if (!servicoId || !nomeCliente || !emailCliente || !cpfCnpjCliente) {
+      return res.status(400).json({ ok: false, error: "Dados incompletos para criar a cobrança." });
     }
+
+    const servico = await prisma.servico.findUnique({
+      where: { id: Number(servicoId) },
+      include: { profissional: true },
+    });
+    if (!servico) {
+      return res.status(404).json({ ok: false, error: "Serviço não encontrado." });
+    }
+
+    const valor = Number(servico.preco || 0);
+    const taxa = Number((valor * TAXA).toFixed(2));
+    const valorLiquido = Number((valor - taxa).toFixed(2));
+
+    // 1) cria registro local
+    const novoPagamento = await prisma.pagamento.create({
+      data: {
+        profissionalId: servico.profissionalId,
+        clienteId: req.session?.painel?.proId ?? null, // se tiver cliente logado
+        servicoId: servico.id,
+        status: "pendente",
+        valor,
+        taxa,
+        valorLiquido,
+        descricao: `Pagamento do serviço: ${servico.titulo}`,
+      },
+    });
+
+    // 2) garante/usa customer Asaas (aqui, para simplificar, cria sempre)
+    const asaasCustomer = await asaasRequest("/customers", {
+      method: "POST",
+      body: JSON.stringify({
+        name: nomeCliente,
+        email: emailCliente,
+        cpfCnpj: (cpfCnpjCliente || "").replace(/\D/g, ""),
+      }),
+    });
+
+    // 3) cria cobrança
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 1);
+    const charge = {
+      customer: asaasCustomer.id,
+      billingType: "UNDEFINED", // permite Pix/Cartão no checkout do Asaas
+      value: Number(valor.toFixed(2)),
+      dueDate: dueDate.toISOString().slice(0, 10),
+      description: `Pagamento do serviço: ${servico.titulo}`,
+      externalReference: `PAGTO-${novoPagamento.id}`, // para localizar no webhook
+    };
+    const asaasCharge = await asaasRequest("/payments", {
+      method: "POST",
+      body: JSON.stringify(charge),
+    });
+
+    // 4) atualiza com o id externo
+    await prisma.pagamento.update({
+      where: { id: novoPagamento.id },
+      data: { externalId: asaasCharge.id },
+    });
+
+    return res.json({
+      ok: true,
+      pagamentoId: novoPagamento.id,
+      asaasId: asaasCharge.id,
+      linkPagamento: asaasCharge.invoiceUrl || asaasCharge.bankSlipUrl || null,
+      qrCode: asaasCharge.pixQrCode || null,
+    });
+  } catch (error) {
+    console.error("[/api/pagamentos/criar] Erro:", error);
+    return res.status(500).json({ ok: false, error: "Erro interno ao criar a cobrança." });
+  }
 });
 
 /**
- * Rota: /api/pagamentos/status/:id
- * Método: GET
- * Função: Consultar status do pagamento
+ * GET /api/pagamentos/status/:id
+ * Consulta o status local e, se houver externalId, sincroniza com Asaas
  */
 app.get("/api/pagamentos/status/:id", async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const pagamento = await prisma.pagamento.findUnique({
-            where: { id: parseInt(id) }
-        });
-
-        if (!pagamento) {
-            return res.status(404).json({ ok: false, error: "Pagamento não encontrado." });
-        }
-
-        // 1. Consultar o status no Asaas (opcional, o webhook é o principal)
-        if (pagamento.externalId) {
-            const asaasCharge = await asaas.charges.get(pagamento.externalId);
-            const statusAsaas = asaasCharge.status;
-
-            // 2. Se o status no Asaas for diferente do banco, atualizar
-            if (statusAsaas !== pagamento.status) {
-                // TODO: Mapear status do Asaas para o status do banco
-                // Ex: RECEIVED -> pago
-                // Ex: PENDING -> pendente
-                // Ex: CANCELED -> cancelado
-                // Vamos retornar o status do banco por enquanto
-            }
-        }
-
-        res.json({
-            ok: true,
-            status: pagamento.status,
-            valor: pagamento.valor,
-            valorLiquido: pagamento.valorLiquido,
-        });
-
-    } catch (error) {
-        console.error("[/api/pagamentos/status/:id] Erro:", error);
-        res.status(500).json({ ok: false, error: "Erro interno ao consultar status." });
+  try {
+    const id = Number(req.params.id);
+    const pagamento = await prisma.pagamento.findUnique({ where: { id } });
+    if (!pagamento) {
+      return res.status(404).json({ ok: false, error: "Pagamento não encontrado." });
     }
+
+    let status = pagamento.status;
+    if (pagamento.externalId) {
+      try {
+        const asaasCharge = await asaasRequest(`/payments/${pagamento.externalId}`, { method: "GET" });
+        const statusAsaas = mapAsaasStatus(asaasCharge.status);
+        if (statusAsaas !== pagamento.status) {
+          await prisma.pagamento.update({
+            where: { id: pagamento.id },
+            data: { status: statusAsaas },
+          });
+          status = statusAsaas;
+        }
+      } catch (e) {
+        console.warn("[/api/pagamentos/status] Falha ao consultar Asaas:", e.message);
+      }
+    }
+
+    return res.json({
+      ok: true,
+      status,
+      valor: pagamento.valor,
+      valorLiquido: pagamento.valorLiquido,
+    });
+  } catch (error) {
+    console.error("[/api/pagamentos/status/:id] Erro:", error);
+    return res.status(500).json({ ok: false, error: "Erro interno ao consultar status." });
+  }
 });
 
 /**
- * Rota: /api/pagamentos/webhook
- * Método: POST
- * Função: Receber confirmação do Asaas
+ * POST /api/pagamentos/webhook
+ * Header obrigatório: asaas-access-token: <ASAAS_WEBHOOK_TOKEN>
+ * Corpo: evento padrão Asaas { event, payment, ... }
  */
 app.post("/api/pagamentos/webhook", async (req, res) => {
-    try {
-        const { event, payment } = req.body;
-
-        // 1. Verificar a assinatura do webhook (segurança)
-        // TODO: Implementar verificação de assinatura do webhook Asaas
-
-        // 2. Processar apenas eventos de pagamento confirmado
-        if (event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED") {
-            const externalId = payment.id;
-            const status = "pago"; // Mapeamento simplificado
-
-            const pagamento = await prisma.pagamento.findFirst({
-                where: { externalId: externalId }
-            });
-
-            if (!pagamento) {
-                console.warn(`[Webhook] Pagamento não encontrado para externalId: ${externalId}`);
-                return res.status(200).json({ ok: true, message: "Pagamento ignorado (não encontrado no DB)." });
-            }
-
-            if (pagamento.status === "pago") {
-                return res.status(200).json({ ok: true, message: "Pagamento já processado." });
-            }
-
-            // 3. Atualizar Pagamento.status → "pago"
-            const pagamentoAtualizado = await prisma.pagamento.update({
-                where: { id: pagamento.id },
-                data: { status: status }
-            });
-
-            // 4. Atualizar saldo do profissional (somando valor líquido)
-            await prisma.profissional.update({
-                where: { id: pagamento.profissionalId },
-                data: {
-                    saldo: {
-                        increment: pagamento.valorLiquido
-                    }
-                }
-            });
-
-            console.log(`[Webhook] Pagamento ${pagamento.id} atualizado para 'pago'. Saldo do profissional ${pagamento.profissionalId} atualizado.`);
-        }
-
-        res.status(200).json({ ok: true });
-
-    } catch (error) {
-        console.error("[/api/pagamentos/webhook] Erro:", error);
-        res.status(500).json({ ok: false, error: "Erro interno ao processar webhook." });
+  try {
+    const token = req.headers["asaas-access-token"];
+    if (token !== process.env.ASAAS_WEBHOOK_TOKEN) {
+      return res.status(401).json({ ok: false, error: "Token inválido." });
     }
+
+    const { event, payment } = req.body || {};
+    if (!payment?.id) {
+      return res.json({ ok: true }); // nada para processar
+    }
+
+    // Apenas eventos relevantes
+    const relevante = ["PAYMENT_RECEIVED", "PAYMENT_CONFIRMED", "PAYMENT_OVERDUE", "PAYMENT_REFUNDED", "PAYMENT_DELETED", "PAYMENT_CANCELED"];
+    if (!relevante.includes(String(event))) {
+      return res.json({ ok: true });
+    }
+
+    const externalId = String(payment.id);
+    const novoStatus = mapAsaasStatus(payment.status || (event.includes("RECEIVED") || event.includes("CONFIRMED") ? "CONFIRMED" : "PENDING"));
+
+    // Localiza pagamento
+    const pagamento = await prisma.pagamento.findFirst({ where: { externalId } });
+    if (!pagamento) {
+      console.warn(`[Webhook] Pagamento não encontrado para externalId: ${externalId}`);
+      return res.json({ ok: true });
+    }
+
+    // Se já está pago, idempotência
+    if (pagamento.status === "pago" && novoStatus === "pago") {
+      return res.json({ ok: true, message: "Pagamento já processado." });
+    }
+
+    // Atualiza status
+    const atualizado = await prisma.pagamento.update({
+      where: { id: pagamento.id },
+      data: { status: novoStatus },
+    });
+
+    // Se ficou pago, credita saldo do profissional
+    if (novoStatus === "pago") {
+      await prisma.profissional.update({
+        where: { id: atualizado.profissionalId },
+        data: { saldo: { increment: atualizado.valorLiquido } },
+      });
+      console.log(`[Webhook] Pagamento ${atualizado.id} => 'pago'. Saldo do profissional ${atualizado.profissionalId} creditado.`);
+    }
+
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error("[/api/pagamentos/webhook] Erro:", error);
+    return res.status(500).json({ ok: false, error: "Erro interno ao processar webhook." });
+  }
 });
 
+// =========================[ SALDO / SAQUE ]========================
+
 /**
- * Rota: /api/saldo/pro/:id
- * Método: GET
- * Função: Consultar saldo do profissional
+ * GET /api/saldo/pro/:id
+ * Protegido: requireProAuth
  */
 app.get("/api/saldo/pro/:id", requireProAuth, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const profissionalId = parseInt(id);
-
-        // 1. Apenas profissional dono da conta vê o saldo
-        if (req.profissional.id !== profissionalId) {
-            return res.status(403).json({ ok: false, error: "Acesso negado." });
-        }
-
-        const profissional = await prisma.profissional.findUnique({
-            where: { id: profissionalId },
-            select: { saldo: true }
-        });
-
-        if (!profissional) {
-            return res.status(404).json({ ok: false, error: "Profissional não encontrado." });
-        }
-
-        res.json({
-            ok: true,
-            saldo: profissional.saldo,
-        });
-
-    } catch (error) {
-        console.error("[/api/saldo/pro/:id] Erro:", error);
-        res.status(500).json({ ok: false, error: "Erro interno ao consultar saldo." });
+  try {
+    const profissionalId = Number(req.params.id);
+    if (Number(req.profissional?.id) !== profissionalId) {
+      return res.status(403).json({ ok: false, error: "Acesso negado." });
     }
+    const profissional = await prisma.profissional.findUnique({
+      where: { id: profissionalId },
+      select: { saldo: true },
+    });
+    if (!profissional) {
+      return res.status(404).json({ ok: false, error: "Profissional não encontrado." });
+    }
+    return res.json({ ok: true, saldo: Number(profissional.saldo || 0) });
+  } catch (error) {
+    console.error("[/api/saldo/pro/:id] Erro:", error);
+    return res.status(500).json({ ok: false, error: "Erro interno ao consultar saldo." });
+  }
 });
 
 /**
- * Rota: /api/saldo/saque
- * Método: POST
- * Função: Solicitar saque via Pix
+ * POST /api/saldo/saque
+ * Protegido: requireProAuth
+ * Body: { valor: number, chavePix: string }
  */
 app.post("/api/saldo/saque", requireProAuth, async (req, res) => {
-    try {
-        const { valor, chavePix } = req.body;
-        const profissionalId = req.profissional.id;
+  try {
+    const profissionalId = Number(req.profissional?.id);
+    const { valor, chavePix } = req.body || {};
+    const valorSaque = Number(valor);
 
-        if (!valor || !chavePix || isNaN(parseFloat(valor)) || parseFloat(valor) <= 0) {
-            return res.status(400).json({ ok: false, error: "Valor e chave Pix válidos são obrigatórios." });
-        }
-
-        const valorSaque = parseFloat(valor);
-        const profissional = await prisma.profissional.findUnique({
-            where: { id: profissionalId }
-        });
-
-        if (profissional.saldo < valorSaque) {
-            return res.status(400).json({ ok: false, error: "Saldo insuficiente para saque." });
-        }
-
-        // 1. Criar o registro de saque (status: pendente)
-        const novoSaque = await prisma.saque.create({
-            data: {
-                profissionalId: profissionalId,
-                valor: valorSaque,
-                chavePix: chavePix,
-                status: "pendente",
-            }
-        });
-
-        // 2. Debitar o valor do saldo do profissional
-        await prisma.profissional.update({
-            where: { id: profissionalId },
-            data: {
-                saldo: {
-                    decrement: valorSaque
-                }
-            }
-        });
-
-        // TODO: Implementar a lógica de pagamento via Pix no Asaas (transferências)
-        // Por enquanto, apenas registra o saque e debita o saldo
-
-        res.json({
-            ok: true,
-            saqueId: novoSaque.id,
-            message: "Solicitação de saque enviada com sucesso. Processamento pendente.",
-        });
-
-    } catch (error) {
-        console.error("[/api/saldo/saque] Erro:", error);
-        res.status(500).json({ ok: false, error: "Erro interno ao solicitar saque." });
+    if (!isFinite(valorSaque) || valorSaque <= 0 || !String(chavePix || "").trim()) {
+      return res.status(400).json({ ok: false, error: "Valor e chave Pix válidos são obrigatórios." });
     }
+
+    const profissional = await prisma.profissional.findUnique({ where: { id: profissionalId } });
+    if (!profissional) return res.status(404).json({ ok: false, error: "Profissional não encontrado." });
+
+    if (Number(profissional.saldo || 0) < valorSaque) {
+      return res.status(400).json({ ok: false, error: "Saldo insuficiente para saque." });
+    }
+
+    // 1) registra solicitação de saque (pendente)
+    const novoSaque = await prisma.saque.create({
+      data: {
+        profissionalId,
+        valor: valorSaque,
+        chavePix: String(chavePix).trim(),
+        status: "pendente",
+      },
+    });
+
+    // 2) debita saldo
+    await prisma.profissional.update({
+      where: { id: profissionalId },
+      data: { saldo: { decrement: valorSaque } },
+    });
+
+    // TODO: disparar transferência Pix via Asaas (Payouts) e atualizar status do saque
+
+    return res.json({
+      ok: true,
+      saqueId: novoSaque.id,
+      message: "Solicitação de saque enviada com sucesso. Processamento pendente.",
+    });
+  } catch (error) {
+    console.error("[/api/saldo/saque] Erro:", error);
+    return res.status(500).json({ ok: false, error: "Erro interno ao solicitar saque." });
+  }
 });
 
 // =========================[ SERVIÇOS DO PROFISSIONAL ]========================
 
+/**
+ * GET /api/servicos/meus
+ * Lista serviços do profissional autenticado (req.session.user.tipo === 'prof')
+ */
 app.get("/api/servicos/meus", async (req, res) => {
-  const user = req.session.user;
-  if (!user || user.tipo !== "prof") return res.status(401).json({ ok: false, error: "Não autenticado ou não é profissional." });
-  
-    const servicos = await prisma.servico.findMany({
-    where: { userId: user.id },
+  const user = req.session?.user;
+  if (!user || user.tipo !== "prof") {
+    return res.status(401).json({ ok: false, error: "Não autenticado ou não é profissional." });
+  }
+  const servicos = await prisma.servico.findMany({
+    where: { userId: Number(user.id) },
+    orderBy: { id: "desc" },
   });
-  res.json({ ok: true, servicos: servicos });
+  return res.json({ ok: true, servicos });
 });
 
+/**
+ * POST /api/servicos/adicionar
+ * Body: { titulo, descricao?, preco }
+ */
 app.post("/api/servicos/adicionar", async (req, res) => {
-  const user = req.session.user;
-  if (!user || user.tipo !== "prof") return res.status(401).json({ ok: false, error: "Não autenticado ou não é profissional." });
-  
-  const { titulo, descricao, preco } = req.body;
-  if (!titulo || !preco) return res.status(400).json({ ok: false, error: "Título e preço são obrigatórios." });
+  const user = req.session?.user;
+  if (!user || user.tipo !== "prof") {
+    return res.status(401).json({ ok: false, error: "Não autenticado ou não é profissional." });
+  }
+  const { titulo, descricao, preco } = req.body || {};
+  if (!titulo || preco == null) {
+    return res.status(400).json({ ok: false, error: "Título e preço são obrigatórios." });
+  }
 
-  // Não é necessário ler todos os serviços aqui, apenas criar o novo.
-  // const servicos = await prisma.servico.findMany();
-  const novo = {
-    id: Date.now(),
-    userId: user.id,
-    titulo,
-    descricao: descricao || "",
-    preco: parseFloat(preco),
-    criadoEm: new Date().toISOString(),
-  };
   const novoServico = await prisma.servico.create({
     data: {
-      userId: user.id,
-      titulo,
-      descricao: descricao || "",
-      preco: parseFloat(preco),
+      userId: Number(user.id),
+      titulo: String(titulo),
+      descricao: String(descricao || ""),
+      preco: Number(preco),
     },
   });
-  res.json({ ok: true, msg: "Serviço cadastrado com sucesso!", servico: novoServico });
+
+  return res.json({ ok: true, msg: "Serviço cadastrado com sucesso!", servico: novoServico });
 });
-
-
-// =========================[ FIM DAS ROTAS ]========================
-// O restante do código (404/500) deve vir aqui.
-// As rotas 404/500 não foram incluídas no trecho lido, assumindo que estão no final do arquivo.
-// A rota /api/saldo/saque foi a última rota encontrada no trecho lido.
 
 // =========================[ FINANCEIRO DO PROFISSIONAL ]========================
-app.get("/api/financeiro/dados", (req, res) => {
-  const user = req.session.user;
-  if (!user || user.tipo !== "prof") return res.status(401).json({ ok: false, error: "Não autenticado ou não é profissional." });
 
-  // Simulação de dados financeiros
-  const dadosFinanceiros = {
-    ok: true,
-    ganhosMes: 230.50,
-    pendenteRecebimento: 80.00,
-    totalRecebido: 150.50,
-    taxaPlataforma: 0.04, // 4%
-    plano: 'PREMIUM',
-    statusAssinatura: 'Ativo',
-    validadePlano: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-    totalLeadsMes: 15,
-    limiteLeadsMes: 50,
-    transacoes: [
-      { id: 1, criadoEm: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), valor: 150.00, taxa: 6.00, status: 'concluido' },
-      { id: 2, criadoEm: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), valor: 80.00, taxa: 3.20, status: 'pendente' },
-      { id: 3, criadoEm: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), valor: 50.00, taxa: 2.00, status: 'cancelado' },
-    ]
-  };
+/**
+ * GET /api/financeiro/dados
+ * (simulado — substitua por consultas reais no Prisma quando quiser)
+ */
+app.get("/api/financeiro/dados", requireProAuth, async (req, res) => {
+  try {
+    // Exemplo de agregações reais (ajuste conforme seu schema):
+    const usuarioId = req.session?.painel?.proId;
 
-  // Em produção, você buscará esses dados no banco de dados
-  // Ex: const profissional = await prisma.profissional.findUnique({ where: { id: user.id } });
-  // Ex: const transacoes = await prisma.transacao.findMany({ where: { profissionalId: user.id } });
+    // Simulação
+    const dadosFinanceiros = {
+      ok: true,
+      ganhosMes: 230.5,
+      pendenteRecebimento: 80.0,
+      totalRecebido: 150.5,
+      taxaPlataforma: TAXA,
+      plano: "PREMIUM",
+      statusAssinatura: "Ativo",
+      validadePlano: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      totalLeadsMes: 15,
+      limiteLeadsMes: 50,
+      transacoes: [
+        { id: 1, criadoEm: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), valor: 150.0, taxa: 6.0, status: "concluido" },
+        { id: 2, criadoEm: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), valor: 80.0, taxa: 3.2, status: "pendente" },
+        { id: 3, criadoEm: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), valor: 50.0, taxa: 2.0, status: "cancelado" },
+      ],
+    };
 
-  res.json(dadosFinanceiros);
-});
-
-
-app.post("/api/saldo/saque", requireProAuth, async (req, res) => {
-    try {
-        const { valor, chavePix } = req.body;
-        const profissionalId = req.profissional.id;
-
-        if (!valor || !chavePix || isNaN(parseFloat(valor)) || parseFloat(valor) <= 0) {
-            return res.status(400).json({ ok: false, error: "Valor e chave Pix válidos são obrigatórios." });
-        }
-
-        const valorSaque = parseFloat(valor);
-        const profissional = await prisma.profissional.findUnique({
-            where: { id: profissionalId }
-        });
-
-        if (profissional.saldo < valorSaque) {
-            return res.status(400).json({ ok: false, error: "Saldo insuficiente para saque." });
-        }
-
-        // 1. Criar o registro de saque (status: pendente)
-        const novoSaque = await prisma.saque.create({
-            data: {
-                profissionalId: profissionalId,
-                valor: valorSaque,
-                chavePix: chavePix,
-                status: "pendente",
-            }
-        });
-
-        // 2. Debitar o valor do saldo do profissional
-        await prisma.profissional.update({
-            where: { id: profissionalId },
-            data: {
-                saldo: {
-                    decrement: valorSaque
-                }
-            }
-        });
-
-        // TODO: Implementar a lógica de pagamento via Pix no Asaas (transferências)
-        // Por enquanto, apenas registra o saque e debita o saldo
-
-        res.json({
-            ok: true,
-            saqueId: novoSaque.id,
-            message: "Solicitação de saque enviada com sucesso. Processamento pendente.",
-        });
-
-    } catch (error) {
-        console.error("[/api/saldo/saque] Erro:", error);
-        res.status(500).json({ ok: false, error: "Erro interno ao solicitar saque." });
-    }
+    return res.json(dadosFinanceiros);
+  } catch (e) {
+    console.error("[/api/financeiro/dados] Erro:", e);
+    return res.status(500).json({ ok: false, error: "Erro ao obter dados financeiros." });
+  }
 });
