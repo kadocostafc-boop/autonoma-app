@@ -2005,17 +2005,27 @@ app.post("/cadastro", async (req, res) => {
       });
 
       // Cria Profissional
-      const novoProfissional = await prisma.Profissional.create({
-        data: {
-          usuarioId: novoUsuario.id,
-          enderecoId: novoEndereco.id,
-          descricao: descricao || '',
-          idade: idade ? Number(idade) : null,
-          tempoExperiencia: tempoExperiencia ? Number(tempoExperiencia) : 0,
-          whatsappPublico: whatsappPublico || whatsapp.replace(/\D/g, ''),
-          // Outros campos do profissional
-        }
-      });
+console.log("🧩 Dados recebidos no cadastro:", req.body);
+console.log("🧩 Dados locais:", {
+  novoUsuario,
+  novoEndereco,
+  descricao,
+  idade,
+  tempoExperiencia,
+  whatsappPublico
+});
+
+const novoProfissional = await prisma.Profissional.create({
+  data: {
+    usuarioId: novoUsuario.id,
+    enderecoId: novoEndereco ? novoEndereco.id : null,
+    descricao: descricao || '',
+    idade: idade ? Number(idade) : null,
+    tempoExperiencia: tempoExperiencia ? Number(tempoExperiencia) : 0,
+    whatsappPublico: whatsappPublico || whatsapp.replace(/\D/g, ''),
+    // Outros campos do profissional
+  }
+});
 
       // Cria Serviços (se houver)
       if (Array.isArray(servicos) && servicos.length > 0) {
