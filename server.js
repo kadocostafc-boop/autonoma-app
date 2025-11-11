@@ -3859,97 +3859,132 @@ app.get("/api/admin/_dump_all", requireAdmin, (_req, res) => {
   res.send(JSON.stringify(dump, null, 2));
 });
 // =========================[ CADASTRO DE PROFISSIONAL ]=========================
+app.post(
+  "/api/profissionais",
+  upload.single("foto"),
+  express.urlencoded({ extended: true }),
+  async (req, res) => {
+    try {
+      const {
+        nome,
+        email,
+        whatsapp,
+        senha,
+        cidade,
+        bairro,
+        servico,
+        bio,
+      } = req.body || {};
 
-app.post("/api/profissionais", upload.single("foto"), express.urlencoded({ extended: true }), (req, res) => {
-  try {
-    const { nome, email, whatsapp, senha, cidade, bairro, servico, bio } = req.body || {};
-    if (!nome || !email || !whatsapp || !senha || !cidade || !bairro) {
-      return res.json({ ok: false, error: "Todos os campos obrigatórios devem ser preenchidos." });
+      // 1. Validação básica (mesmos campos do front)
+      if (!nome || !email || !whatsapp || !senha || !cidade || !bairro) {
+        return res.status(400).json({
+          ok: false,
+          error: "Todos os campos obrigatórios devem ser preenchidos.",
+        });
+      }
+
+      // 2. Derivar cidade e UF a partir do campo "cidade" (ex.: "Rio de Janeiro/RJ")
+      let cidadeNome = String(cidade).trim();
+      let estadoUF = "";
+      const matchUF = cidadeNome.match(/\/([A-Za-z]{2})\s*$/);
+      if (matchUF) {
+        estadoUF = matchUF[1].toUpperCase();
+        cidadeNome = cidadeNome.replace(/\/([A-Za-z]{2})\s*$/, "").trim();
+      }
+      if (!estadoUF) {
+        estadoUF = "SP"; // fallback simples; depois podemos melhorar
+      }
+
+      // 3. Verificar se já existe usuário com mesmo e-mail ou WhatsApp
+      const existingUser = await prisma.usuario.findFirst({
+        where: {
+          OR: [
+            { email: email.toLowerCase() },
+            { whatsapp: whatsapp.replace(/\D/g, "") },
+          ],
+        },
+      });
+
+      if (existingUser) {
+        return res.status(409).json({
+          ok: false,
+          error: "E-mail ou WhatsApp já cadastrados.",
+        });
+      }
+
+      // 4. Hash da senha
+      const hashedPassword = bcrypt.hashSync(senha, 10);
+
+      // 5. Criação no Neon (Endereco, Usuario, Profissional, Servico) em transação
+      const result = await prisma.$transaction(async (tx) => {
+        // Endereço
+        const novoEndereco = await tx.endereco.create({
+          data: {
+            cidade: titleCase(cidadeNome),
+            bairro: titleCase(bairro),
+            estado: estadoUF,
+          },
+        });
+
+        // Usuário
+        const novoUsuario = await tx.usuario.create({
+          data: {
+            nome: nome,
+            email: email.toLowerCase(),
+            whatsapp: whatsapp.replace(/\D/g, ""),
+            senha: hashedPassword,
+          },
+        });
+
+        // Profissional
+        const novoProfissional = await tx.profissional.create({
+          data: {
+            usuarioId: novoUsuario.id,
+            enderecoId: novoEndereco.id,
+            descricao: bio || "",
+            tempoExperiencia: 0,
+            whatsappPublico: whatsapp.replace(/\D/g, ""),
+            planoAtual: "free",          // se existir este campo no schema
+            validadePlano: null,
+          },
+        });
+
+        // Serviço principal (se enviado)
+        if (servico) {
+          await tx.servico.create({
+            data: {
+              profissionalId: novoProfissional.id,
+              titulo: servico,
+              descricao: bio || "",
+              preco: 0,
+            },
+          });
+        }
+
+        // OBS: a foto já foi salva em disco pelo Multer (req.file),
+        // depois podemos ligar este caminho a um campo no Prisma se quiser.
+        return { usuario: novoUsuario, profissional: novoProfissional };
+      });
+
+      // 6. (Opcional) Criar sessão de painel direto após cadastro
+      req.session.painel = { ok: true, proId: result.profissional.id };
+
+      // 7. Resposta de sucesso compatível com a antiga
+      return res.json({
+        ok: true,
+        msg: "Cadastro realizado com sucesso!",
+        id: result.profissional.id,
+        redirect: "/painel.html",
+      });
+    } catch (e) {
+      console.error("Erro no cadastro /api/profissionais:", e);
+      return res
+        .status(500)
+        .json({ ok: false, error: "Erro interno no servidor." });
     }
-
-    const db = readDB();
-    const id = Date.now().toString();
-
-    const novo = {
-      id,
-      nome,
-      email,
-      whatsapp,
-      senha,
-      cidade,
-      bairro,
-      servico,
-      bio,
-      verificado: false,
-      foto: req.file ? "/uploads/" + req.file.filename : "/icons/icon-192.png",
-      dataCadastro: new Date().toISOString(),
-      avaliacoes: []
-    };
-
-    db.push(novo);
-    writeDB(db);
-
-    res.json({ ok: true, msg: "Cadastro realizado com sucesso!", id });
-  } catch (e) {
-    console.error("Erro no cadastro:", e);
-    res.status(500).json({ ok: false, error: "Erro interno no servidor." });
   }
-});
-// === Compat extra de avaliações ===
-app.get("/api/profissional/:id/avaliacoes", (req, res) => {
-  const id = String(req.params.id || "");
-  const db = readDB();
-  const pro = db.find((x) => String(x.id) === id);
-  if (!pro) return res.json([]);
-  res.json(pro.avaliacoes || []);
-});
-
-app.post("/api/profissional/:id/avaliar", express.json(), (req, res) => {
-  const id = String(req.params.id || "");
-  const db = readDB();
-  const pro = db.find((x) => String(x.id) === id);
-  if (!pro) return res.status(404).json({ ok: false, msg: "Profissional não encontrado" });
-  const { nome, nota, texto } = req.body || {};
-  if (!texto && !nota) return res.status(400).json({ ok: false, msg: "Comentário ou nota obrigatórios" });
-  if (!Array.isArray(pro.avaliacoes)) pro.avaliacoes = [];
-  pro.avaliacoes.unshift({
-    nome: nome || "Cliente",
-    nota: Number(nota) || 0,
-    texto: texto || "",
-    data: new Date().toISOString(),
-  });
-  writeDB(db);
-  res.json({ ok: true });
-});
-
-// =============[ Avaliações • GET /api/avaliacoes/:id ]=============
-app.get("/api/avaliacoes/:id", async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    if (!Number.isFinite(id) || id <= 0) {
-      return res.status(400).json({ ok: false, error: "ID inválido" });
-    }
-
-    const prof = await prisma.profissional.findUnique({
-      where: { id },
-      include: { avaliacoes: true }
-    });
-
-    if (!prof) {
-      return res.status(404).json({ ok: false, error: "Profissional não encontrado" });
-    }
-
-    return res.json({
-      ok: true,
-      total: prof.avaliacoes.length,
-      items: prof.avaliacoes
-    });
-  } catch (e) {
-    console.error("[ERR /api/avaliacoes/:id]", e);
-    return res.status(500).json({ ok: false, error: "server_error" });
-  }
-});
-
+);
 // =============[ Avaliações • POST /api/avaliar ]=============
 app.post("/api/avaliar", async (req, res) => {
   try {
