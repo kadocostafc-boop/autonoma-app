@@ -2005,7 +2005,7 @@ app.post("/cadastro", async (req, res) => {
       });
 
       // Cria Profissional
-      const novoProfissional = await prisma.profissional.create({
+      const novoProfissional = await prisma.Profissional.create({
         data: {
           usuarioId: novoUsuario.id,
           enderecoId: novoEndereco.id,
