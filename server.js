@@ -2102,28 +2102,22 @@ app.get("/api/profissionais", async (req, res) => {
     }
 
     // Busca no banco via Prisma
-    const profissionais = await prisma.profissional.findMany({
-      where: whereClause,
-      skip: offsetNum,
-      take: limitNum,
-      include: {
-        endereco: true,
-        usuario: {
-          select: {
-            email: true,
-            whatsapp: true,
-            criadoEm: true,
-            assinaturas: {
-              where: { ativo: true },
-              orderBy: { criadoEm: "desc" },
-              take: 1,
-            },
-          },
-        },
+const profissionais = await prisma.profissional.findMany({
+  where: whereClause,
+  skip: offsetNum,
+  take: limitNum,
+  include: {
+    endereco: true,
+    usuario: {
+      select: {
+        email: true,
+        whatsapp: true,
+        criadoEm: true
       },
-      orderBy: { criadoEm: "desc" },
-    });
-
+    },
+  },
+  orderBy: { criadoEm: "desc" },
+});
     // Mapeia resultado
     const items = profissionais.map((p) => ({
       id: p.id,
@@ -3938,12 +3932,16 @@ app.post(
 
     } // 👈 fecha o try
 
-    catch (e) {
-      console.error("[/api/profissionais] Erro:", e);
-      return res.status(500).json({
-        ok: false,
-        error: "Erro interno no servidor."
-      });
-    }
+     catch (e) {
+  console.error("🚨 Erro detalhado no cadastro /api/profissionais:", e);
+  return res.status(500).json({ ok: false, error: e.message || "Erro interno no servidor." });
+}
   } // 👈 fecha a função async (req, res)
 ); // 👈 fecha o app.post("/api/profissionais")
+
+// =========================[ START SERVER ]=========================
+
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+console.log(`[BOOT] Autônoma.app rodando na porta ${PORT}`);
+});
