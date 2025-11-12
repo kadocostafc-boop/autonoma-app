@@ -1994,39 +1994,7 @@ app.post("/cadastro", async (req, res) => {
         }
       });
 
-      // Cria Usuario
-      const novoUsuario = await prisma.usuario.create({
-        data: {
-          nome: nome,
-          email: email.toLowerCase(),
-          whatsapp: whatsapp.replace(/\D/g, ''),
-          senha: hashedPassword,
-        }
-      });
-
-      // Cria Profissional
-console.log("🧩 Dados recebidos no cadastro:", req.body);
-console.log("🧩 Dados locais:", {
-  novoUsuario,
-  novoEndereco,
-  descricao,
-  idade,
-  tempoExperiencia,
-  whatsappPublico
-});
-
-const novoProfissional = await prisma.Profissional.create({
-  data: {
-    usuarioId: novoUsuario.id,
-    enderecoId: novoEndereco ? novoEndereco.id : null,
-    descricao: descricao || '',
-    idade: idade ? Number(idade) : null,
-    tempoExperiencia: tempoExperiencia ? Number(tempoExperiencia) : 0,
-    whatsappPublico: whatsappPublico || whatsapp.replace(/\D/g, ''),
-    // Outros campos do profissional
-  }
-});
-
+      
       // Cria Serviços (se houver)
       if (Array.isArray(servicos) && servicos.length > 0) {
         const servicosData = servicos.map(s => ({
@@ -3868,7 +3836,7 @@ app.get("/api/admin/_dump_all", requireAdmin, (_req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.send(JSON.stringify(dump, null, 2));
 });
-// =========================[ CADASTRO DE PROFISSIONAL ]=========================
+// =====================================================[ CADASTRO DE PROFISSIONAIS ]=========================
 app.post(
   "/api/profissionais",
   upload.single("foto"),
@@ -3880,38 +3848,19 @@ app.post(
         email,
         whatsapp,
         senha,
-        cidade,
+        cidadeNome,
         bairro,
-        servico,
+        estadoUF,
         bio,
-      } = req.body || {};
+        servico
+      } = req.body;
 
-      // 1. Validação básica (mesmos campos do front)
-      if (!nome || !email || !whatsapp || !senha || !cidade || !bairro) {
-        return res.status(400).json({
-          ok: false,
-          error: "Todos os campos obrigatórios devem ser preenchidos.",
-        });
-      }
-
-      // 2. Derivar cidade e UF a partir do campo "cidade" (ex.: "Rio de Janeiro/RJ")
-      let cidadeNome = String(cidade).trim();
-      let estadoUF = "";
-      const matchUF = cidadeNome.match(/\/([A-Za-z]{2})\s*$/);
-      if (matchUF) {
-        estadoUF = matchUF[1].toUpperCase();
-        cidadeNome = cidadeNome.replace(/\/([A-Za-z]{2})\s*$/, "").trim();
-      }
-      if (!estadoUF) {
-        estadoUF = "SP"; // fallback simples; depois podemos melhorar
-      }
-
-      // 3. Verificar se já existe usuário com mesmo e-mail ou WhatsApp
+      // 1️⃣ Verifica duplicidade
       const existingUser = await prisma.usuario.findFirst({
         where: {
           OR: [
             { email: email.toLowerCase() },
-            { whatsapp: whatsapp.replace(/\D/g, "") },
+            { whatsapp: whatsapp.replace(/\D/g, "") }
           ],
         },
       });
@@ -3923,10 +3872,10 @@ app.post(
         });
       }
 
-      // 4. Hash da senha
+      // 2️⃣ Hash da senha
       const hashedPassword = bcrypt.hashSync(senha, 10);
 
-      // 5. Criação no Neon (Endereco, Usuario, Profissional, Servico) em transação
+      // 3️⃣ Criação no Neon (Endereço, Usuário, Profissional, Serviço)
       const result = await prisma.$transaction(async (tx) => {
         // Endereço
         const novoEndereco = await tx.endereco.create({
@@ -3955,7 +3904,7 @@ app.post(
             descricao: bio || "",
             tempoExperiencia: 0,
             whatsappPublico: whatsapp.replace(/\D/g, ""),
-            planoAtual: "free",          // se existir este campo no schema
+            planoAtual: "free", // se existir este campo no schema
             validadePlano: null,
           },
         });
@@ -3972,638 +3921,29 @@ app.post(
           });
         }
 
-        // OBS: a foto já foi salva em disco pelo Multer (req.file),
-        // depois podemos ligar este caminho a um campo no Prisma se quiser.
+        // Retorna os dados criados
         return { usuario: novoUsuario, profissional: novoProfissional };
       });
 
-      // 6. (Opcional) Criar sessão de painel direto após cadastro
+      // 4️⃣ Cria sessão de painel direto após cadastro
       req.session.painel = { ok: true, proId: result.profissional.id };
 
-      // 7. Resposta de sucesso compatível com a antiga
+      // 5️⃣ Resposta de sucesso
       return res.json({
         ok: true,
         msg: "Cadastro realizado com sucesso!",
         id: result.profissional.id,
         redirect: "/painel.html",
       });
-    } catch (e) {
-      console.error("Erro no cadastro /api/profissionais:", e);
-      return res
-        .status(500)
-        .json({ ok: false, error: "Erro interno no servidor." });
-    }
-  }
-);
-// =============[ Avaliações • POST /api/avaliar ]=============
-app.post("/api/avaliar", async (req, res) => {
-  try {
-    const { profissionalId, nota, comentario, clienteNome } = req.body;
 
-    if (!profissionalId || !nota) {
-      return res.status(400).json({ ok: false, error: "ID do profissional e nota são obrigatórios." });
-    }
+    } // 👈 fecha o try
 
-    const notaNum = Number(nota);
-    if (isNaN(notaNum) || notaNum < 1 || notaNum > 5) {
-      return res.status(400).json({ ok: false, error: "Nota deve ser um número entre 1 e 5." });
-    }
-
-    const profissional = await prisma.profissional.findUnique({
-      where: { id: parseInt(profissionalId) }
-    });
-    if (!profissional) {
-      return res.status(404).json({ ok: false, error: "Profissional não encontrado." });
-    }
-
-    const avaliacao = await prisma.avaliacao.create({
-      data: {
-        profissionalId: parseInt(profissionalId),
-        nota: notaNum,
-        comentario: comentario ? comentario.trim() : null,
-        clienteNome: clienteNome?.trim() || "Anônimo",
-      }
-    });
-
-    const avaliacoes = await prisma.avaliacao.findMany({
-      where: { profissionalId: parseInt(profissionalId) },
-      select: { nota: true }
-    });
-    const notas = avaliacoes.map(a => Number(a.nota)).filter(n => !isNaN(n));
-    const media = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length) : 0;
-
-    await prisma.profissional.update({
-      where: { id: parseInt(profissionalId) },
-      data: { mediaAvaliacao: parseFloat(media.toFixed(2)) }
-    });
-
-    return res.json({ ok: true, msg: "Avaliação registrada com sucesso!", avaliacao });
-
-  } catch (e) {
-    console.error("[ERR /api/avaliar]", e);
-    return res.status(500).json({ ok: false, error: "server_error" });
-  }
-});
-
-// =============[ Admin • GET /admin/profissionais ]=============
-app.get("/admin/profissionais", async (req, res) => {
-  try {
-    const { q, limit = 50, offset = 0 } = req.query;
-    const limitNum = parseInt(limit);
-    const offsetNum = parseInt(offset);
-
-    let whereClause = {};
-
-    if (q) {
-      whereClause.OR = [
-        { nome: { contains: q, mode: 'insensitive' } },
-        { descricao: { contains: q, mode: 'insensitive' } },
-        { endereco: { cidade: { contains: q, mode: 'insensitive' } } },
-        { endereco: { bairro: { contains: q, mode: 'insensitive' } } },
-        { usuario: { email: { contains: q, mode: 'insensitive' } } },
-        { usuario: { whatsapp: { contains: q, mode: 'insensitive' } } },
-      ];
-    }
-
-    const profissionais = await prisma.profissional.findMany({
-      where: whereClause,
-      take: limitNum,
-      skip: offsetNum,
-      orderBy: {
-        criadoEm: 'desc'
-      },
-      include: {
-        endereco: true,
-        usuario: {
-          select: {
-            email: true,
-            whatsapp: true,
-            criadoEm: true,
-            assinaturas: {
-              where: { ativo: true },
-              orderBy: { criadoEm: 'desc' },
-              take: 1
-            }
-          }
-        }
-      }
-    });
-
-    const total = await prisma.profissional.count({ where: whereClause });
-
-    const items = profissionais.map(prof => ({
-      id: prof.id,
-      nome: prof.nome,
-      email: prof.usuario?.email,
-      whatsapp: prof.usuario?.whatsapp,
-      cidade: prof.endereco?.cidade,
-      bairro: prof.endereco?.bairro,
-      plano: prof.usuario?.assinaturas[0]?.plano || 'free',
-      criadoEm: prof.usuario?.criadoEm,
-      // Adicione outros campos relevantes para o admin
-    }));
-
-    return res.json({ ok: true, items, total });
-
-  } catch (e) {
-    console.error("[ERR /admin/profissionais]", e);
-    return res.status(500).json({ ok: false, error: "server_error" });
-  }
-});
-
-// =============[ Admin • GET /admin/usuarios ]=============
-app.get("/admin/usuarios", async (req, res) => {
-  try {
-    const { q, limit = 50, offset = 0 } = req.query;
-    const limitNum = parseInt(limit);
-    const offsetNum = parseInt(offset);
-
-    let whereClause = {};
-
-    if (q) {
-      whereClause.OR = [
-        { nome: { contains: q, mode: 'insensitive' } },
-        { email: { contains: q, mode: 'insensitive' } },
-        { whatsapp: { contains: q, mode: 'insensitive' } },
-      ];
-    }
-
-    const usuarios = await prisma.usuario.findMany({
-      where: whereClause,
-      take: limitNum,
-      skip: offsetNum,
-      orderBy: {
-        criadoEm: 'desc'
-      },
-      include: {
-        profissional: {
-          select: {
-            id: true,
-            nome: true,
-          }
-        },
-        assinaturas: {
-          where: { ativo: true },
-          orderBy: { criadoEm: 'desc' },
-          take: 1
-        }
-      }
-    });
-
-    const total = await prisma.usuario.count({ where: whereClause });
-
-    const items = usuarios.map(user => ({
-      id: user.id,
-      nome: user.nome,
-      email: user.email,
-      whatsapp: user.whatsapp,
-      isProfissional: !!user.profissional,
-      profissionalId: user.profissional?.id || null,
-      plano: user.assinaturas[0]?.plano || 'free',
-      criadoEm: user.criadoEm,
-    }));
-
-    return res.json({ ok: true, items, total });
-
-  } catch (e) {
-    console.error("[ERR /admin/usuarios]", e);
-    return res.status(500).json({ ok: false, error: "server_error" });
-  }
-});
-
-// =============[ Pagamentos • POST /api/saldo/saque ]=============
-// Rota mantida e verificada: não há duplicação.
-app.post("/api/saldo/saque", requireProAuth, async (req, res) => {
-  try {
-    const { valor, chavePix } = req.body;
-    const proId = req.session.painel.proId;
-
-    if (!valor || !chavePix) {
-      return res.status(400).json({ ok: false, error: "Valor e chave Pix são obrigatórios." });
-    }
-
-    const valorNum = Number(valor);
-    if (isNaN(valorNum) || valorNum <= 0) {
-      return res.status(400).json({ ok: false, error: "Valor inválido." });
-    }
-
-    // 1. Busca o profissional e seu saldo (exemplo, assumindo que o saldo está no Profissional ou em uma tabela de Saldo)
-    const profissional = await prisma.profissional.findUnique({
-      where: { id: proId },
-      select: { saldo: true } // Assumindo que o campo 'saldo' existe
-    });
-
-    if (!profissional) {
-      return res.status(404).json({ ok: false, error: "Profissional não encontrado." });
-    }
-
-    if (profissional.saldo < valorNum) {
-      return res.status(400).json({ ok: false, error: "Saldo insuficiente." });
-    }
-
-    // 2. Cria a transação de saque (exemplo)
-    const saque = await prisma.transacao.create({
-      data: {
-        profissionalId: proId,
-        tipo: 'SAQUE',
-        valor: -valorNum, // Valor negativo para saque
-        status: 'PENDENTE',
-        detalhes: { chavePix: chavePix }
-      }
-    });
-
-    // 3. Atualiza o saldo (em um cenário real, isso seria feito após a confirmação do pagamento)
-    // Para fins de demonstração, vamos apenas subtrair o saldo.
-    await prisma.profissional.update({
-      where: { id: proId },
-      data: {
-        saldo: {
-          decrement: valorNum
-        }
-      }
-    });
-
-    // 4. Resposta
-    return res.json({
-      ok: true,
-      msg: "Solicitação de saque enviada com sucesso. Processamento em até 24h.",
-      saqueId: saque.id
-    });
-
-  } catch (e) {
-    console.error("[ERR /api/saldo/saque]", e);
-    return res.status(500).json({ ok: false, error: "server_error" });
-  }
-});
-
-// ===== Inicialização compatível com Railway =====
-const PORT = Number(process.env.PORT || 8080);
-// Não passe HOST aqui; sem host o Express usa 0.0.0.0
-app.listen(PORT, () => {
-  console.log(`[BOOT] Autônoma.app rodando na porta ${PORT}`);
-});
-// =========================[ PAGAMENTOS / ASAAS ]========================
-
-// Taxa da plataforma (4%) — ajuste via env se quiser
-const TAXA = Number(process.env.FEE_APP_PERCENT || 0.04);
-
-// Helper: converte status do Asaas -> nosso status
-function mapAsaasStatus(s) {
-  // Asaas: PENDING, RECEIVED, CONFIRMED, OVERDUE, CANCELED, REFUNDED, CHARGEBACK
-  switch (String(s || '').toUpperCase()) {
-    case 'RECEIVED':
-    case 'CONFIRMED':
-      return 'pago';
-    case 'CANCELED':
-    case 'REFUNDED':
-    case 'CHARGEBACK':
-      return 'cancelado';
-    case 'OVERDUE':
-      return 'atrasado';
-    case 'PENDING':
-    default:
-      return 'pendente';
-  }
-}
-
-/**
- * POST /api/pagamentos/criar
- * Body: { servicoId: number, nomeCliente: string, emailCliente: string, cpfCnpjCliente: string }
- * Cria pagamento no DB (pendente) + cobrança no Asaas e devolve link/QR (quando houver)
- */
-app.post("/api/pagamentos/criar", async (req, res) => {
-  try {
-    const { servicoId, nomeCliente, emailCliente, cpfCnpjCliente } = req.body || {};
-    if (!servicoId || !nomeCliente || !emailCliente || !cpfCnpjCliente) {
-      return res.status(400).json({ ok: false, error: "Dados incompletos para criar a cobrança." });
-    }
-
-    const servico = await prisma.servico.findUnique({
-      where: { id: Number(servicoId) },
-      include: { profissional: true },
-    });
-    if (!servico) {
-      return res.status(404).json({ ok: false, error: "Serviço não encontrado." });
-    }
-
-    const valor = Number(servico.preco || 0);
-    const taxa = Number((valor * TAXA).toFixed(2));
-    const valorLiquido = Number((valor - taxa).toFixed(2));
-
-    // 1) cria registro local
-    const novoPagamento = await prisma.pagamento.create({
-      data: {
-        profissionalId: servico.profissionalId,
-        clienteId: req.session?.painel?.proId ?? null, // se tiver cliente logado
-        servicoId: servico.id,
-        status: "pendente",
-        valor,
-        taxa,
-        valorLiquido,
-        descricao: `Pagamento do serviço: ${servico.titulo}`,
-      },
-    });
-
-    // 2) garante/usa customer Asaas (aqui, para simplificar, cria sempre)
-    const asaasCustomer = await asaasRequest("/customers", {
-      method: "POST",
-      body: JSON.stringify({
-        name: nomeCliente,
-        email: emailCliente,
-        cpfCnpj: (cpfCnpjCliente || "").replace(/\D/g, ""),
-      }),
-    });
-
-    // 3) cria cobrança
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 1);
-    const charge = {
-      customer: asaasCustomer.id,
-      billingType: "UNDEFINED", // permite Pix/Cartão no checkout do Asaas
-      value: Number(valor.toFixed(2)),
-      dueDate: dueDate.toISOString().slice(0, 10),
-      description: `Pagamento do serviço: ${servico.titulo}`,
-      externalReference: `PAGTO-${novoPagamento.id}`, // para localizar no webhook
-    };
-    const asaasCharge = await asaasRequest("/payments", {
-      method: "POST",
-      body: JSON.stringify(charge),
-    });
-
-    // 4) atualiza com o id externo
-    await prisma.pagamento.update({
-      where: { id: novoPagamento.id },
-      data: { externalId: asaasCharge.id },
-    });
-
-    return res.json({
-      ok: true,
-      pagamentoId: novoPagamento.id,
-      asaasId: asaasCharge.id,
-      linkPagamento: asaasCharge.invoiceUrl || asaasCharge.bankSlipUrl || null,
-      qrCode: asaasCharge.pixQrCode || null,
-    });
-  } catch (error) {
-    console.error("[/api/pagamentos/criar] Erro:", error);
-    return res.status(500).json({ ok: false, error: "Erro interno ao criar a cobrança." });
-  }
-});
-
-/**
- * GET /api/pagamentos/status/:id
- * Consulta o status local e, se houver externalId, sincroniza com Asaas
- */
-app.get("/api/pagamentos/status/:id", async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    const pagamento = await prisma.pagamento.findUnique({ where: { id } });
-    if (!pagamento) {
-      return res.status(404).json({ ok: false, error: "Pagamento não encontrado." });
-    }
-
-    let status = pagamento.status;
-    if (pagamento.externalId) {
-      try {
-        const asaasCharge = await asaasRequest(`/payments/${pagamento.externalId}`, { method: "GET" });
-        const statusAsaas = mapAsaasStatus(asaasCharge.status);
-        if (statusAsaas !== pagamento.status) {
-          await prisma.pagamento.update({
-            where: { id: pagamento.id },
-            data: { status: statusAsaas },
-          });
-          status = statusAsaas;
-        }
-      } catch (e) {
-        console.warn("[/api/pagamentos/status] Falha ao consultar Asaas:", e.message);
-      }
-    }
-
-    return res.json({
-      ok: true,
-      status,
-      valor: pagamento.valor,
-      valorLiquido: pagamento.valorLiquido,
-    });
-  } catch (error) {
-    console.error("[/api/pagamentos/status/:id] Erro:", error);
-    return res.status(500).json({ ok: false, error: "Erro interno ao consultar status." });
-  }
-});
-
-/**
- * POST /api/pagamentos/webhook
- * Header obrigatório: asaas-access-token: <ASAAS_WEBHOOK_TOKEN>
- * Corpo: evento padrão Asaas { event, payment, ... }
- */
-app.post("/api/pagamentos/webhook", async (req, res) => {
-  try {
-    const token = req.headers["asaas-access-token"];
-    if (token !== process.env.ASAAS_WEBHOOK_TOKEN) {
-      return res.status(401).json({ ok: false, error: "Token inválido." });
-    }
-
-    const { event, payment } = req.body || {};
-    if (!payment?.id) {
-      return res.json({ ok: true }); // nada para processar
-    }
-
-    // Apenas eventos relevantes
-    const relevante = ["PAYMENT_RECEIVED", "PAYMENT_CONFIRMED", "PAYMENT_OVERDUE", "PAYMENT_REFUNDED", "PAYMENT_DELETED", "PAYMENT_CANCELED"];
-    if (!relevante.includes(String(event))) {
-      return res.json({ ok: true });
-    }
-
-    const externalId = String(payment.id);
-    const novoStatus = mapAsaasStatus(payment.status || (event.includes("RECEIVED") || event.includes("CONFIRMED") ? "CONFIRMED" : "PENDING"));
-
-    // Localiza pagamento
-    const pagamento = await prisma.pagamento.findFirst({ where: { externalId } });
-    if (!pagamento) {
-      console.warn(`[Webhook] Pagamento não encontrado para externalId: ${externalId}`);
-      return res.json({ ok: true });
-    }
-
-    // Se já está pago, idempotência
-    if (pagamento.status === "pago" && novoStatus === "pago") {
-      return res.json({ ok: true, message: "Pagamento já processado." });
-    }
-
-    // Atualiza status
-    const atualizado = await prisma.pagamento.update({
-      where: { id: pagamento.id },
-      data: { status: novoStatus },
-    });
-
-    // Se ficou pago, credita saldo do profissional
-    if (novoStatus === "pago") {
-      await prisma.profissional.update({
-        where: { id: atualizado.profissionalId },
-        data: { saldo: { increment: atualizado.valorLiquido } },
+    catch (e) {
+      console.error("[/api/profissionais] Erro:", e);
+      return res.status(500).json({
+        ok: false,
+        error: "Erro interno no servidor."
       });
-      console.log(`[Webhook] Pagamento ${atualizado.id} => 'pago'. Saldo do profissional ${atualizado.profissionalId} creditado.`);
     }
-
-    return res.json({ ok: true });
-  } catch (error) {
-    console.error("[/api/pagamentos/webhook] Erro:", error);
-    return res.status(500).json({ ok: false, error: "Erro interno ao processar webhook." });
-  }
-});
-
-// =========================[ SALDO / SAQUE ]========================
-
-/**
- * GET /api/saldo/pro/:id
- * Protegido: requireProAuth
- */
-app.get("/api/saldo/pro/:id", requireProAuth, async (req, res) => {
-  try {
-    const profissionalId = Number(req.params.id);
-    if (Number(req.profissional?.id) !== profissionalId) {
-      return res.status(403).json({ ok: false, error: "Acesso negado." });
-    }
-    const profissional = await prisma.profissional.findUnique({
-      where: { id: profissionalId },
-      select: { saldo: true },
-    });
-    if (!profissional) {
-      return res.status(404).json({ ok: false, error: "Profissional não encontrado." });
-    }
-    return res.json({ ok: true, saldo: Number(profissional.saldo || 0) });
-  } catch (error) {
-    console.error("[/api/saldo/pro/:id] Erro:", error);
-    return res.status(500).json({ ok: false, error: "Erro interno ao consultar saldo." });
-  }
-});
-
-/**
- * POST /api/saldo/saque
- * Protegido: requireProAuth
- * Body: { valor: number, chavePix: string }
- */
-app.post("/api/saldo/saque", requireProAuth, async (req, res) => {
-  try {
-    const profissionalId = Number(req.profissional?.id);
-    const { valor, chavePix } = req.body || {};
-    const valorSaque = Number(valor);
-
-    if (!isFinite(valorSaque) || valorSaque <= 0 || !String(chavePix || "").trim()) {
-      return res.status(400).json({ ok: false, error: "Valor e chave Pix válidos são obrigatórios." });
-    }
-
-    const profissional = await prisma.profissional.findUnique({ where: { id: profissionalId } });
-    if (!profissional) return res.status(404).json({ ok: false, error: "Profissional não encontrado." });
-
-    if (Number(profissional.saldo || 0) < valorSaque) {
-      return res.status(400).json({ ok: false, error: "Saldo insuficiente para saque." });
-    }
-
-    // 1) registra solicitação de saque (pendente)
-    const novoSaque = await prisma.saque.create({
-      data: {
-        profissionalId,
-        valor: valorSaque,
-        chavePix: String(chavePix).trim(),
-        status: "pendente",
-      },
-    });
-
-    // 2) debita saldo
-    await prisma.profissional.update({
-      where: { id: profissionalId },
-      data: { saldo: { decrement: valorSaque } },
-    });
-
-    // TODO: disparar transferência Pix via Asaas (Payouts) e atualizar status do saque
-
-    return res.json({
-      ok: true,
-      saqueId: novoSaque.id,
-      message: "Solicitação de saque enviada com sucesso. Processamento pendente.",
-    });
-  } catch (error) {
-    console.error("[/api/saldo/saque] Erro:", error);
-    return res.status(500).json({ ok: false, error: "Erro interno ao solicitar saque." });
-  }
-});
-
-// =========================[ SERVIÇOS DO PROFISSIONAL ]========================
-
-/**
- * GET /api/servicos/meus
- * Lista serviços do profissional autenticado (req.session.user.tipo === 'prof')
- */
-app.get("/api/servicos/meus", async (req, res) => {
-  const user = req.session?.user;
-  if (!user || user.tipo !== "prof") {
-    return res.status(401).json({ ok: false, error: "Não autenticado ou não é profissional." });
-  }
-  const servicos = await prisma.servico.findMany({
-    where: { userId: Number(user.id) },
-    orderBy: { id: "desc" },
-  });
-  return res.json({ ok: true, servicos });
-});
-
-/**
- * POST /api/servicos/adicionar
- * Body: { titulo, descricao?, preco }
- */
-app.post("/api/servicos/adicionar", async (req, res) => {
-  const user = req.session?.user;
-  if (!user || user.tipo !== "prof") {
-    return res.status(401).json({ ok: false, error: "Não autenticado ou não é profissional." });
-  }
-  const { titulo, descricao, preco } = req.body || {};
-  if (!titulo || preco == null) {
-    return res.status(400).json({ ok: false, error: "Título e preço são obrigatórios." });
-  }
-
-  const novoServico = await prisma.servico.create({
-    data: {
-      userId: Number(user.id),
-      titulo: String(titulo),
-      descricao: String(descricao || ""),
-      preco: Number(preco),
-    },
-  });
-
-  return res.json({ ok: true, msg: "Serviço cadastrado com sucesso!", servico: novoServico });
-});
-
-// =========================[ FINANCEIRO DO PROFISSIONAL ]========================
-
-/**
- * GET /api/financeiro/dados
- * (simulado — substitua por consultas reais no Prisma quando quiser)
- */
-app.get("/api/financeiro/dados", requireProAuth, async (req, res) => {
-  try {
-    // Exemplo de agregações reais (ajuste conforme seu schema):
-    const usuarioId = req.session?.painel?.proId;
-
-    // Simulação
-    const dadosFinanceiros = {
-      ok: true,
-      ganhosMes: 230.5,
-      pendenteRecebimento: 80.0,
-      totalRecebido: 150.5,
-      taxaPlataforma: TAXA,
-      plano: "PREMIUM",
-      statusAssinatura: "Ativo",
-      validadePlano: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      totalLeadsMes: 15,
-      limiteLeadsMes: 50,
-      transacoes: [
-        { id: 1, criadoEm: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), valor: 150.0, taxa: 6.0, status: "concluido" },
-        { id: 2, criadoEm: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), valor: 80.0, taxa: 3.2, status: "pendente" },
-        { id: 3, criadoEm: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), valor: 50.0, taxa: 2.0, status: "cancelado" },
-      ],
-    };
-
-    return res.json(dadosFinanceiros);
-  } catch (e) {
-    console.error("[/api/financeiro/dados] Erro:", e);
-    return res.status(500).json({ ok: false, error: "Erro ao obter dados financeiros." });
-  }
-});
+  } // 👈 fecha a função async (req, res)
+); // 👈 fecha o app.post("/api/profissionais")
