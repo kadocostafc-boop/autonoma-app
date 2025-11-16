@@ -3912,12 +3912,18 @@ app.post(
         // Serviço principal (se enviado)
         if (servico) {
           await tx.servico.create({
-            data: {
-              profissionalId: novoProfissional.id,
-              titulo: servico,
-              descricao: bio || "",
-              preco: 0,
-            },
+	            data: {
+	              profissionalId: novoProfissional.id,
+	              titulo: servico,
+	              descricao: bio || "",
+	              preco: 0,
+	              categoria: {
+	                connectOrCreate: {
+	                  where: { nome: servico },
+	                  create: { nome: servico },
+	                },
+	              },
+	            },
           });
         }
 
