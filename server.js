@@ -3893,7 +3893,8 @@ app.post(
 	        // Profissional (com Endereço aninhado)
 	        const novoProfissional = await tx.profissional.create({
 	          data: {
-	            usuarioId: novoUsuario.id,
+		            usuarioId: novoUsuario.id,
+		            nome: nome,
 	            descricao: bio || "",
 	            tempoExperiencia: 0,
 	            whatsappPublico: whatsapp.replace(/\D/g, ""),
