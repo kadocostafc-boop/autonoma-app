@@ -3873,14 +3873,15 @@ app.post(
       const result = await prisma.$transaction(async (tx) => {
 // Endereço
 	        let estadoUF = "";
-	        if (cidadeNome.includes("/")) {
+		        const cidade = String(cidadeNome || ""); // Garante que é uma string
+		        if (cidade.includes("/")) {
 	          estadoUF = cidadeNome.split("/")[1].trim().toUpperCase();
 	        } else {
 	          estadoUF = "RJ"; // fallback temporário
 	        }
 	        const novoEndereco = await tx.endereco.create({
 	          data: {
-	            cidade: titleCase(cidadeNome),
+		            cidade: titleCase(cidade),
 	            bairro: titleCase(bairro),
 	            estado: estadoUF,
 	          },
