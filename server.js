@@ -3871,14 +3871,20 @@ app.post(
 
       // 3️⃣ Criação no Neon (Endereço, Usuário, Profissional, Serviço)
       const result = await prisma.$transaction(async (tx) => {
-        // Endereço
-        const novoEndereco = await tx.endereco.create({
-          data: {
-            cidade: titleCase(cidadeNome),
-            bairro: titleCase(bairro),
-            estado: estadoUF,
-          },
-        });
+// Endereço
+	        let estadoUF = "";
+	        if (cidadeNome.includes("/")) {
+	          estadoUF = cidadeNome.split("/")[1].trim().toUpperCase();
+	        } else {
+	          estadoUF = "RJ"; // fallback temporário
+	        }
+	        const novoEndereco = await tx.endereco.create({
+	          data: {
+	            cidade: titleCase(cidadeNome),
+	            bairro: titleCase(bairro),
+	            estado: estadoUF,
+	          },
+	        });
 
         // Usuário
         const novoUsuario = await tx.usuario.create({
