@@ -1998,7 +1998,7 @@ app.post("/cadastro", async (req, res) => {
       // Cria Serviços (se houver)
       if (Array.isArray(servicos) && servicos.length > 0) {
         const servicosData = servicos.map(s => ({
-          profissionalId: novoProfissional.id,
+		              profissional: { connect: { id: novoProfissional.id } },
           titulo: s.titulo,
           descricao: s.descricao || '',
           preco: s.preco ? Number(s.preco) : 0,
@@ -3913,7 +3913,7 @@ app.post(
         if (servico) {
           await tx.servico.create({
 	            data: {
-	              profissionalId: novoProfissional.id,
+		              profissional: { connect: { id: novoProfissional.id } },
 	              titulo: servico,
 	              descricao: bio || "",
 	              preco: 0,
