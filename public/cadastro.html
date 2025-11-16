@@ -38,7 +38,6 @@
     </div>
 
     <div class="card" style="max-width:880px; margin:auto">
-      <!-- IMPORTANTE: action /api/profissionais, enctype multipart, names exatos -->
       <form
         id="formCad"
         action="/api/profissionais"
@@ -92,7 +91,7 @@
           placeholder="Ex.: Ana Souza"
         >
 
-        <!-- GPS / Cidade / Bairro -->
+        <!-- GPS -->
         <div class="row-wrap" style="align-items:center; gap:10px; margin-top:4px">
           <button type="button" id="btnGPS" class="btn small" aria-describedby="gpsStatus">
             Usar minha localização
@@ -100,8 +99,9 @@
           <span id="gpsStatus" class="muted">GPS desativado.</span>
         </div>
 
+        <!-- Cidade + Estado + Bairro -->
         <div class="row-wrap">
-          <div class="field-50">
+          <div class="field-33">
             <label for="cidade">Cidade *</label>
             <input
               id="cidade"
@@ -109,16 +109,27 @@
               type="text"
               list="lista-cidades"
               required
-              placeholder="Ex.: Rio de Janeiro/RJ"
+              placeholder="Ex.: Rio de Janeiro"
               autocomplete="off"
             >
             <datalist id="lista-cidades"></datalist>
-            <p class="help">
-              Digite e escolha na lista. Aceitamos “Cidade/UF” ou só “Cidade”.
-            </p>
           </div>
 
-          <div class="field-50">
+          <!-- NOVO CAMPO ADICIONADO -->
+          <div class="field-33">
+            <label for="estado">Estado (UF) *</label>
+            <input
+              id="estado"
+              name="estado"
+              type="text"
+              maxlength="2"
+              required
+              placeholder="Ex.: RJ"
+              style="text-transform:uppercase"
+            >
+          </div>
+
+          <div class="field-33">
             <label for="bairro">Bairro *</label>
             <input
               id="bairro"
@@ -126,13 +137,10 @@
               type="text"
               list="lista-bairros"
               required
-              placeholder="Ex.: Copacabana"
+              placeholder="Ex.: Botafogo"
               autocomplete="off"
             >
             <datalist id="lista-bairros"></datalist>
-            <p class="help">
-              Depois de escolher a cidade, este campo sugere bairros automaticamente.
-            </p>
           </div>
         </div>
 
@@ -165,7 +173,6 @@
 
         <p class="help">
           Preencha pelo menos <strong>Serviço</strong> ou <strong>Profissão</strong>.
-          Se o serviço não existir na lista, ele será adicionado automaticamente após o envio.
         </p>
 
         <!-- Contatos -->
@@ -181,9 +188,6 @@
               placeholder="Ex.: (21) 98765-4321"
             >
             <div id="whatsPrev" class="preview"></div>
-            <p class="help">
-              Pode colar com espaços/parênteses/traços. Formatamos automaticamente e adicionamos o +55.
-            </p>
           </div>
 
           <div class="field-50">
@@ -199,10 +203,10 @@
           </div>
         </div>
 
-        <!-- E-mail / Site -->
+        <!-- Email / Site -->
         <div class="row-wrap">
           <div class="field-50">
-            <label for="email">E-mail </label>
+            <label for="email">E-mail *</label>
             <input
               id="email"
               name="email"
@@ -211,7 +215,6 @@
               autocomplete="email"
               placeholder="Ex.: voce@email.com"
             >
-            <p class="help">Obrigatório — usado para redefinir senha.</p>
           </div>
 
           <div class="field-50">
@@ -220,47 +223,36 @@
               id="site"
               name="site"
               type="url"
-              placeholder="Ex.: https://meuportfolio.com/"
+              placeholder="Ex.: https://meuportfolio.com"
             >
           </div>
         </div>
 
-        <!-- Endereço / Experiência / Preço -->
+        <!-- Endereço -->
         <label for="endereco">Endereço (opcional, oculto no perfil)</label>
         <input
           id="endereco"
           name="endereco"
           type="text"
           maxlength="120"
-          placeholder="Rua/Av, número, complemento (apenas para referência interna)"
+          placeholder="Rua/Av, número, complemento"
         >
 
+        <!-- Experiência / Preço -->
         <div class="row-wrap">
           <div class="field-50">
             <label for="experiencia">Experiência (opcional)</label>
-            <input
-              id="experiencia"
-              name="experiencia"
-              type="text"
-              maxlength="80"
-              placeholder="Ex.: 5 anos"
-            >
+            <input id="experiencia" name="experiencia" type="text" maxlength="80">
           </div>
 
           <div class="field-50">
             <label for="precoBase">Preço base (opcional)</label>
-            <input
-              id="precoBase"
-              name="precoBase"
-              type="text"
-              maxlength="40"
-              placeholder="Ex.: R$ 100/hora"
-            >
+            <input id="precoBase" name="precoBase" type="text" maxlength="40">
           </div>
         </div>
 
-        <!-- Sobre você (BIO) -->
-        <label for="bio">Sobre você </label>
+        <!-- BIO -->
+        <label for="bio">Sobre você *</label>
         <textarea
           id="bio"
           name="bio"
@@ -269,59 +261,36 @@
           placeholder="Descreva seu trabalho, diferenciais e área de atendimento."
         ></textarea>
 
-        <!-- Lat/Lng (ocultos, preenchidos via GPS e/ou no backend por cidades.json) -->
+        <!-- GPS hidden -->
         <input type="hidden" id="lat" name="lat" />
         <input type="hidden" id="lng" name="lng" />
 
-        <!-- ========== [ SEGURANÇA: SENHA ] ========== -->
+        <!-- SEGURANÇA: SENHA -->
         <div class="grid" style="gap:12px; margin-top:16px">
           <div class="field">
-            <label for="senha" class="label">
-              PIN de Acesso (4 a 6 dígitos numéricos) <span style="color:#ef4444">*</span>
-            </label>
-            <div class="input-group" style="display:flex; align-items:center; gap:8px">
+            <label for="senha">PIN de acesso (4 a 6 dígitos) *</label>
+            <div class="input-group">
               <input
                 type="tel"
-                inputmode="numeric"
                 id="senha"
                 name="senha"
                 required
                 minlength="4"
                 maxlength="6"
                 pattern="[0-9]{4,6}"
-                autocomplete="new-password"
-                placeholder="4 a 6 dígitos numéricos"
-                class="input"
-                style="flex:1"
+                placeholder="4 a 6 dígitos"
               >
-              <button
-                type="button"
-                id="toggleSenha"
-                class="btn btn-light"
-                aria-label="Mostrar/ocultar senha"
-              >
-                👁
-              </button>
+              <button type="button" id="toggleSenha" class="btn btn-light">👁</button>
             </div>
-            <small class="muted">
-              Crie um PIN de 4 a 6 dígitos numéricos para acessar seu painel.
-            </small>
-            <div id="senhaMeterWrap" style="margin-top:8px">
-              <div
-                id="senhaMeter"
-                style="height:8px; border-radius:6px; background:#e5e7eb; overflow:hidden"
-              >
-                <div id="senhaMeterFill" style="height:100%; width:0%"></div>
-              </div>
-              <div id="senhaHint" class="muted" style="margin-top:6px; font-size:12px"></div>
+            <div id="senhaMeter" style="height:8px;background:#e5e7eb;margin-top:8px">
+              <div id="senhaMeterFill" style="height:100%;width:0%"></div>
             </div>
+            <small id="senhaHint" class="muted"></small>
           </div>
 
           <div class="field">
-            <label for="confirmaSenha" class="label">
-              Confirmar senha <span style="color:#ef4444">*</span>
-            </label>
-            <div class="input-group" style="display:flex; align-items:center; gap:8px">
+            <label for="confirmaSenha">Confirmar senha *</label>
+            <div class="input-group">
               <input
                 type="password"
                 id="confirmaSenha"
@@ -329,21 +298,11 @@
                 required
                 minlength="4"
                 maxlength="6"
-                autocomplete="new-password"
                 placeholder="Repita a senha"
-                class="input"
-                style="flex:1"
               >
-              <button
-                type="button"
-                id="toggleConfirma"
-                class="btn btn-light"
-                aria-label="Mostrar/ocultar senha"
-              >
-                👁
-              </button>
+              <button type="button" id="toggleConfirma" class="btn btn-light">👁</button>
             </div>
-            <small id="matchMsg" class="muted" style="display:block; margin-top:6px"></small>
+            <small id="matchMsg" class="muted"></small>
           </div>
         </div>
 
@@ -359,9 +318,12 @@
     </div>
   </main>
 
-  <!-- ====== APP SCRIPT ====== -->
+  <!-- SCRIPTS -->
   <script>
     (function () {
+
+      /* -------------- utilidades -------------- */
+
       const $ = (id) => document.getElementById(id);
       const err = $("err");
       const NO_STORE = { cache: "no-store" };
@@ -376,7 +338,8 @@
           .replace(/'/g, "&#39;");
       }
 
-      // --- Foto preview
+      /* -------------- foto preview -------------- */
+
       const foto = $("foto"), fotoPrev = $("fotoPrev");
       if (foto) {
         foto.addEventListener("change", () => {
@@ -389,17 +352,20 @@
         });
       }
 
-      // --- Selo / Documento
+      /* -------------- selo verificado -------------- */
+
       const wantSelo = $("wantSelo");
       const docWrap = $("docWrap");
       const doc = $("doc");
       const docPrev = $("docPrev");
+
       wantSelo.addEventListener("change", () => {
         const on = wantSelo.checked;
         docWrap.style.display = on ? "" : "none";
         doc.required = on;
         doc.setAttribute("aria-required", on ? "true" : "false");
       });
+
       if (doc) {
         doc.addEventListener("change", () => {
           const f = doc.files?.[0];
@@ -413,15 +379,15 @@
         });
       }
 
-      // --- Datalists (cidades / bairros / serviços)
+      /* -------------- autocomplete cidades/bairros/serviços -------------- */
+
       async function fillCities() {
         try {
           const r = await fetch("/api/geo/cidades?" + ts(), NO_STORE);
           if (!r.ok) return;
           const arr = await r.json();
-          $("lista-cidades").innerHTML = (arr || [])
-            .map((c) => `<option value="${escapeHtml(c)}">`)
-            .join("");
+          $("lista-cidades").innerHTML =
+            (arr || []).map((c) => `<option value="${escapeHtml(c)}">`).join("");
         } catch {}
       }
 
@@ -435,9 +401,8 @@
           );
           if (!r.ok) return;
           const arr = await r.json();
-          $("lista-bairros").innerHTML = (arr || [])
-            .map((b) => `<option value="${escapeHtml(b)}">`)
-            .join("");
+          $("lista-bairros").innerHTML =
+            (arr || []).map((b) => `<option value="${escapeHtml(b)}">`).join("");
         } catch {}
       }
 
@@ -451,9 +416,8 @@
           );
           if (!r.ok) return;
           const arr = await r.json();
-          $("lista-bairros").innerHTML = (arr || [])
-            .map((b) => `<option value="${escapeHtml(b)}">`)
-            .join("");
+          $("lista-bairros").innerHTML =
+            (arr || []).map((b) => `<option value="${escapeHtml(b)}">`).join("");
         } catch {}
       }
 
@@ -466,9 +430,8 @@
           );
           if (!r.ok) return;
           const arr = await r.json();
-          $("lista-servicos").innerHTML = (arr || [])
-            .map((s) => `<option value="${escapeHtml(s)}">`)
-            .join("");
+          $("lista-servicos").innerHTML =
+            (arr || []).map((s) => `<option value="${escapeHtml(s)}">`).join("");
         } catch {}
       }
 
@@ -477,9 +440,11 @@
       $("servico").addEventListener("input", (e) => suggestServicos(e.target.value.trim()));
       fillCities();
 
-      // --- GPS
+      /* -------------- GPS -------------- */
+
       const btnGPS = $("btnGPS");
       const gpsStatus = $("gpsStatus");
+
       function isSecureForGeo() {
         return (
           location.hostname === "localhost" ||
@@ -487,6 +452,7 @@
           window.isSecureContext === true
         );
       }
+
       async function resolveCityByGPS(lat, lng) {
         try {
           const r = await fetch(
@@ -505,6 +471,7 @@
           gpsStatus.textContent = "Falha ao consultar a cidade.";
         }
       }
+
       btnGPS.addEventListener("click", () => {
         if (!isSecureForGeo()) {
           gpsStatus.textContent = "Para usar GPS, acesse via HTTPS ou localhost.";
@@ -515,20 +482,30 @@
           return;
         }
         gpsStatus.textContent = "Solicitando localização…";
+
         navigator.geolocation.getCurrentPosition(
           async (pos) => {
-            const lat = pos.coords.latitude, lng = pos.coords.longitude;
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+
             $("lat").value = String(lat);
             $("lng").value = String(lng);
+
             gpsStatus.textContent = "Localização obtida.";
-            if (!$("cidade").value.trim()) await resolveCityByGPS(lat, lng);
+
+            if (!$("cidade").value.trim()) {
+              await resolveCityByGPS(lat, lng);
+            }
           },
-          (_) => { gpsStatus.textContent = "Não foi possível obter a localização."; },
+          (_) => {
+            gpsStatus.textContent = "Não foi possível obter a localização.";
+          },
           { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
         );
       });
 
-      // ---- Telefone/WhatsApp helpers (alinhados com backend)
+      /* -------------- Telefones -------------- */
+
       function onlyDigits(s) { return String(s || "").replace(/\D/g, ""); }
       function toBRWith55(d) {
         if (!d) return "";
@@ -544,40 +521,48 @@
           ? `+${cc} (${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`
           : `+${cc} (${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
       }
+
       function bindPhoneInput(inputId, prevId) {
         const input = $(inputId), prev = $(prevId);
+
         function update() {
           const dig = onlyDigits(input.value);
           const br = toBRWith55(dig);
           const nice = formatPrettyBR(br);
+
           if (nice) {
             prev.textContent = "Formato: " + nice;
             prev.style.color = "#334155";
           } else if (dig.length) {
-            prev.textContent = "Formato inválido — digite com DDD. Ex.: (21) 98765-4321";
+            prev.textContent = "Formato inválido — digite com DDD.";
             prev.style.color = "#b91c1c";
           } else {
             prev.textContent = "";
           }
         }
+
         input.addEventListener("input", update);
         input.addEventListener("blur", () => {
           const dig = onlyDigits(input.value);
           const br = toBRWith55(dig);
-          if (isValidBR(br)) input.value = br; // normaliza no próprio campo
+          if (isValidBR(br)) input.value = br;
           update();
         });
+
         update();
       }
+
       bindPhoneInput("whatsapp", "whatsPrev");
       bindPhoneInput("telefone", "telPrev");
 
-      // --- Password meter + toggles + match
+      /* -------------- Senha + conferência -------------- */
+
       const senha = $("senha");
       const confirma = $("confirmaSenha");
       const meterFill = $("senhaMeterFill");
       const hint = $("senhaHint");
       const matchMsg = $("matchMsg");
+
       function scorePassword(pw) {
         let s = 0;
         if (pw.length >= 8) s += 25;
@@ -586,21 +571,26 @@
         if (/[^a-zA-Z0-9]/.test(pw)) s += 25;
         return Math.min(100, s);
       }
+
       function updateMeter() {
         const v = senha.value || "";
         const sc = scorePassword(v);
         meterFill.style.width = sc + "%";
         meterFill.style.background =
-          sc < 50 ? "#f87171" :
-          sc < 75 ? "#fbbf24" :
-          "#22c55e";
+          sc < 50 ? "#f87171"
+          : sc < 75 ? "#fbbf24"
+          : "#22c55e";
         hint.textContent =
-          sc < 50 ? "Senha fraca" :
-          sc < 75 ? "Senha média" :
-          "Senha forte";
+          sc < 50 ? "Senha fraca"
+          : sc < 75 ? "Senha média"
+          : "Senha forte";
       }
+
       function updateMatch() {
-        if (!confirma.value) { matchMsg.textContent = ""; return; }
+        if (!confirma.value) {
+          matchMsg.textContent = "";
+          return;
+        }
         if (senha.value === confirma.value) {
           matchMsg.textContent = "As senhas coincidem.";
           matchMsg.style.color = "#16a34a";
@@ -609,22 +599,29 @@
           matchMsg.style.color = "#b91c1c";
         }
       }
-      senha.addEventListener("input", () => { updateMeter(); updateMatch(); });
+
+      senha.addEventListener("input", () => {
+        updateMeter();
+        updateMatch();
+      });
+
       confirma.addEventListener("input", updateMatch);
-      updateMeter();
+
       $("toggleSenha").addEventListener("click", () => {
         senha.type = senha.type === "password" ? "text" : "password";
       });
+
       $("toggleConfirma").addEventListener("click", () => {
         confirma.type = confirma.type === "password" ? "text" : "password";
       });
 
-      // --- Validação final antes de enviar
+      /* -------------- Validação final -------------- */
+
       $("formCad").addEventListener("submit", (ev) => {
         err.style.display = "none";
         err.textContent = "";
 
-        // garante que, se só "profissao" for preenchido, o backend receba "servico"
+        // força serviço = profissão, se usuário preencheu só a profissão
         const servInput = $("servico");
         const profInput = $("profissao");
         if (servInput && profInput) {
@@ -635,18 +632,18 @@
           }
         }
 
+        // senhas iguais?
         if (senha.value !== confirma.value) {
           ev.preventDefault();
           matchMsg.textContent = "As senhas não coincidem.";
           matchMsg.style.color = "#b91c1c";
-          err.textContent = "Corrija os campos destacados e tente novamente.";
+          err.textContent = "Corrija os campos destacados.";
           err.style.display = "";
           confirma.focus();
           return;
         }
-
-        // deixa o submit seguir normalmente (multipart POST /api/profissionais)
       });
+
     })();
   </script>
 </body>
