@@ -3869,46 +3869,45 @@ app.post(
       // 2️⃣ Hash da senha
       const hashedPassword = bcrypt.hashSync(senha, 10);
 
-      // 3️⃣ Criação no Neon (Endereço, Usuário, Profissional, Serviço)
-      const result = await prisma.$transaction(async (tx) => {
-// Endereço
-	        let estadoUF = "";
-		        const cidade = String(cidadeNome || ""); // Garante que é uma string
-		        if (cidade.includes("/")) {
-	          estadoUF = cidadeNome.split("/")[1].trim().toUpperCase();
-	        } else {
-	          estadoUF = "RJ"; // fallback temporário
-	        }
-	        const novoEndereco = await tx.endereco.create({
+// Lógica de extração de estado (movida para fora da transação)
+	      let estadoUF = "";
+	      const cidade = String(cidadeNome || ""); // Garante que é uma string
+	      if (cidade.includes("/")) {
+	        estadoUF = cidade.split("/")[1].trim().toUpperCase();
+	      } else {
+	        estadoUF = "RJ"; // fallback temporário
+	      }
+	
+	      // 3️⃣ Criação no Neon (Usuário, Profissional, Endereço, Serviço)
+	      const result = await prisma.$transaction(async (tx) => {
+	        // Usuário
+	        const novoUsuario = await tx.usuario.create({
 	          data: {
-		            cidade: titleCase(cidade),
-	            bairro: titleCase(bairro),
-	            estado: estadoUF,
+	            nome: nome,
+	            email: email.toLowerCase(),
+	            whatsapp: whatsapp.replace(/\D/g, ""),
+	            senha: hashedPassword,
 	          },
 	        });
-
-        // Usuário
-        const novoUsuario = await tx.usuario.create({
-          data: {
-            nome: nome,
-            email: email.toLowerCase(),
-            whatsapp: whatsapp.replace(/\D/g, ""),
-            senha: hashedPassword,
-          },
-        });
-
-        // Profissional
-        const novoProfissional = await tx.profissional.create({
-          data: {
-            usuarioId: novoUsuario.id,
-            enderecoId: novoEndereco.id,
-            descricao: bio || "",
-            tempoExperiencia: 0,
-            whatsappPublico: whatsapp.replace(/\D/g, ""),
-            planoAtual: "free", // se existir este campo no schema
-            validadePlano: null,
-          },
-        });
+	
+	        // Profissional (com Endereço aninhado)
+	        const novoProfissional = await tx.profissional.create({
+	          data: {
+	            usuarioId: novoUsuario.id,
+	            descricao: bio || "",
+	            tempoExperiencia: 0,
+	            whatsappPublico: whatsapp.replace(/\D/g, ""),
+	            planoAtual: "free", // se existir este campo no schema
+	            validadePlano: null,
+	            endereco: {
+	              create: {
+	                cidade: titleCase(cidade),
+	                bairro: titleCase(bairro),
+	                estado: estadoUF,
+	              },
+	            },
+	          },
+	        });
 
         // Serviço principal (se enviado)
         if (servico) {
