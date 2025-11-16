@@ -3898,8 +3898,7 @@ app.post(
 	            descricao: bio || "",
 	            tempoExperiencia: 0,
 	            whatsappPublico: whatsapp.replace(/\D/g, ""),
-	            planoAtual: "free", // se existir este campo no schema
-	            validadePlano: null,
+
 	            endereco: {
 	              create: {
 	                cidade: titleCase(cidade),
