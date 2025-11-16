@@ -3844,7 +3844,7 @@ app.post(
         senha,
         cidadeNome,
         bairro,
-        estadoUF,
+
         bio,
         servico
       } = req.body;
