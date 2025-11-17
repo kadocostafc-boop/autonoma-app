@@ -1998,7 +1998,7 @@ app.post("/cadastro", async (req, res) => {
       // Cria Serviços (se houver)
       if (Array.isArray(servicos) && servicos.length > 0) {
         const servicosData = servicos.map(s => ({
-          profissionalId: novoProfissional.id,
+		              profissional: { connect: { id: novoProfissional.id } },
           titulo: s.titulo,
           descricao: s.descricao || '',
           preco: s.preco ? Number(s.preco) : 0,
@@ -3877,7 +3877,7 @@ app.post(
         senha,
         cidadeNome,
         bairro,
-        estadoUF,
+
         bio,
         servico
       } = req.body;
@@ -3902,61 +3902,55 @@ app.post(
       // 2️⃣ Hash da senha
       const hashedPassword = bcrypt.hashSync(senha, 10);
 
- // 6️⃣ Criação no Neon (Transação)
-const result = await prisma.$transaction(async (tx) => {
-
-  const novoUsuario = await tx.usuario.create({
-    data: {
-      nome: sNome,
-      email: sEmail,
-      whatsapp: sWhatsapp,
-      senha: hashedPassword,
-    },
-  });
-
-  // Endereço
-  const novoEndereco = await tx.endereco.create({
-    data: {
-      cidade: titleCase(cidade),
-      bairro: titleCase(sBairro || "Centro"),
-      estado: estadoUF,
-      profissional: { create: {} } // <- Garante relação
-    },
-  });
-
-  // Profissional
-  const novoProfissional = await tx.profissional.create({
-    data: {
-      usuarioId: novoUsuario.id,
-      enderecoId: novoEndereco.id,
-      nome: sNome,
-      descricao: sBio,
-      tempoExperiencia: 0,
-      whatsappPublico: sWhatsapp,
-    },
-  });
-
-  // Serviço principal
-  if (sServico) {
-    await tx.servico.create({
-      data: {
-        profissionalId: novoProfissional.id,
-        titulo: sServico,
-        descricao: sBio,
-        preco: 0,
-        categoria: {
-          connectOrCreate: {
-            where: { nome: sServico },
-            create: { nome: sServico },
+      // 3️⃣ Criação no Neon (Endereço, Usuário, Profissional, Serviço)
+      const result = await prisma.$transaction(async (tx) => {
+        // Endereço
+        const novoEndereco = await tx.endereco.create({
+          data: {
+            cidade: titleCase(cidadeNome),
+            bairro: titleCase(bairro),
+            estado: estadoUF,
           },
-        },
-      },
-    });
-  }
+        });
+
+        // Usuário
+        const novoUsuario = await tx.usuario.create({
+          data: {
+            nome: nome,
+            email: email.toLowerCase(),
+            whatsapp: whatsapp.replace(/\D/g, ""),
+            senha: hashedPassword,
+          },
+        });
+
+        // Profissional
+        const novoProfissional = await tx.profissional.create({
+          data: {
+            usuarioId: novoUsuario.id,
+            enderecoId: novoEndereco.id,
+            descricao: bio || "",
+            tempoExperiencia: 0,
+            whatsappPublico: whatsapp.replace(/\D/g, ""),
+            planoAtual: "free", // se existir este campo no schema
+            validadePlano: null,
+          },
+        });
+
+        // Serviço principal (se enviado)
+        if (servico) {
+          await tx.servico.create({
+            data: {
+              profissionalId: novoProfissional.id,
+              titulo: servico,
+              descricao: bio || "",
+              preco: 0,
+            },
+          });
+        }
 
   // Retorna dados
   return { usuario: novoUsuario, profissional: novoProfissional };
-}); // <-- FECHA SOMENTE A TRANSAÇÃO CORRETAMENTE
+}); //  FECHA SOMENTE A TRANSAÇÃO CORRETAMENTE
 
 
 // 4️⃣ Cria sessão do painel
@@ -3979,7 +3973,7 @@ return res.json({
   });
 }
 
-}); // <-- FECHA A ROTA CORRETAMENTE
+}); //  FECHA A ROTA CORRETAMENTE
 
 // =========================[ START SERVER ]=========================
 
