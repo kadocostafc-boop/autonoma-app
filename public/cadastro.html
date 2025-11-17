@@ -46,7 +46,6 @@
         enctype="multipart/form-data"
         novalidate
       >
-
         <!-- Foto -->
         <label for="foto">Foto de perfil <strong>(obrigatória)</strong></label>
         <div class="row-wrap" style="align-items:center">
@@ -150,7 +149,6 @@
             >
             <datalist id="lista-servicos"></datalist>
           </div>
-
           <div class="field-50">
             <label for="profissao">Profissão (alternativa)</label>
             <input
@@ -162,7 +160,6 @@
             >
           </div>
         </div>
-
         <p class="help">
           Preencha pelo menos <strong>Serviço</strong> ou <strong>Profissão</strong>.
           Se o serviço não existir na lista, ele será adicionado automaticamente após o envio.
@@ -185,7 +182,6 @@
               Pode colar com espaços/parênteses/traços. Formatamos automaticamente e adicionamos o +55.
             </p>
           </div>
-
           <div class="field-50">
             <label for="telefone">Telefone (opcional)</label>
             <input
@@ -213,7 +209,6 @@
             >
             <p class="help">Obrigatório — usado para redefinir senha.</p>
           </div>
-
           <div class="field-50">
             <label for="site">Site/Catálogo (opcional)</label>
             <input
@@ -246,7 +241,6 @@
               placeholder="Ex.: 5 anos"
             >
           </div>
-
           <div class="field-50">
             <label for="precoBase">Preço base (opcional)</label>
             <input
@@ -272,6 +266,8 @@
         <!-- Lat/Lng (ocultos, preenchidos via GPS e/ou no backend por cidades.json) -->
         <input type="hidden" id="lat" name="lat" />
         <input type="hidden" id="lng" name="lng" />
+        <!-- 👇 NOVO: UF escondido para o backend -->
+        <input type="hidden" id="estadoUF" name="estadoUF" />
 
         <!-- ========== [ SEGURANÇA: SENHA ] ========== -->
         <div class="grid" style="gap:12px; margin-top:16px">
@@ -376,6 +372,25 @@
           .replace(/'/g, "&#39;");
       }
 
+      // 👇 NOVO: extrai a UF do campo cidade e preenche o hidden estadoUF
+      function updateEstadoUF() {
+        const cidadeInput = $("cidade");
+        const ufHidden = $("estadoUF");
+        if (!cidadeInput || !ufHidden) return;
+
+        const value = cidadeInput.value.trim();
+        let uf = "";
+
+        // tenta pegar "RJ" em formatos como:
+        // "Rio de Janeiro/RJ", "Rio de Janeiro - RJ", "Rio de Janeiro RJ"
+        const match = value.match(/([A-Z]{2})$/i);
+        if (match) {
+          uf = match[1].toUpperCase();
+        }
+
+        ufHidden.value = uf;
+      }
+
       // --- Foto preview
       const foto = $("foto"), fotoPrev = $("fotoPrev");
       if (foto) {
@@ -422,7 +437,7 @@
           $("lista-cidades").innerHTML = (arr || [])
             .map((c) => `<option value="${escapeHtml(c)}">`)
             .join("");
-        } catch {}
+        } catch { }
       }
 
       async function refreshBairros() {
@@ -438,7 +453,7 @@
           $("lista-bairros").innerHTML = (arr || [])
             .map((b) => `<option value="${escapeHtml(b)}">`)
             .join("");
-        } catch {}
+        } catch { }
       }
 
       async function suggestBairros(q) {
@@ -454,7 +469,7 @@
           $("lista-bairros").innerHTML = (arr || [])
             .map((b) => `<option value="${escapeHtml(b)}">`)
             .join("");
-        } catch {}
+        } catch { }
       }
 
       async function suggestServicos(q) {
@@ -469,10 +484,15 @@
           $("lista-servicos").innerHTML = (arr || [])
             .map((s) => `<option value="${escapeHtml(s)}">`)
             .join("");
-        } catch {}
+        } catch { }
       }
 
-      $("cidade").addEventListener("change", refreshBairros);
+      // 👇 Aqui eu só adicionei o updateEstadoUF nos eventos
+      $("cidade").addEventListener("change", () => {
+        refreshBairros();
+        updateEstadoUF();
+      });
+      $("cidade").addEventListener("input", updateEstadoUF);
       $("bairro").addEventListener("input", (e) => suggestBairros(e.target.value.trim()));
       $("servico").addEventListener("input", (e) => suggestServicos(e.target.value.trim()));
       fillCities();
@@ -480,6 +500,7 @@
       // --- GPS
       const btnGPS = $("btnGPS");
       const gpsStatus = $("gpsStatus");
+
       function isSecureForGeo() {
         return (
           location.hostname === "localhost" ||
@@ -487,6 +508,7 @@
           window.isSecureContext === true
         );
       }
+
       async function resolveCityByGPS(lat, lng) {
         try {
           const r = await fetch(
@@ -496,6 +518,7 @@
           const js = await r.json();
           if (js && js.ok && js.cidade) {
             $("cidade").value = js.cidade;
+            updateEstadoUF();                 // 👈 NOVO: atualiza UF quando cidade vem do GPS
             await refreshBairros();
             gpsStatus.textContent = `Localização detectada: ${js.cidade}`;
           } else {
@@ -505,6 +528,7 @@
           gpsStatus.textContent = "Falha ao consultar a cidade.";
         }
       }
+
       btnGPS.addEventListener("click", () => {
         if (!isSecureForGeo()) {
           gpsStatus.textContent = "Para usar GPS, acesse via HTTPS ou localhost.";
@@ -588,20 +612,23 @@
         return Math.min(100, s);
       }
       function updateMeter() {
-        const v = senha.value || "";
-        const sc = scorePassword(v);
-        meterFill.style.width = sc + "%";
-        meterFill.style.background =
-          sc < 50 ? "#f87171" :
-          sc < 75 ? "#fbbf24" :
-          "#22c55e";
-        hint.textContent =
-          sc < 50 ? "Senha fraca" :
-          sc < 75 ? "Senha média" :
-          "Senha forte";
-      }
-      function updateMatch() {
-        if (!confirma.value) { matchMsg.textContent = ""; return; }
+  const v = senha.value || "";
+  const sc = scorePassword(v);
+  meterFill.style.width = sc + "%";
+  meterFill.style.background =
+    sc < 50 ? "#f87171" :
+    sc < 75 ? "#fbbf24" :
+              "#22c55e";
+  hint.textContent =
+    sc < 50 ? "Senha fraca" :
+    sc < 75 ? "Senha média" :
+              "Senha forte";
+}
+function updateMatch() {
+        if (!confirma.value) {
+          matchMsg.textContent = "";
+          return;
+        }
         if (senha.value === confirma.value) {
           matchMsg.textContent = "As senhas coincidem.";
           matchMsg.style.color = "#16a34a";
@@ -610,34 +637,43 @@
           matchMsg.style.color = "#b91c1c";
         }
       }
-      senha.addEventListener("input", () => { updateMeter(); updateMatch(); });
+
+      senha.addEventListener("input", () => {
+        updateMeter();
+        updateMatch();
+      });
+
       confirma.addEventListener("input", updateMatch);
+
       updateMeter();
 
       $("toggleSenha").addEventListener("click", () => {
         senha.type = senha.type === "password" ? "text" : "password";
       });
+
       $("toggleConfirma").addEventListener("click", () => {
         confirma.type = confirma.type === "password" ? "text" : "password";
       });
 
-      // --- Validação final + envio via fetch (popup + redirect perfil)
+      // --------------------------------------------------------------------
+      //  ENVIO DO FORMULÁRIO VIA FETCH + POPUP + REDIRECIONAMENTO
+      // --------------------------------------------------------------------
       const form = $("formCad");
 
       form.addEventListener("submit", async (ev) => {
         ev.preventDefault();
+
         err.style.display = "none";
         err.textContent = "";
 
-        // garante que, se só "profissao" for preenchido, o backend receba "servico"
+        // Copia profissão -> serviço se só profissão estiver preenchido
         const servInput = $("servico");
         const profInput = $("profissao");
+
         if (servInput && profInput) {
           const serv = servInput.value.trim();
           const prof = profInput.value.trim();
-          if (!serv && prof) {
-            servInput.value = prof;
-          }
+          if (!serv && prof) servInput.value = prof;
         }
 
         if (senha.value !== confirma.value) {
@@ -649,7 +685,7 @@
           return;
         }
 
-        // Estado de carregando
+        // Botão carregando
         const submitBtn = form.querySelector('button[type="submit"]');
         const originalText = submitBtn ? submitBtn.textContent : "";
         if (submitBtn) {
@@ -659,6 +695,7 @@
 
         try {
           const formData = new FormData(form);
+
           const resp = await fetch(form.action, {
             method: "POST",
             body: formData,
@@ -675,14 +712,20 @@
             const msg = (data && (data.error || data.msg)) || "Erro ao enviar cadastro.";
             err.textContent = msg;
             err.style.display = "";
+
             alert("Não foi possível concluir o cadastro:\n\n" + msg);
           } else {
-            // Sucesso: popup + redirecionar para o perfil
+            // SUCESSO — popup + redirecionamento
             const id = data.id;
-            const redirectPerfil = id ? `/perfil.html?id=${encodeURIComponent(id)}` : (data.redirect || "/painel.html");
+            const redirectPerfil = id
+              ? `/perfil.html?id=${encodeURIComponent(id)}`
+              : (data.redirect || "/painel.html");
+
             alert("Cadastro realizado com sucesso!");
+
             window.location.href = redirectPerfil;
           }
+
         } catch (e) {
           console.error("Erro ao enviar cadastro:", e);
           err.textContent = "Erro inesperado ao enviar seus dados. Tente novamente.";
@@ -695,7 +738,9 @@
           }
         }
       });
+
     })();
   </script>
+
 </body>
 </html>
