@@ -3867,33 +3867,36 @@ app.post("/api/profissionais", upload.single("foto"), async (req, res) => {
       fotoUrl = "/uploads/" + req.file.filename;
     }
 
-    // ======================= Campos do formulário =======================
-    const {
+    // ======================= Campos enviados pelo formulário =======================
+    let {
       nome,
       email,
       whatsapp,
       senha,
-      cidadeNome,
+      cidade,      // <- VEM DO FRONT
       bairro,
       bio,
-      servico
+      servico,
+      estadoUF     // <- hidden do front
     } = req.body;
 
-    // ======================= Extrai Cidade + UF =======================
-    let estadoUF = null;
-    let cidade = null;
+    // ======================= Tratamento de Cidade + UF =======================
+    let cidadeFinal = null;
+    let ufFinal = null;
 
-    if (cidadeNome && cidadeNome.includes("/")) {
-      const partes = cidadeNome.split("/");
-      cidade = partes[0].trim();   // "Rio de Janeiro"
-      estadoUF = partes[1].trim(); // "RJ"
+    if (cidade && cidade.includes("/")) {
+      // Formato: "Rio de Janeiro/RJ"
+      const partes = cidade.split("/");
+      cidadeFinal = partes[0].trim();
+      ufFinal = partes[1].trim().toUpperCase();
     } else {
-      cidade = cidadeNome?.trim() || null;
-      estadoUF = "RJ"; // fallback seguro (evita erro)
+      // Caso venha só cidade
+      cidadeFinal = cidade?.trim() || null;
+      ufFinal = estadoUF?.trim().toUpperCase() || "RJ"; // fallback seguro
     }
 
     // ======================= Validação mínima =======================
-    if (!nome || !email || !whatsapp || !senha || !cidade || !bairro) {
+    if (!nome || !email || !whatsapp || !senha || !cidadeFinal || !bairro) {
       return res.status(400).json({
         ok: false,
         error: "Todos os campos obrigatórios devem ser preenchidos."
@@ -3931,8 +3934,8 @@ app.post("/api/profissionais", upload.single("foto"), async (req, res) => {
       // Endereço
       const novoEndereco = await tx.endereco.create({
         data: {
-          cidade,
-          estadoUF,
+          cidade: cidadeFinal,
+          estadoUF: ufFinal,
           bairro
         }
       });
@@ -3951,7 +3954,7 @@ app.post("/api/profissionais", upload.single("foto"), async (req, res) => {
         }
       });
 
-      // Serviço principal (se enviado)
+      // Serviço (se enviado)
       if (servico && servico.trim() !== "") {
         await tx.servico.create({
           data: {
@@ -3970,7 +3973,7 @@ app.post("/api/profissionais", upload.single("foto"), async (req, res) => {
       proId: novoRegistro.novoProf.id
     };
 
-    // ======================= Retorno de sucesso =======================
+    // ======================= Retorno =======================
     return res.json({
       ok: true,
       msg: "Cadastro realizado com sucesso!",
@@ -3986,6 +3989,7 @@ app.post("/api/profissionais", upload.single("foto"), async (req, res) => {
     });
   }
 });
+
 
 // =========================[ START SERVER ]=========================
 
