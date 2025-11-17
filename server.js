@@ -3858,122 +3858,134 @@ app.get("/api/admin/_dump_all", requireAdmin, (_req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.send(JSON.stringify(dump, null, 2));
 });
-// =====================================================[ CADASTRO DE PROFISSIONAIS ]=========================
-app.post(
-  "/api/profissionais",
-  upload.single("foto"),
-  express.urlencoded({ extended: true }),
-  async (req, res) => {
-    try {
-// Foto enviada pelo upload
+// ==================================================[ CADASTRO PROFISSIONAL ]==================================================
+app.post("/api/profissionais", upload.single("foto"), async (req, res) => {
+  try {
+    // ======================= Foto =======================
     let fotoUrl = null;
     if (req.file) {
       fotoUrl = "/uploads/" + req.file.filename;
     }
-      const {
-        nome,
-        email,
-        whatsapp,
-        senha,
-        cidadeNome,
-        bairro,
 
-        bio,
-        servico
-      } = req.body;
+    // ======================= Campos do formulário =======================
+    const {
+      nome,
+      email,
+      whatsapp,
+      senha,
+      cidadeNome,
+      bairro,
+      bio,
+      servico
+    } = req.body;
 
-      // 1️⃣ Verifica duplicidade
-      const existingUser = await prisma.usuario.findFirst({
-        where: {
-          OR: [
-            { email: email.toLowerCase() },
-            { whatsapp: whatsapp.replace(/\D/g, "") }
-          ],
-        },
+    // ======================= Extrai Cidade + UF =======================
+    let estadoUF = null;
+    let cidade = null;
+
+    if (cidadeNome && cidadeNome.includes("/")) {
+      const partes = cidadeNome.split("/");
+      cidade = partes[0].trim();   // "Rio de Janeiro"
+      estadoUF = partes[1].trim(); // "RJ"
+    } else {
+      cidade = cidadeNome?.trim() || null;
+      estadoUF = "RJ"; // fallback seguro (evita erro)
+    }
+
+    // ======================= Validação mínima =======================
+    if (!nome || !email || !whatsapp || !senha || !cidade || !bairro) {
+      return res.status(400).json({
+        ok: false,
+        error: "Todos os campos obrigatórios devem ser preenchidos."
+      });
+    }
+
+    // ======================= Verifica duplicidade =======================
+    const existingUser = await prisma.usuario.findFirst({
+      where: {
+        OR: [{ email }, { whatsapp }]
+      }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        ok: false,
+        error: "E-mail ou WhatsApp já cadastrado."
+      });
+    }
+
+    // ======================= Criação no banco =======================
+    const hashedPassword = bcrypt.hashSync(senha, 10);
+
+    const novoRegistro = await prisma.$transaction(async (tx) => {
+      // Usuário
+      const novoUsuario = await tx.usuario.create({
+        data: {
+          nome,
+          email: email.toLowerCase(),
+          whatsapp: whatsapp.replace(/\D/g, ""),
+          senha: hashedPassword
+        }
       });
 
-      if (existingUser) {
-        return res.status(409).json({
-          ok: false,
-          error: "E-mail ou WhatsApp já cadastrados.",
+      // Endereço
+      const novoEndereco = await tx.endereco.create({
+        data: {
+          cidade,
+          estadoUF,
+          bairro
+        }
+      });
+
+      // Profissional
+      const novoProf = await tx.profissional.create({
+        data: {
+          usuarioId: novoUsuario.id,
+          enderecoId: novoEndereco.id,
+          descricao: bio || "",
+          fotoUrl: fotoUrl,
+          whatsappPublico: whatsapp.replace(/\D/g, ""),
+          tempoExperiencia: 0,
+          planoAtual: "free",
+          validadePlano: null
+        }
+      });
+
+      // Serviço principal (se enviado)
+      if (servico && servico.trim() !== "") {
+        await tx.servico.create({
+          data: {
+            nome: servico.trim(),
+            profissionalId: novoProf.id
+          }
         });
       }
 
-      // 2️⃣ Hash da senha
-      const hashedPassword = bcrypt.hashSync(senha, 10);
+      return { novoUsuario, novoProf };
+    });
 
-      // 3️⃣ Criação no Neon (Endereço, Usuário, Profissional, Serviço)
-      const result = await prisma.$transaction(async (tx) => {
-        // Endereço
-        const novoEndereco = await tx.endereco.create({
-          data: {
-            cidade: titleCase(cidadeNome),
-            bairro: titleCase(bairro),
-            estado: estadoUF,
-          },
-        });
+    // ======================= Sessão automática =======================
+    req.session.painel = {
+      ok: true,
+      proId: novoRegistro.novoProf.id
+    };
 
-        // Usuário
-        const novoUsuario = await tx.usuario.create({
-          data: {
-            nome: nome,
-            email: email.toLowerCase(),
-            whatsapp: whatsapp.replace(/\D/g, ""),
-            senha: hashedPassword,
-          },
-        });
+    // ======================= Retorno de sucesso =======================
+    return res.json({
+      ok: true,
+      msg: "Cadastro realizado com sucesso!",
+      id: novoRegistro.novoProf.id,
+      redirect: "/painel.html"
+    });
 
-        // Profissional
-        const novoProfissional = await tx.profissional.create({
-          data: {
-            usuarioId: novoUsuario.id,
-            enderecoId: novoEndereco.id,
-            descricao: bio || "",
-            tempoExperiencia: 0,
-            whatsappPublico: whatsapp.replace(/\D/g, ""),
-            planoAtual: "free", // se existir este campo no schema
-            validadePlano: null,
-          },
-        });
-
-        // Serviço principal (se enviado)
-        if (servico) {
-          await tx.servico.create({
-            data: {
-              profissionalId: novoProfissional.id,
-              titulo: servico,
-              descricao: bio || "",
-              preco: 0,
-            },
-          });
-        }
-
-  // Retorna dados
-  return { usuario: novoUsuario, profissional: novoProfissional };
-}); //  FECHA SOMENTE A TRANSAÇÃO CORRETAMENTE
-
-
-// 4️⃣ Cria sessão do painel
-req.session.painel = { ok: true, proId: result.profissional.id };
-
-// 5️⃣ Resposta de sucesso
-return res.json({
-  ok: true,
-  msg: "Cadastro realizado com sucesso!",
-  id: result.profissional.id,
-  redirect: "/painel.html",
+  } catch (e) {
+    console.error("🔴 Erro detalhado no cadastro /api/profissionais:", e);
+    return res.status(500).json({
+      ok: false,
+      error: e.message || "Erro interno no servidor."
+    });
+  }
 });
-
-   } catch (e) {
-  console.error("🚨 Erro detalhado no cadastro /api/profissionais:", e);
-
-  return res.status(500).json({
-    ok: false,
-    error: e.message || "Erro interno no servidor."
-  });
-}
-
-}); //  FECHA A ROTA CORRETAMENTE
 
 // =========================[ START SERVER ]=========================
 
