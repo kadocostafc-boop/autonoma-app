@@ -2819,27 +2819,39 @@ app.get("/painel.html", requireProAuth, (_req, res) => {
   return res.sendFile(path.join(PUBLIC_DIR, "painel.html"));
 });
 
-// Rota de login do profissional
-// =============[ Login Profissional • POST /auth/pro/login ]=============
+//// =============[ Login Profissional • POST /auth/pro/login ]=============
 app.post("/auth/pro/login", async (req, res) => {
   try {
     const identifier = String(req.body?.identifier || "").trim();
     const password = String(req.body?.password || "").trim();
 
     if (!identifier || !password) {
-      return res.status(400).json({ ok: false, error: "Identificador (e-mail ou WhatsApp) e senha são obrigatórios." });
+      return res.status(400).json({
+        ok: false,
+        error: "Identificador (e-mail ou WhatsApp) e senha são obrigatórios."
+      });
     }
 
-    // 1. Normaliza o identificador e busca o usuário
-    const emailDigitado = isEmail(identifier) ? identifier.toLowerCase() : null;
-    const numeroDigitado = !isEmail(identifier) ? identifier.replace(/\D/g, '') : null;
+    // 1. Normaliza e identifica o tipo
+    let emailDigitado = null;
+    let numeroDigitado = null;
 
+    if (isEmail(identifier)) {
+      emailDigitado = identifier.toLowerCase();
+    } else {
+      // extrai apenas dígitos
+      const raw = identifier.replace(/\D/g, "");
+      // adiciona o 55 obrigatório igual o cadastro faz
+      numeroDigitado = raw.startsWith("55") ? raw : "55" + raw;
+    }
+
+    // 2. Busca no banco
     const usuario = await prisma.usuario.findFirst({
       where: {
         OR: [
-          { email: emailDigitado },
-          { whatsapp: numeroDigitado }
-        ]
+          emailDigitado ? { email: emailDigitado } : undefined,
+          numeroDigitado ? { whatsapp: numeroDigitado } : undefined
+        ].filter(Boolean)
       },
       include: { profissional: true }
     });
@@ -2848,29 +2860,45 @@ app.post("/auth/pro/login", async (req, res) => {
       return res.status(401).json({ ok: false, error: "Credenciais inválidas." });
     }
 
-    // 2. Valida a senha
-    const passwordMatch = bcrypt.compareSync(password, usuario.senha);
+    // 3. Valida a senha corretamente
+    let passwordMatch = false;
+
+    // se estiver em hash → valida hash
+    if (usuario.senha && usuario.senha.startsWith("$2")) {
+      passwordMatch = bcrypt.compareSync(password, usuario.senha);
+    } else {
+      // se for senha antiga em texto puro → compara direto
+      passwordMatch = (password === usuario.senha);
+    }
 
     if (!passwordMatch) {
       return res.status(401).json({ ok: false, error: "Credenciais inválidas." });
     }
 
-    // 3. Verifica se o usuário tem um perfil profissional
+    // 4. Checa se tem perfil profissional
     if (!usuario.profissional) {
-      return res.status(401).json({ ok: false, error: "Conta não associada a um perfil profissional." });
+      return res.status(401).json({
+        ok: false,
+        error: "Conta não associada a um perfil profissional."
+      });
     }
 
-    // 4. Cria a sessão e redireciona
-    req.session.painel = { ok: true, proId: usuario.profissional.id };
-    res.redirect('/painel.html');
+    // 5. Cria sessão
+    req.session.painel = {
+      ok: true,
+      proId: usuario.profissional.id
+    };
+
+    return res.json({
+      ok: true,
+      redirect: "/painel.html"
+    });
 
   } catch (e) {
     console.error("[login] erro:", e);
     return res.status(500).json({ ok: false, error: "server_error" });
   }
 });
-
-
 // Definir ou trocar PIN (6 dígitos)
 app.post("/api/painel/set-pin", (req, res) => {
   const s = req.session?.painel;
@@ -3837,6 +3865,11 @@ app.post(
   express.urlencoded({ extended: true }),
   async (req, res) => {
     try {
+// Foto enviada pelo upload
+    let fotoUrl = null;
+    if (req.file) {
+      fotoUrl = "/uploads/" + req.file.filename;
+    }
       const {
         nome,
         email,
@@ -3869,75 +3902,84 @@ app.post(
       // 2️⃣ Hash da senha
       const hashedPassword = bcrypt.hashSync(senha, 10);
 
-      // 3️⃣ Criação no Neon (Endereço, Usuário, Profissional, Serviço)
-      const result = await prisma.$transaction(async (tx) => {
-        // Endereço
-        const novoEndereco = await tx.endereco.create({
-          data: {
-            cidade: titleCase(cidadeNome),
-            bairro: titleCase(bairro),
-            estado: estadoUF,
+ // 6️⃣ Criação no Neon (Transação)
+const result = await prisma.$transaction(async (tx) => {
+
+  const novoUsuario = await tx.usuario.create({
+    data: {
+      nome: sNome,
+      email: sEmail,
+      whatsapp: sWhatsapp,
+      senha: hashedPassword,
+    },
+  });
+
+  // Endereço
+  const novoEndereco = await tx.endereco.create({
+    data: {
+      cidade: titleCase(cidade),
+      bairro: titleCase(sBairro || "Centro"),
+      estado: estadoUF,
+      profissional: { create: {} } // <- Garante relação
+    },
+  });
+
+  // Profissional
+  const novoProfissional = await tx.profissional.create({
+    data: {
+      usuarioId: novoUsuario.id,
+      enderecoId: novoEndereco.id,
+      nome: sNome,
+      descricao: sBio,
+      tempoExperiencia: 0,
+      whatsappPublico: sWhatsapp,
+    },
+  });
+
+  // Serviço principal
+  if (sServico) {
+    await tx.servico.create({
+      data: {
+        profissionalId: novoProfissional.id,
+        titulo: sServico,
+        descricao: sBio,
+        preco: 0,
+        categoria: {
+          connectOrCreate: {
+            where: { nome: sServico },
+            create: { nome: sServico },
           },
-        });
+        },
+      },
+    });
+  }
 
-        // Usuário
-        const novoUsuario = await tx.usuario.create({
-          data: {
-            nome: nome,
-            email: email.toLowerCase(),
-            whatsapp: whatsapp.replace(/\D/g, ""),
-            senha: hashedPassword,
-          },
-        });
+  // Retorna dados
+  return { usuario: novoUsuario, profissional: novoProfissional };
+}); // <-- FECHA SOMENTE A TRANSAÇÃO CORRETAMENTE
 
-        // Profissional
-        const novoProfissional = await tx.profissional.create({
-          data: {
-            usuarioId: novoUsuario.id,
-            enderecoId: novoEndereco.id,
-            descricao: bio || "",
-            tempoExperiencia: 0,
-            whatsappPublico: whatsapp.replace(/\D/g, ""),
-            planoAtual: "free", // se existir este campo no schema
-            validadePlano: null,
-          },
-        });
 
-        // Serviço principal (se enviado)
-        if (servico) {
-          await tx.servico.create({
-            data: {
-              profissionalId: novoProfissional.id,
-              titulo: servico,
-              descricao: bio || "",
-              preco: 0,
-            },
-          });
-        }
+// 4️⃣ Cria sessão do painel
+req.session.painel = { ok: true, proId: result.profissional.id };
 
-        // Retorna os dados criados
-        return { usuario: novoUsuario, profissional: novoProfissional };
-      });
+// 5️⃣ Resposta de sucesso
+return res.json({
+  ok: true,
+  msg: "Cadastro realizado com sucesso!",
+  id: result.profissional.id,
+  redirect: "/painel.html",
+});
 
-      // 4️⃣ Cria sessão de painel direto após cadastro
-      req.session.painel = { ok: true, proId: result.profissional.id };
-
-      // 5️⃣ Resposta de sucesso
-      return res.json({
-        ok: true,
-        msg: "Cadastro realizado com sucesso!",
-        id: result.profissional.id,
-        redirect: "/painel.html",
-      });
-
-    } // 👈 fecha o try
-
-     catch (e) {
+   } catch (e) {
   console.error("🚨 Erro detalhado no cadastro /api/profissionais:", e);
-  return res.status(500).json({ ok: false, error: e.message || "Erro interno no servidor." });
+
+  return res.status(500).json({
+    ok: false,
+    error: e.message || "Erro interno no servidor."
+  });
 }
-  } // 👈 fecha a função async (req, res)
-); // 👈 fecha o app.post("/api/profissionais")
+
+}); // <-- FECHA A ROTA CORRETAMENTE
 
 // =========================[ START SERVER ]=========================
 
