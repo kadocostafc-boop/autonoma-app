@@ -3932,14 +3932,13 @@ app.post("/api/profissionais", upload.single("foto"), async (req, res) => {
       });
 
       // Endereço
-      const novoEndereco = await tx.endereco.create({
-        data: {
-          cidade: cidadeFinal,
-          estadoUF: ufFinal,
-          bairro
-        }
-      });
-
+     const novoEndereco = await tx.endereco.create({
+  data: {
+    cidade: cidadeFinal,
+    estado: ufFinal, // <- NOME EXATO DO CAMPO NO PRISMA
+    bairro
+  }
+});
       // Profissional
       const novoProf = await tx.profissional.create({
         data: {
