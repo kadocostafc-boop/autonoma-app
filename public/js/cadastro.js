@@ -1,83 +1,78 @@
-// Helpers
-const $ = (s) => document.querySelector(s);
+// =========================================
+//  CADASTRO PROFISSIONAL – FRONTEND
+// =========================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  // preview da foto
-  const inputFoto = $("#foto");
-  const img = $("#previewImg");
-  const fallback = $("#previewFallback");
-
-  if (inputFoto) {
-    inputFoto.addEventListener("change", (e) => {
-      const file = e.target.files?.[0];
-      if (!file) {
-        img.style.display = "none";
-        fallback.style.display = "inline";
-        img.removeAttribute("src");
-        return;
-      }
-      // validação simples
-      if (!file.type.startsWith("image/")) {
-        alert("Envie um arquivo de imagem (JPG/PNG).");
-        e.target.value = "";
-        return;
-      }
-      if (file.size > 2 * 1024 * 1024) { // 2MB
-        alert("Imagem muito grande. Tamanho máximo: 2MB.");
-        e.target.value = "";
-        return;
-      }
-      const url = URL.createObjectURL(file);
-      img.src = url;
-      img.style.display = "block";
-      fallback.style.display = "none";
-    });
-  }
-
-  // máscara/normalização simples de telefone/whatsapp
-  const tel = $("#telefone");
-  const wa = $("#whatsapp");
-
-  const maskPhone = (value) => {
-    // mantém somente dígitos e aplica formato (DD) 00000-0000
-    const d = value.replace(/\D/g, "").slice(0, 11);
-    if (d.length <= 10) {
-      return d.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, "($1) $2-$3");
-    }
-    return d.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, "($1) $2-$3");
-  };
-
-  const onMask = (el) => {
-    if (!el) return;
-    el.addEventListener("input", () => {
-      const pos = el.selectionStart;
-      el.value = maskPhone(el.value);
-      // cursor ao fim em navegadores modernos
-      el.setSelectionRange(el.value.length, el.value.length);
-    });
-  };
-
-  onMask(tel);
-  onMask(wa);
-
-  // antes de enviar: normaliza números para dígitos e garante +55 se faltar
   const form = document.getElementById("formCadastro");
-  if (form) {
-    form.addEventListener("submit", () => {
-      const onlyDigits = (v) => (v || "").replace(/\D/g, "");
-      const ensureBR = (v) => {
-        if (!v) return v;
-        // se vier com 10/11 dígitos, assume BR e prefixa 55
-        if (/^\d{10,11}$/.test(v)) return "55" + v;
-        return v; // já pode estar com 55
+  const btn = document.getElementById("btnCadastrar");
+  const previewFoto = document.getElementById("previewFoto");
+
+  // ===================== PREVIEW DA FOTO =====================
+  const fotoInput = document.getElementById("foto");
+  if (fotoInput) {
+    fotoInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        previewFoto.src = reader.result;
+        previewFoto.style.display = "block";
       };
-
-      const telDigits = ensureBR(onlyDigits(tel?.value));
-      const waDigits = ensureBR(onlyDigits(wa?.value));
-
-      if (tel) tel.value = telDigits || "";
-      if (wa) wa.value = waDigits || "";
-      // deixa o submit seguir normalmente (enctype multipart -> /cadastrar)
+      reader.readAsDataURL(file);
     });
   }
+
+  // ===================== SUBMIT DO FORMULÁRIO =====================
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    btn.disabled = true;
+    btn.innerText = "Enviando...";
+
+    try {
+      const formData = new FormData();
+
+      // FOTO
+      if (fotoInput.files.length > 0) {
+        formData.append("foto", fotoInput.files[0]);
+      }
+
+      // CAMPOS DE TEXTO (EXATOS DO BACKEND)
+      formData.append("nome", document.getElementById("nome").value.trim());
+      formData.append("email", document.getElementById("email").value.trim());
+      formData.append("whatsapp", document.getElementById("whatsapp").value.trim());
+      formData.append("senha", document.getElementById("senha").value.trim());
+      formData.append("cidade", document.getElementById("cidade").value.trim());
+      formData.append("bairro", document.getElementById("bairro").value.trim());
+      formData.append("estado", document.getElementById("estado").value.trim()); // 🔵 NOVO (UF obrigatório)
+      formData.append("bio", document.getElementById("bio").value.trim());
+      formData.append("servico", document.getElementById("servico").value.trim());
+
+      // ===================== ENVIO PARA O BACKEND =====================
+      const response = await fetch("/api/profissionais", {
+        method: "POST",
+        body: formData
+      });
+
+      const json = await response.json();
+
+      if (!json.ok) {
+        alert("Erro: " + json.error);
+        btn.disabled = false;
+        btn.innerText = "Cadastrar";
+        return;
+      }
+
+      // SUCESSO
+      window.location.href = json.redirect;
+
+    } catch (err) {
+      console.error("Erro ao enviar cadastro:", err);
+      alert("Erro inesperado. Tente novamente.");
+      btn.disabled = false;
+      btn.innerText = "Cadastrar";
+    }
+  });
+
 });

@@ -1947,82 +1947,161 @@ function isDuplicate(db, novo) {
   );
 }
 
-// =============[ Cadastro Profissional • POST /cadastro ]=============
-app.post("/cadastro", async (req, res) => {
+// ==================================================[ CADASTRO PROFISSIONAL ]==================================================
+app.post("/api/profissionais", upload.single("foto"), async (req, res) => {
   try {
+    // ======================= Foto =======================
+    let fotoUrl = null;
+    if (req.file) {
+      fotoUrl = "/uploads/" + req.file.filename;
+    }
+
+    // ======================= Campos do formulário =======================
     const {
-      nome, email, whatsapp, senha,
-      descricao, idade, tempoExperiencia, whatsappPublico,
-      cidade, bairro, estado,
-      servicos
+      nome,
+      email,
+      whatsapp,
+      senha,
+      cidade: cidadeBruta,
+      bairro: bairroBruto,
+      bio,
+      servico: servicoBruto,
+      estadoUF: estadoBruto // hidden do cadastro.html (se vier)
     } = req.body;
 
-    // 1. Validação básica
-    if (!nome || !email || !whatsapp || !senha || !cidade || !bairro || !estado) {
-      return res.status(400).json({ ok: false, error: "Todos os campos obrigatórios devem ser preenchidos." });
+    // Sanitização básica
+    const sNome = String(nome || "").trim();
+    const sEmail = String(email || "").trim().toLowerCase();
+    const rawWhats = String(whatsapp || "");
+    const sWhatsapp = rawWhats.replace(/\D/g, ""); // só dígitos
+    const sBio = String(bio || "").trim();
+    const sCidade = String(cidadeBruta || "").trim();
+    const sBairro = String(bairroBruto || "").trim();
+    const sServico = String(servicoBruto || "").trim();
+    let ufFinal = String(estadoBruto || "").trim().toUpperCase();
+
+    // ======================= Extrai UF =======================
+    // 1) Tenta usar o hidden estadoUF (preenchido no cadastro.html)
+    // 2) Se não vier, tenta pegar do campo cidade (ex: "Rio de Janeiro/RJ" ou "Rio de Janeiro - RJ")
+    if (!ufFinal && sCidade) {
+      const match = sCidade.match(/([A-Za-z]{2})$/);
+      if (match) {
+        ufFinal = match[1].toUpperCase();
+      }
     }
-    if (!isEmail(email)) {
-      return res.status(400).json({ ok: false, error: "E-mail inválido." });
+    // 3) Fallback seguro
+    if (!ufFinal) {
+      ufFinal = "RJ";
     }
 
-    // 2. Verifica se o usuário já existe
+    // ======================= Validação mínima =======================
+    if (!sNome || !sEmail || !sWhatsapp || !senha || !sCidade || !sBairro) {
+      return res.status(400).json({
+        ok: false,
+        error: "Todos os campos obrigatórios devem ser preenchidos."
+      });
+    }
+
+    // ======================= Verifica duplicidade (usuário) =======================
     const existingUser = await prisma.usuario.findFirst({
       where: {
         OR: [
-          { email: email.toLowerCase() },
-          { whatsapp: whatsapp.replace(/\D/g, '') }
+          { email: sEmail },
+          { whatsapp: sWhatsapp }
         ]
       }
     });
 
     if (existingUser) {
-      return res.status(409).json({ ok: false, error: "E-mail ou WhatsApp já cadastrados." });
+      return res.status(400).json({
+        ok: false,
+        error: "E-mail ou WhatsApp já cadastrado."
+      });
     }
 
-    // 3. Hash da senha
-    const hashedPassword = bcrypt.hashSync(senha, 10);
+    // ======================= Criação no banco (transação) =======================
+    const hashedPassword = bcrypt.hashSync(String(senha), 10);
 
-    // 4. Criação do usuário, profissional, endereço e serviços em uma transação
-    const result = await prisma.$transaction(async (prisma) => {
-      // Cria Endereco
-      const novoEndereco = await prisma.endereco.create({
+    const result = await prisma.$transaction(async (tx) => {
+      // ---------- Usuário (credenciais) ----------
+      const novoUsuario = await tx.usuario.create({
         data: {
-          cidade: titleCase(cidade),
-          bairro: titleCase(bairro),
-          estado: estado.toUpperCase(),
-          // latitude e longitude podem ser adicionados aqui se disponíveis
+          nome: sNome,
+          email: sEmail,
+          whatsapp: sWhatsapp,
+          senha: hashedPassword
         }
       });
 
-      
-      // Cria Serviços (se houver)
-      if (Array.isArray(servicos) && servicos.length > 0) {
-        const servicosData = servicos.map(s => ({
-		              profissional: { connect: { id: novoProfissional.id } },
-          titulo: s.titulo,
-          descricao: s.descricao || '',
-          preco: s.preco ? Number(s.preco) : 0,
-        }));
-        await prisma.servico.createMany({
-          data: servicosData
-        });
-      }
+      // ---------- Profissional (perfil público) ----------
+      const novoProf = await tx.profissional.create({
+        data: {
+          usuarioId: novoUsuario.id,
+          nome: sNome,
+          whatsappPublico: sWhatsapp,
+          descricao: sBio || null,
+          fotoUrl: fotoUrl
+        }
+      });
 
-      return { usuario: novoUsuario, profissional: novoProfissional };
+      // ---------- Endereço (modelo atual exige profissionalId, cidade, bairro, estado) ----------
+      await tx.endereco.create({
+        data: {
+          profissionalId: novoProf.id,
+          cidade: sCidade,
+          bairro: sBairro,
+          estado: ufFinal
+        }
+      });
+
+      // ---------- Serviço principal (OPCIONAL) ----------
+      // IMPORTANTE: no schema atual, Servico exige categoriaId, titulo, descricao e preco.
+      // Para não quebrar o cadastro, neste momento NÃO vamos criar Servico aqui.
+      // Depois faremos uma tela no painel para o profissional cadastrar/editar seus serviços.
+      //
+      // Exemplo de como seria, no futuro:
+      // if (sServico) {
+      //   const categoria = await tx.categoria.upsert({
+      //     where: { nome: sServico },
+      //     update: {},
+      //     create: { nome: sServico }
+      //   });
+      //
+      //   await tx.servico.create({
+      //     data: {
+      //       profissionalId: novoProf.id,
+      //       categoriaId: categoria.id,
+      //       titulo: sServico,
+      //       descricao: sBio || sServico,
+      //       preco: 0
+      //     }
+      //   });
+      // }
+
+      return { novoUsuario, novoProf };
     });
 
-    // 5. Cria a sessão para o novo profissional
-    req.session.painel = { ok: true, proId: result.profissional.id };
+    // ======================= Sessão automática do painel =======================
+    req.session.painel = {
+      ok: true,
+      proId: result.novoProf.id
+    };
 
-    return res.json({ ok: true, msg: "Cadastro realizado com sucesso!", redirect: '/painel.html' });
-
+    // ======================= Retorno de sucesso =======================
+    return res.json({
+      ok: true,
+      msg: "Cadastro realizado com sucesso!",
+      id: result.novoProf.id,
+      redirect: "/painel.html"
+    });
   } catch (e) {
-    console.error("[cadastro] erro:", e);
-    return res.status(500).json({ ok: false, error: "server_error" });
+    console.error("🔴 Erro detalhado no cadastro /api/profissionais:", e);
+    return res.status(500).json({
+      ok: false,
+      error: e?.message || "Erro interno no servidor."
+    });
   }
 });
-
-
 // ===== [Perfil APIs — UNIFICADO e robusto] =====
 
 // DEBUG opcional: último profissional salvo
@@ -3858,102 +3937,134 @@ app.get("/api/admin/_dump_all", requireAdmin, (_req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.send(JSON.stringify(dump, null, 2));
 });
-// ==================================================[ CADASTRO PROFISSIONAL ]==================================================
-app.post("/api/profissionais", upload.single("foto"), async (req, res) => {
+
+// ========================================[ CADASTRO PROFISSIONAL • FINAL ]========================================
+app.post("/api/profissionais", upload.fields([
+  { name: "foto", maxCount: 1 },
+  { name: "doc", maxCount: 1 }
+]), async (req, res) => {
   try {
     // ======================= Foto =======================
     let fotoUrl = null;
-    if (req.file) {
-      fotoUrl = "/uploads/" + req.file.filename;
+    if (req.files?.foto?.[0]) {
+      fotoUrl = "/uploads/" + req.files.foto[0].filename;
     }
 
-    // ======================= Campos enviados pelo formulário =======================
+    // ======================= Documento (selo verificado) =======================
+    let docUrl = null;
+    if (req.files?.doc?.[0]) {
+      docUrl = "/uploads/" + req.files.doc[0].filename;
+    }
+
+    // ======================= Campos enviados =======================
     let {
       nome,
       email,
       whatsapp,
       senha,
-      cidade,      // <- VEM DO FRONT
+      confirmaSenha,
+      cidade,
       bairro,
+      estadoUF,   // 👈 campo correto vindo do cadastro.html
+      lat,
+      lng,
       bio,
       servico,
-      estadoUF     // <- hidden do front
+      profissao
     } = req.body;
 
-    // ======================= Tratamento de Cidade + UF =======================
-    let cidadeFinal = null;
-    let ufFinal = null;
-
-    if (cidade && cidade.includes("/")) {
-      // Formato: "Rio de Janeiro/RJ"
-      const partes = cidade.split("/");
-      cidadeFinal = partes[0].trim();
-      ufFinal = partes[1].trim().toUpperCase();
-    } else {
-      // Caso venha só cidade
-      cidadeFinal = cidade?.trim() || null;
-      ufFinal = estadoUF?.trim().toUpperCase() || "RJ"; // fallback seguro
-    }
+    // Limpeza dos campos
+    nome = nome?.trim();
+    email = email?.trim().toLowerCase();
+    whatsapp = whatsapp?.replace(/\D/g, "");
+    cidade = cidade?.trim();
+    bairro = bairro?.trim();
+    estadoUF = estadoUF?.trim().toUpperCase();
+    bio = bio?.trim() || "";
 
     // ======================= Validação mínima =======================
-    if (!nome || !email || !whatsapp || !senha || !cidadeFinal || !bairro) {
+    if (!nome || !email || !whatsapp || !senha || !cidade || !bairro) {
       return res.status(400).json({
         ok: false,
-        error: "Todos os campos obrigatórios devem ser preenchidos."
+        error: "Preencha todos os campos obrigatórios."
       });
     }
 
-    // ======================= Verifica duplicidade =======================
-    const existingUser = await prisma.usuario.findFirst({
+    if (senha !== confirmaSenha) {
+      return res.status(400).json({
+        ok: false,
+        error: "As senhas não conferem."
+      });
+    }
+
+    if (!estadoUF || estadoUF.length !== 2) {
+      return res.status(400).json({
+        ok: false,
+        error: "Cidade inválida: UF não detectada."
+      });
+    }
+
+    // ======================= Checa duplicidade =======================
+    const existente = await prisma.usuario.findFirst({
       where: {
-        OR: [{ email }, { whatsapp }]
+        OR: [
+          { email },
+          { whatsapp }
+        ]
       }
     });
 
-    if (existingUser) {
+    if (existente) {
       return res.status(400).json({
         ok: false,
-        error: "E-mail ou WhatsApp já cadastrado."
+        error: "E-mail ou WhatsApp já estão cadastrados."
       });
     }
 
-    // ======================= Criação no banco =======================
-    const hashedPassword = bcrypt.hashSync(senha, 10);
+    const hashed = bcrypt.hashSync(senha, 10);
 
-    const novoRegistro = await prisma.$transaction(async (tx) => {
-      // Usuário
+    // ======================= Transação Prisma =======================
+    const resultado = await prisma.$transaction(async (tx) => {
+
+      // 1. USUÁRIO
       const novoUsuario = await tx.usuario.create({
         data: {
           nome,
-          email: email.toLowerCase(),
-          whatsapp: whatsapp.replace(/\D/g, ""),
-          senha: hashedPassword
+          email,
+          whatsapp,
+          senha: hashed
         }
       });
 
-      // Endereço
-     const novoEndereco = await tx.endereco.create({
-  data: {
-    cidade: cidadeFinal,
-    estado: ufFinal, // <- NOME EXATO DO CAMPO NO PRISMA
-    bairro
-  }
-});
-      // Profissional
+      // 2. ENDEREÇO
+      const novoEndereco = await tx.endereco.create({
+        data: {
+          cidade,
+          bairro,
+          estado: estadoUF,   // 👈 agora correto
+          lat: lat ? parseFloat(lat) : null,
+          lng: lng ? parseFloat(lng) : null
+        }
+      });
+
+      // 3. PROFISSIONAL
       const novoProf = await tx.profissional.create({
         data: {
           usuarioId: novoUsuario.id,
           enderecoId: novoEndereco.id,
-          descricao: bio || "",
-          fotoUrl: fotoUrl,
-          whatsappPublico: whatsapp.replace(/\D/g, ""),
+          descricao: bio,
+          fotoUrl,
+          docUrl,
+          whatsappPublico: whatsapp,
           tempoExperiencia: 0,
           planoAtual: "free",
-          validadePlano: null
+          validadePlano: null,
+          servicoPrincipal: servico || null,
+          profissao: profissao || null
         }
       });
 
-      // Serviço (se enviado)
+      // 4. Serviço — caso preenchido
       if (servico && servico.trim() !== "") {
         await tx.servico.create({
           data: {
@@ -3966,25 +4077,25 @@ app.post("/api/profissionais", upload.single("foto"), async (req, res) => {
       return { novoUsuario, novoProf };
     });
 
-    // ======================= Sessão automática =======================
+    // ======================= LOGIN AUTOMÁTICO =======================
     req.session.painel = {
       ok: true,
-      proId: novoRegistro.novoProf.id
+      proId: resultado.novoProf.id
     };
 
-    // ======================= Retorno =======================
+    // ======================= RESPOSTA FINAL =======================
     return res.json({
       ok: true,
       msg: "Cadastro realizado com sucesso!",
-      id: novoRegistro.novoProf.id,
+      id: resultado.novoProf.id,
       redirect: "/painel.html"
     });
 
   } catch (e) {
-    console.error("🔴 Erro detalhado no cadastro /api/profissionais:", e);
+    console.error("🔴 ERRO DETALHADO NO CADASTRO /api/profissionais:", e);
     return res.status(500).json({
       ok: false,
-      error: e.message || "Erro interno no servidor."
+      error: "Erro interno ao cadastrar."
     });
   }
 });
