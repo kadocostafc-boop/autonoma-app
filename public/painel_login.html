@@ -157,45 +157,61 @@
     toggleSenha.textContent = isPwd ? '🙈' : '👁';
   });
 
-  form?.addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    errBox.style.display='none'; errBox.textContent='';
+form?.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  errBox.style.display='none'; 
+  errBox.textContent='';
 
-    const rawId = (idInput.value||'').trim();
-    if(!rawId){ return showErr('Informe seu WhatsApp ou e-mail.'); }
+  const rawId = (idInput.value||'').trim();
+  if(!rawId){ 
+    return showErr('Informe seu WhatsApp ou e-mail.'); 
+  }
 
-    let identifier = rawId;
-    if(isEmail(rawId)){
-      identifier = rawId.toLowerCase();
-    }else{
-      const dig = toBRWith55( onlyDigits(rawId) );
-      if(!isValidBR(dig)){ return showErr('WhatsApp inválido. Digite com DDD.'); }
-      identifier = dig;
+  // ======================= Identificador =======================
+  let identifier = rawId;
+
+  if(isEmail(rawId)){
+    identifier = rawId.toLowerCase();
+  } else {
+    const dig = toBRWith55( onlyDigits(rawId) );
+    if(!isValidBR(dig)){ 
+      return showErr('WhatsApp inválido. Digite com DDD.'); 
+    }
+    identifier = dig;
+  }
+
+  const password = senha.value||'';
+  if(!password){ 
+    return showErr('Informe sua senha.'); 
+  }
+
+  setLoading(true);
+  try{
+    // NOVO ENDPOINT DO BACKEND
+    const res = await fetch('/api/auth/login', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ 
+        identifier, 
+        senha: password, 
+        rememberMe: !!remember.checked 
+      })
+    });
+
+    const data = await res.json().catch(()=> ({}));
+
+    if(data && data.ok){
+      location.href = data.redirect || '/painel.html';
+      return;
     }
 
-    const password = senha.value||'';
-    if(!password){ return showErr('Informe sua senha.'); }
-
-    setLoading(true);
-    try{
-      const res = await fetch('/auth/pro/login', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ phone: identifier, pin: password, rememberMe: !!remember.checked })
+    showErr(data.error || data.message || 'Credenciais inválidas.');
+  }catch(_){
+    showErr('Falha de conexão. Tente novamente.');
+  }finally{
+    setLoading(false);
+  }
 });
-      const data = await res.json().catch(()=> ({}));
-      if(data && data.ok){
-        location.href = data.redirect || '/painel';
-        return;
-      }
-      showErr((data && (data.message||data.error)) || 'Credenciais inválidas.');
-    }catch(_){
-      showErr('Falha de conexão. Tente novamente.');
-    }finally{
-      setLoading(false);
-    }
-  });
-
   function showErr(t){ errBox.textContent=t; errBox.style.display='block'; }
   function setLoading(on){ if(on){ loginBtn.disabled=true; loginBtn.textContent='Entrando…'; } else { loginBtn.disabled=false; loginBtn.textContent='Entrar'; } }
 
