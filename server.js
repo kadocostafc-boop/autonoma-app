@@ -2918,10 +2918,8 @@ app.post("/auth/pro/login", async (req, res) => {
     if (isEmail(identifier)) {
       emailDigitado = identifier.toLowerCase();
     } else {
-      // extrai apenas dígitos
-      const raw = identifier.replace(/\D/g, "");
-      // adiciona o 55 obrigatório igual o cadastro faz
-      numeroDigitado = raw.startsWith("55") ? raw : "55" + raw;
+      // Igual ao cadastro: só dígitos, sem 55
+      numeroDigitado = identifier.replace(/\D/g, "");
     }
 
     // 2. Busca no banco
@@ -2942,11 +2940,9 @@ app.post("/auth/pro/login", async (req, res) => {
     // 3. Valida a senha corretamente
     let passwordMatch = false;
 
-    // se estiver em hash → valida hash
     if (usuario.senha && usuario.senha.startsWith("$2")) {
       passwordMatch = bcrypt.compareSync(password, usuario.senha);
     } else {
-      // se for senha antiga em texto puro → compara direto
       passwordMatch = (password === usuario.senha);
     }
 
