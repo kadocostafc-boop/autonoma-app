@@ -5,174 +5,170 @@
   <title>Cadastro de Profissional | Autônoma</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <style>
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #f6f7f9;
-    }
+  <link rel="stylesheet" href="/css/global.css" />
 
+  <style>
     .container {
-      max-width: 520px;
+      max-width: 420px;
       margin: 40px auto;
+      padding: 20px;
       background: #fff;
-      padding: 24px;
-      border-radius: 12px;
+      border-radius: 10px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.08);
     }
-
-    h1 { font-size: 24px; margin-bottom: 6px; }
-    p { color: #666; margin-bottom: 20px; }
-
-    label {
-      display: block;
-      margin-top: 14px;
-      font-weight: 600;
-      font-size: 14px;
-    }
-
+    h1 { text-align: center; margin-bottom: 20px; }
+    label { display:block; margin-top:12px; font-weight:600; }
     input, button {
-      width: 100%;
-      padding: 12px;
-      margin-top: 6px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 15px;
+      width:100%; padding:10px; margin-top:6px;
+      border-radius:6px; border:1px solid #ddd;
     }
-
-    button {
-      margin-top: 24px;
-      background: #4f46e5;
-      color: #fff;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
+    button { background:#111; color:#fff; margin-top:20px; cursor:pointer; }
+    .foto-preview img {
+      width:120px; height:120px; border-radius:50%;
+      object-fit:cover; display:none; margin:auto;
     }
-
-    .preview {
-      margin-top: 10px;
-      text-align: center;
+    .autocomplete-list {
+      border:1px solid #ddd; border-radius:6px;
+      max-height:160px; overflow-y:auto;
     }
-
-    .preview img {
-      width: 100px;
-      height: 100px;
-      object-fit: cover;
-      border-radius: 50%;
-      border: 2px solid #ddd;
+    .autocomplete-item {
+      padding:8px; cursor:pointer;
     }
-
-    .row {
-      display: flex;
-      gap: 12px;
-    }
-
-    .row > div { flex: 1; }
-
-    .msg {
-      margin-top: 16px;
-      font-size: 14px;
-    }
-
-    @media (max-width: 600px) {
-      .row { flex-direction: column; }
+    .autocomplete-item:hover { background:#f2f2f2; }
+    .tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    .tag {
+      background:#111; color:#fff;
+      padding:4px 8px; border-radius:12px;
+      font-size:13px; cursor:pointer;
     }
   </style>
 </head>
+
 <body>
 
 <div class="container">
-  <h1>Cadastro profissional</h1>
-  <p>Crie sua conta e comece a receber clientes</p>
+  <h1>Cadastro Profissional</h1>
 
-  <form id="cadastroForm" enctype="multipart/form-data">
+  <form id="formCadastro">
 
-    <label>Foto de perfil</label>
-    <input type="file" id="foto" accept="image/*" required />
-    <div class="preview" id="preview"></div>
-
-    <label>Nome completo</label>
-    <input type="text" id="nome" required />
+    <label>Nome</label>
+    <input name="nome" required>
 
     <label>Email</label>
-    <input type="email" id="email" required />
+    <input name="email" type="email" required>
 
     <label>WhatsApp</label>
-    <input type="tel" id="whatsapp" required />
+    <input name="whatsapp" required>
 
     <label>Senha</label>
-    <input type="password" id="senha" minlength="6" required />
+    <input name="senha" type="password" required>
 
-    <label>Serviço principal</label>
-    <input type="text" id="servico" required />
+    <label>Serviços</label>
+    <input id="servicoInput" placeholder="Digite e pressione Enter">
+    <div id="servicoList" class="autocomplete-list" style="display:none"></div>
+    <div class="tags" id="servicoTags"></div>
 
-    <div class="row">
-      <div>
-        <label>Cidade</label>
-        <input type="text" id="cidade" required />
-      </div>
-      <div>
-        <label>Estado</label>
-        <input type="text" id="estado" maxlength="2" required />
-      </div>
-    </div>
+    <input type="hidden" name="servicos" id="servicosHidden">
+
+    <label>Cidade</label>
+    <input name="cidade" id="cidade" required>
+
+    <label>Estado</label>
+    <input name="estado" id="estado" required>
 
     <label>Bairro</label>
-    <input type="text" id="bairro" />
+    <input name="bairro" id="bairro">
 
-    <button type="submit">Criar conta</button>
-    <div class="msg" id="msg"></div>
+    <label>Foto</label>
+    <input type="file" name="foto" id="fotoInput" accept="image/*">
+    <div class="foto-preview">
+      <img id="fotoPreview">
+    </div>
+
+    <button>Cadastrar</button>
   </form>
 </div>
 
 <script>
-const fotoInput = document.getElementById('foto')
-const preview = document.getElementById('preview')
+/* ===============================
+   PREVIEW FOTO
+================================ */
+fotoInput.onchange = () => {
+  fotoPreview.src = URL.createObjectURL(fotoInput.files[0])
+  fotoPreview.style.display = 'block'
+}
 
-fotoInput.addEventListener('change', () => {
-  const file = fotoInput.files[0]
-  if (!file) return
-  const img = document.createElement('img')
-  img.src = URL.createObjectURL(file)
-  preview.innerHTML = ''
-  preview.appendChild(img)
+/* ===============================
+   GEOLOCALIZAÇÃO
+================================ */
+navigator.geolocation?.getCurrentPosition(async pos => {
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`
+  )
+  const d = await res.json()
+  cidade.value = d.address.city || d.address.town || ''
+  estado.value = d.address.state || ''
 })
 
-document.getElementById('cadastroForm').addEventListener('submit', async (e) => {
-  e.preventDefault()
-  const msg = document.getElementById('msg')
-  msg.textContent = 'Criando conta...'
+/* ===============================
+   SERVIÇOS INTELIGENTES
+================================ */
+const sugestoes = [
+  'Eletricista','Encanador','Faxineira','Pedreiro',
+  'Pintor','Jardineiro','Montador de móveis',
+  'Diarista','Marceneiro','Técnico de informática'
+]
 
-  const formData = new FormData()
-  formData.append('foto', fotoInput.files[0])
-  formData.append('nome', nome.value)
-  formData.append('email', email.value)
-  formData.append('whatsapp', whatsapp.value)
-  formData.append('senha', senha.value)
-  formData.append('servicos', JSON.stringify([servico.value]))
-  formData.append('cidade', cidade.value)
-  formData.append('estado', estado.value.toUpperCase())
-  formData.append('bairro', bairro.value)
+const selecionados = new Set()
 
-  const res = await fetch('/api/auth/register', {
-    method: 'POST',
-    body: formData,
-    credentials: 'include'
-  })
+servicoInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault()
+    adicionarServico(servicoInput.value)
+  }
+})
 
-  const json = await res.json()
-  if (!json.ok) {
-    msg.textContent = json.message || 'Erro no cadastro'
-    return
+function adicionarServico(nome) {
+  nome = nome.trim()
+  if (!nome || selecionados.has(nome)) return
+  selecionados.add(nome)
+
+  const tag = document.createElement('div')
+  tag.className = 'tag'
+  tag.textContent = nome
+  tag.onclick = () => {
+    selecionados.delete(nome)
+    tag.remove()
+    atualizarHidden()
   }
 
-  msg.style.color = 'green'
-  msg.textContent = 'Cadastro realizado!'
+  servicoTags.appendChild(tag)
+  servicoInput.value = ''
+  atualizarHidden()
+}
 
-  setTimeout(() => {
-    window.location.href = '/painel.html'
-  }, 1200)
-})
+function atualizarHidden() {
+  servicosHidden.value = JSON.stringify([...selecionados])
+}
+
+/* ===============================
+   SUBMIT
+================================ */
+formCadastro.onsubmit = async e => {
+  e.preventDefault()
+  atualizarHidden()
+
+  const formData = new FormData(formCadastro)
+
+  const res = await fetch('/api/auth/register', {
+    method:'POST', body:formData
+  })
+  const data = await res.json()
+
+  if (!data.ok) return alert(data.message)
+  alert('Cadastro realizado!')
+  location.href = '/painel.html'
+}
 </script>
 
 </body>
