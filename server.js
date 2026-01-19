@@ -26,7 +26,6 @@ const SibApiV3Sdk = require('sib-api-v3-sdk')
 const app = express()
 const prisma = new PrismaClient()
 
-const PORT = process.env.PORT || 3000
 
 // -------------------------------
 // ASAAS (CONFIG ÚNICA)
@@ -775,9 +774,14 @@ app.post('/api/admin/verificar/:id', requireAdmin, async (req, res) => {
 // -------------------------------
 app.use('/uploads/documentos', express.static(uploadDocDir))
 
+app.get('/', (req, res) => {
+  res.status(200).send('Autônoma API OK')
+})
 // -------------------------------
 // START SERVER
 // -------------------------------
-app.listen(PORT, () => {
+const PORT = process.env.PORT
+
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Autônoma API rodando na porta ${PORT}`)
 })
