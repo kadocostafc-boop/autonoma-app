@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Financeiro — Autônoma</title>
+
+  <link rel="stylesheet" href="/public.css.global.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header>
+  <div class="container header-content">
+    <a href="/Painel.html" class="logo">Autônoma</a>
+    <a href="#" onclick="logout()" class="btn btn-outline">Sair</a>
+  </div>
+</header>
+
+<section class="container">
+  <h1>Financeiro</h1>
+
+  <!-- RESUMO -->
+  <div class="grid grid-3" style="margin-top:1.5rem">
+
+    <div class="card">
+      <h3>Total Bruto</h3>
+      <p id="totalBruto">R$ 0,00</p>
+    </div>
+
+    <div class="card">
+      <h3>Comissão Autônoma</h3>
+      <p id="totalComissao">R$ 0,00</p>
+    </div>
+
+    <div class="card">
+      <h3>Você Recebe</h3>
+      <p id="totalLiquido">R$ 0,00</p>
+    </div>
+
+  </div>
+
+  <!-- TRANSAÇÕES -->
+  <div class="card" style="margin-top:2rem">
+    <h3>Transações</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Cliente</th>
+          <th>Valor</th>
+          <th>Comissão</th>
+          <th>Líquido</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="listaTransacoes"></tbody>
+    </table>
+  </div>
+
+</section>
+
+<footer>
+  © 2026 Autônoma.app
+</footer>
+
+<script>
+  async function carregarFinanceiro() {
+    const res = await fetch('/api/financeiro/me')
+    const data = await res.json()
+
+    if (!data.ok) {
+      location.href = '/Painel-login.html'
+      return
+    }
+
+    document.getElementById('totalBruto').innerText = formatar(data.resumo.bruto)
+    document.getElementById('totalComissao').innerText = formatar(data.resumo.comissao)
+    document.getElementById('totalLiquido').innerText = formatar(data.resumo.liquido)
+
+    const tbody = document.getElementById('listaTransacoes')
+    tbody.innerHTML = ''
+
+    data.transacoes.forEach(t => {
+      const tr = document.createElement('tr')
+      tr.innerHTML = `
+        <td>${new Date(t.data).toLocaleDateString()}</td>
+        <td>${t.cliente}</td>
+        <td>${formatar(t.valor)}</td>
+        <td>${formatar(t.comissao)}</td>
+        <td>${formatar(t.liquido)}</td>
+        <td>${t.status}</td>
+      `
+      tbody.appendChild(tr)
+    })
+  }
+
+  function formatar(valor) {
+    return 'R$ ' + valor.toFixed(2).replace('.', ',')
+  }
+
+  function logout() {
+    fetch('/api/auth/logout').then(() => location.href = '/')
+  }
+
+  carregarFinanceiro()
+</script>
+
+</body>
+</html>

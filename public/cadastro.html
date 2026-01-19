@@ -1,746 +1,179 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cadastro de Profissional • Autônoma.app</title>
+  <meta charset="UTF-8" />
+  <title>Cadastro de Profissional | Autônoma</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Canonical + SEO -->
-  <link rel="canonical" href="https://www.autonomaapp.com.br/cadastro.html" />
-  <meta name="description" content="Cadastre seu perfil no Autônoma: informe seus dados, cidade, bairro e WhatsApp para receber clientes pelo app." />
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f6f7f9;
+    }
 
-  <!-- PWA / Favicons -->
-  <link rel="manifest" href="/manifest.webmanifest" />
-  <meta name="theme-color" content="#2d6cdf" />
-  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-  <link rel="icon" href="/favicon.ico" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
-  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
+    .container {
+      max-width: 520px;
+      margin: 40px auto;
+      background: #fff;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
 
-  <!-- CSS Global Padronizado -->
-  <link rel="stylesheet" href="/css/global.css?v=2.0" />
+    h1 { font-size: 24px; margin-bottom: 6px; }
+    p { color: #666; margin-bottom: 20px; }
+
+    label {
+      display: block;
+      margin-top: 14px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 6px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 15px;
+    }
+
+    button {
+      margin-top: 24px;
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .preview {
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    .preview img {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 2px solid #ddd;
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .row > div { flex: 1; }
+
+    .msg {
+      margin-top: 16px;
+      font-size: 14px;
+    }
+
+    @media (max-width: 600px) {
+      .row { flex-direction: column; }
+    }
+  </style>
 </head>
 <body>
-  <header class="header" role="banner">
-    <a href="/" aria-label="Início">
-      <img class="logo" src="/img/logo.png" alt="Autônoma.app" onerror="this.style.display='none'">
-    </a>
-    <div style="margin-left:auto; display:flex; gap:8px">
-      <a class="btn ghost" href="/">Início</a>
-      <a class="btn outline" href="/clientes.html">Ver profissionais</a>
+
+<div class="container">
+  <h1>Cadastro profissional</h1>
+  <p>Crie sua conta e comece a receber clientes</p>
+
+  <form id="cadastroForm" enctype="multipart/form-data">
+
+    <label>Foto de perfil</label>
+    <input type="file" id="foto" accept="image/*" required />
+    <div class="preview" id="preview"></div>
+
+    <label>Nome completo</label>
+    <input type="text" id="nome" required />
+
+    <label>Email</label>
+    <input type="email" id="email" required />
+
+    <label>WhatsApp</label>
+    <input type="tel" id="whatsapp" required />
+
+    <label>Senha</label>
+    <input type="password" id="senha" minlength="6" required />
+
+    <label>Serviço principal</label>
+    <input type="text" id="servico" required />
+
+    <div class="row">
+      <div>
+        <label>Cidade</label>
+        <input type="text" id="cidade" required />
+      </div>
+      <div>
+        <label>Estado</label>
+        <input type="text" id="estado" maxlength="2" required />
+      </div>
     </div>
-  </header>
 
-  <main class="wrap" role="main">
-    <div class="card">
-      <h1 style="margin:0">Cadastre seu perfil</h1>
-      <p class="meta">É rápido e gratuito. Você recebe contatos pelo <strong>WhatsApp</strong>.</p>
-    </div>
+    <label>Bairro</label>
+    <input type="text" id="bairro" />
 
-    <div class="card" style="max-width:880px; margin:auto">
-      <!-- IMPORTANTE: action /api/profissionais, enctype multipart, names exatos -->
-      <form
-        id="formCad"
-        action="/api/profissionais"
-        method="POST"
-        enctype="multipart/form-data"
-        novalidate
-      >
-        <!-- Foto -->
-        <label for="foto">Foto de perfil <strong>(obrigatória)</strong></label>
-        <div class="row-wrap" style="align-items:center">
-          <img id="fotoPrev" class="avatar-preview" src="/icons/icon-192.png" alt="Prévia da foto">
-          <input id="foto" name="foto" type="file" accept="image/*" required aria-required="true">
-        </div>
-        <p class="help">Formatos: JPG/PNG/WEBP, até 3MB. A foto aumenta a confiança do cliente.</p>
+    <button type="submit">Criar conta</button>
+    <div class="msg" id="msg"></div>
+  </form>
+</div>
 
-        <!-- Selo verificado -->
-        <div class="row-wrap" style="align-items:flex-start">
-          <label class="gps-pill" style="background:#f0fdf4; border-color:#bbf7d0; color:#166534">
-            <input id="wantSelo" type="checkbox" style="transform:translateY(1px)">
-            Quero selo verificado
-          </label>
-          <span id="seloHint" class="muted">
-            Para análise do selo, envie um documento com foto (RG, CNH, passaporte).
-          </span>
-        </div>
+<script>
+const fotoInput = document.getElementById('foto')
+const preview = document.getElementById('preview')
 
-        <div id="docWrap" style="display:none; margin-top:8px">
-          <label for="doc">Documento com foto <span class="muted">(obrigatório se quiser o selo)</span></label>
-          <div class="row-wrap" style="align-items:center">
-            <img
-              id="docPrev"
-              class="doc-preview"
-              src="/img/doc-placeholder.png"
-              alt="Prévia do documento"
-              onerror="this.style.display='none'"
-            >
-            <input id="doc" name="doc" type="file" accept="image/*,application/pdf">
-          </div>
-          <p class="help">Foto legível do documento (JPG/PNG) ou PDF.</p>
-        </div>
+fotoInput.addEventListener('change', () => {
+  const file = fotoInput.files[0]
+  if (!file) return
+  const img = document.createElement('img')
+  img.src = URL.createObjectURL(file)
+  preview.innerHTML = ''
+  preview.appendChild(img)
+})
 
-        <!-- Nome -->
-        <label for="nome">Seu nome completo *</label>
-        <input
-          id="nome"
-          name="nome"
-          type="text"
-          maxlength="80"
-          required
-          placeholder="Ex.: Ana Souza"
-        >
+document.getElementById('cadastroForm').addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const msg = document.getElementById('msg')
+  msg.textContent = 'Criando conta...'
 
-        <!-- GPS / Cidade / Bairro -->
-        <div class="row-wrap" style="align-items:center; gap:10px; margin-top:4px">
-          <button type="button" id="btnGPS" class="btn small" aria-describedby="gpsStatus">
-            Usar minha localização
-          </button>
-          <span id="gpsStatus" class="muted">GPS desativado.</span>
-        </div>
+  const formData = new FormData()
+  formData.append('foto', fotoInput.files[0])
+  formData.append('nome', nome.value)
+  formData.append('email', email.value)
+  formData.append('whatsapp', whatsapp.value)
+  formData.append('senha', senha.value)
+  formData.append('servicos', JSON.stringify([servico.value]))
+  formData.append('cidade', cidade.value)
+  formData.append('estado', estado.value.toUpperCase())
+  formData.append('bairro', bairro.value)
 
-        <div class="row-wrap">
-          <div class="field-50">
-            <label for="cidade">Cidade *</label>
-            <input
-              id="cidade"
-              name="cidade"
-              type="text"
-              list="lista-cidades"
-              required
-              placeholder="Ex.: Rio de Janeiro/RJ"
-              autocomplete="off"
-            >
-            <datalist id="lista-cidades"></datalist>
-            <p class="help">
-              Digite e escolha na lista. Aceitamos “Cidade/UF” ou só “Cidade”.
-            </p>
-          </div>
+  const res = await fetch('/api/auth/register', {
+    method: 'POST',
+    body: formData,
+    credentials: 'include'
+  })
 
-          <div class="field-50">
-            <label for="bairro">Bairro *</label>
-            <input
-              id="bairro"
-              name="bairro"
-              type="text"
-              list="lista-bairros"
-              required
-              placeholder="Ex.: Copacabana"
-              autocomplete="off"
-            >
-            <datalist id="lista-bairros"></datalist>
-            <p class="help">
-              Depois de escolher a cidade, este campo sugere bairros automaticamente.
-            </p>
-          </div>
-        </div>
+  const json = await res.json()
+  if (!json.ok) {
+    msg.textContent = json.message || 'Erro no cadastro'
+    return
+  }
 
-        <!-- Serviço / Profissão -->
-        <div class="row-wrap">
-          <div class="field-50">
-            <label for="servico">Categoria/Serviço (recomendado)</label>
-            <input
-              id="servico"
-              name="servico"
-              type="text"
-              list="lista-servicos"
-              placeholder="Ex.: Eletricista"
-              autocomplete="off"
-            >
-            <datalist id="lista-servicos"></datalist>
-          </div>
-          <div class="field-50">
-            <label for="profissao">Profissão (alternativa)</label>
-            <input
-              id="profissao"
-              name="profissao"
-              type="text"
-              maxlength="60"
-              placeholder="Ex.: Técnico em elétrica"
-            >
-          </div>
-        </div>
-        <p class="help">
-          Preencha pelo menos <strong>Serviço</strong> ou <strong>Profissão</strong>.
-          Se o serviço não existir na lista, ele será adicionado automaticamente após o envio.
-        </p>
+  msg.style.color = 'green'
+  msg.textContent = 'Cadastro realizado!'
 
-        <!-- Contatos -->
-        <div class="row-wrap">
-          <div class="field-50">
-            <label for="whatsapp">WhatsApp (com DDD) *</label>
-            <input
-              id="whatsapp"
-              name="whatsapp"
-              type="tel"
-              required
-              inputmode="tel"
-              placeholder="Ex.: (21) 98765-4321"
-            >
-            <div id="whatsPrev" class="preview"></div>
-            <p class="help">
-              Pode colar com espaços/parênteses/traços. Formatamos automaticamente e adicionamos o +55.
-            </p>
-          </div>
-          <div class="field-50">
-            <label for="telefone">Telefone (opcional)</label>
-            <input
-              id="telefone"
-              name="telefone"
-              type="tel"
-              inputmode="tel"
-              placeholder="Ex.: (21) 3456-7890"
-            >
-            <div id="telPrev" class="preview"></div>
-          </div>
-        </div>
-
-        <!-- E-mail / Site -->
-        <div class="row-wrap">
-          <div class="field-50">
-            <label for="email">E-mail </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              autocomplete="email"
-              placeholder="Ex.: voce@email.com"
-            >
-            <p class="help">Obrigatório — usado para redefinir senha.</p>
-          </div>
-          <div class="field-50">
-            <label for="site">Site/Catálogo (opcional)</label>
-            <input
-              id="site"
-              name="site"
-              type="url"
-              placeholder="Ex.: https://meuportfolio.com/"
-            >
-          </div>
-        </div>
-
-        <!-- Endereço / Experiência / Preço -->
-        <label for="endereco">Endereço (opcional, oculto no perfil)</label>
-        <input
-          id="endereco"
-          name="endereco"
-          type="text"
-          maxlength="120"
-          placeholder="Rua/Av, número, complemento (apenas para referência interna)"
-        >
-
-        <div class="row-wrap">
-          <div class="field-50">
-            <label for="experiencia">Experiência (opcional)</label>
-            <input
-              id="experiencia"
-              name="experiencia"
-              type="text"
-              maxlength="80"
-              placeholder="Ex.: 5 anos"
-            >
-          </div>
-          <div class="field-50">
-            <label for="precoBase">Preço base (opcional)</label>
-            <input
-              id="precoBase"
-              name="precoBase"
-              type="text"
-              maxlength="40"
-              placeholder="Ex.: R$ 100/hora"
-            >
-          </div>
-        </div>
-
-        <!-- Sobre você (BIO) -->
-        <label for="bio">Sobre você </label>
-        <textarea
-          id="bio"
-          name="bio"
-          maxlength="600"
-          required
-          placeholder="Descreva seu trabalho, diferenciais e área de atendimento."
-        ></textarea>
-
-        <!-- Lat/Lng (ocultos, preenchidos via GPS e/ou no backend por cidades.json) -->
-        <input type="hidden" id="lat" name="lat" />
-        <input type="hidden" id="lng" name="lng" />
-        <!-- 👇 NOVO: UF escondido para o backend -->
-        <input type="hidden" id="estadoUF" name="estadoUF" />
-
-        <!-- ========== [ SEGURANÇA: SENHA ] ========== -->
-        <div class="grid" style="gap:12px; margin-top:16px">
-          <div class="field">
-            <label for="senha" class="label">
-              PIN de Acesso (4 a 6 dígitos numéricos) <span style="color:#ef4444">*</span>
-            </label>
-            <div class="input-group" style="display:flex; align-items:center; gap:8px">
-              <input
-                type="tel"
-                inputmode="numeric"
-                id="senha"
-                name="senha"
-                required
-                minlength="4"
-                maxlength="6"
-                pattern="[0-9]{4,6}"
-                autocomplete="new-password"
-                placeholder="4 a 6 dígitos numéricos"
-                class="input"
-                style="flex:1"
-              >
-              <button
-                type="button"
-                id="toggleSenha"
-                class="btn btn-light"
-                aria-label="Mostrar/ocultar senha"
-              >
-                👁
-              </button>
-            </div>
-            <small class="muted">
-              Crie um PIN de 4 a 6 dígitos numéricos para acessar seu painel.
-            </small>
-            <div id="senhaMeterWrap" style="margin-top:8px">
-              <div
-                id="senhaMeter"
-                style="height:8px; border-radius:6px; background:#e5e7eb; overflow:hidden"
-              >
-                <div id="senhaMeterFill" style="height:100%; width:0%"></div>
-              </div>
-              <div id="senhaHint" class="muted" style="margin-top:6px; font-size:12px"></div>
-            </div>
-          </div>
-
-          <div class="field">
-            <label for="confirmaSenha" class="label">
-              Confirmar senha <span style="color:#ef4444">*</span>
-            </label>
-            <div class="input-group" style="display:flex; align-items:center; gap:8px">
-              <input
-                type="password"
-                id="confirmaSenha"
-                name="confirmaSenha"
-                required
-                minlength="4"
-                maxlength="6"
-                autocomplete="new-password"
-                placeholder="Repita a senha"
-                class="input"
-                style="flex:1"
-              >
-              <button
-                type="button"
-                id="toggleConfirma"
-                class="btn btn-light"
-                aria-label="Mostrar/ocultar senha"
-              >
-                👁
-              </button>
-            </div>
-            <small id="matchMsg" class="muted" style="display:block; margin-top:6px"></small>
-          </div>
-        </div>
-
-        <!-- Ações -->
-        <div class="row" style="margin-top:12px; gap:8px; flex-wrap:wrap">
-          <button class="btn" type="submit">Cadastrar</button>
-          <a class="btn ghost" href="/clientes.html">Cancelar</a>
-        </div>
-
-        <!-- Erro -->
-        <p id="err" class="meta warn" style="display:none; margin-top:8px"></p>
-      </form>
-    </div>
-  </main>
-
-  <!-- ====== APP SCRIPT ====== -->
-  <script>
-    (function () {
-      const $ = (id) => document.getElementById(id);
-      const err = $("err");
-      const NO_STORE = { cache: "no-store" };
-      const ts = () => "ts=" + Date.now();
-
-      function escapeHtml(s) {
-        return String(s || "")
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;")
-          .replace(/'/g, "&#39;");
-      }
-
-      // 👇 NOVO: extrai a UF do campo cidade e preenche o hidden estadoUF
-      function updateEstadoUF() {
-        const cidadeInput = $("cidade");
-        const ufHidden = $("estadoUF");
-        if (!cidadeInput || !ufHidden) return;
-
-        const value = cidadeInput.value.trim();
-        let uf = "";
-
-        // tenta pegar "RJ" em formatos como:
-        // "Rio de Janeiro/RJ", "Rio de Janeiro - RJ", "Rio de Janeiro RJ"
-        const match = value.match(/([A-Z]{2})$/i);
-        if (match) {
-          uf = match[1].toUpperCase();
-        }
-
-        ufHidden.value = uf;
-      }
-
-      // --- Foto preview
-      const foto = $("foto"), fotoPrev = $("fotoPrev");
-      if (foto) {
-        foto.addEventListener("change", () => {
-          const f = foto.files?.[0];
-          if (!f) { fotoPrev.src = "/icons/icon-192.png"; return; }
-          const ok = /(jpeg|jpg|png|webp)$/i.test(f.type);
-          if (!ok) { alert("Escolha JPG/PNG/WEBP."); foto.value = ""; return; }
-          if (f.size > 3 * 1024 * 1024) { alert("Imagem até 3MB."); foto.value = ""; return; }
-          fotoPrev.src = URL.createObjectURL(f);
-        });
-      }
-
-      // --- Selo / Documento
-      const wantSelo = $("wantSelo");
-      const docWrap = $("docWrap");
-      const doc = $("doc");
-      const docPrev = $("docPrev");
-      wantSelo.addEventListener("change", () => {
-        const on = wantSelo.checked;
-        docWrap.style.display = on ? "" : "none";
-        doc.required = on;
-        doc.setAttribute("aria-required", on ? "true" : "false");
-      });
-      if (doc) {
-        doc.addEventListener("change", () => {
-          const f = doc.files?.[0];
-          if (!f) { docPrev.style.display = "none"; return; }
-          if (f.type && f.type.startsWith("image/")) {
-            docPrev.style.display = "";
-            docPrev.src = URL.createObjectURL(f);
-          } else {
-            docPrev.style.display = "none";
-          }
-        });
-      }
-
-      // --- Datalists (cidades / bairros / serviços)
-      async function fillCities() {
-        try {
-          const r = await fetch("/api/geo/cidades?" + ts(), NO_STORE);
-          if (!r.ok) return;
-          const arr = await r.json();
-          $("lista-cidades").innerHTML = (arr || [])
-            .map((c) => `<option value="${escapeHtml(c)}">`)
-            .join("");
-        } catch { }
-      }
-
-      async function refreshBairros() {
-        const cid = $("cidade").value.trim();
-        if (!cid) { $("lista-bairros").innerHTML = ""; return; }
-        try {
-          const r = await fetch(
-            "/api/geo/bairros?cidade=" + encodeURIComponent(cid) + "&" + ts(),
-            NO_STORE
-          );
-          if (!r.ok) return;
-          const arr = await r.json();
-          $("lista-bairros").innerHTML = (arr || [])
-            .map((b) => `<option value="${escapeHtml(b)}">`)
-            .join("");
-        } catch { }
-      }
-
-      async function suggestBairros(q) {
-        const cid = $("cidade").value.trim();
-        if (!cid || !q) return;
-        try {
-          const r = await fetch(
-            `/api/geo/bairros/suggest?cidade=${encodeURIComponent(cid)}&q=${encodeURIComponent(q)}&${ts()}`,
-            NO_STORE
-          );
-          if (!r.ok) return;
-          const arr = await r.json();
-          $("lista-bairros").innerHTML = (arr || [])
-            .map((b) => `<option value="${escapeHtml(b)}">`)
-            .join("");
-        } catch { }
-      }
-
-      async function suggestServicos(q) {
-        if (!q) return;
-        try {
-          const r = await fetch(
-            `/api/geo/servicos/suggest?q=${encodeURIComponent(q)}&${ts()}`,
-            NO_STORE
-          );
-          if (!r.ok) return;
-          const arr = await r.json();
-          $("lista-servicos").innerHTML = (arr || [])
-            .map((s) => `<option value="${escapeHtml(s)}">`)
-            .join("");
-        } catch { }
-      }
-
-      // 👇 Aqui eu só adicionei o updateEstadoUF nos eventos
-      $("cidade").addEventListener("change", () => {
-        refreshBairros();
-        updateEstadoUF();
-      });
-      $("cidade").addEventListener("input", updateEstadoUF);
-      $("bairro").addEventListener("input", (e) => suggestBairros(e.target.value.trim()));
-      $("servico").addEventListener("input", (e) => suggestServicos(e.target.value.trim()));
-      fillCities();
-
-      // --- GPS
-      const btnGPS = $("btnGPS");
-      const gpsStatus = $("gpsStatus");
-
-      function isSecureForGeo() {
-        return (
-          location.hostname === "localhost" ||
-          location.hostname === "127.0.0.1" ||
-          window.isSecureContext === true
-        );
-      }
-
-      async function resolveCityByGPS(lat, lng) {
-        try {
-          const r = await fetch(
-            `/api/geo/closest-city?lat=${lat}&lng=${lng}&${ts()}`,
-            NO_STORE
-          );
-          const js = await r.json();
-          if (js && js.ok && js.cidade) {
-            $("cidade").value = js.cidade;
-            updateEstadoUF();                 // 👈 NOVO: atualiza UF quando cidade vem do GPS
-            await refreshBairros();
-            gpsStatus.textContent = `Localização detectada: ${js.cidade}`;
-          } else {
-            gpsStatus.textContent = "Não foi possível identificar sua cidade.";
-          }
-        } catch {
-          gpsStatus.textContent = "Falha ao consultar a cidade.";
-        }
-      }
-
-      btnGPS.addEventListener("click", () => {
-        if (!isSecureForGeo()) {
-          gpsStatus.textContent = "Para usar GPS, acesse via HTTPS ou localhost.";
-          return;
-        }
-        if (!("geolocation" in navigator)) {
-          gpsStatus.textContent = "Seu navegador não suporta geolocalização.";
-          return;
-        }
-        gpsStatus.textContent = "Solicitando localização…";
-        navigator.geolocation.getCurrentPosition(
-          async (pos) => {
-            const lat = pos.coords.latitude, lng = pos.coords.longitude;
-            $("lat").value = String(lat);
-            $("lng").value = String(lng);
-            gpsStatus.textContent = "Localização obtida.";
-            if (!$("cidade").value.trim()) await resolveCityByGPS(lat, lng);
-          },
-          (_) => { gpsStatus.textContent = "Não foi possível obter a localização."; },
-          { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
-        );
-      });
-
-      // ---- Telefone/WhatsApp helpers (alinhados com backend)
-      function onlyDigits(s) { return String(s || "").replace(/\D/g, ""); }
-      function toBRWith55(d) {
-        if (!d) return "";
-        if (d.startsWith("55")) return d;
-        if (d.length === 10 || d.length === 11) return "55" + d;
-        return d;
-      }
-      function isValidBR(d) { return /^\d{12,13}$/.test(d); }
-      function formatPrettyBR(d) {
-        if (!/^\d{12,13}$/.test(d)) return "";
-        const cc = d.slice(0, 2), ddd = d.slice(2, 4), rest = d.slice(4);
-        return rest.length === 9
-          ? `+${cc} (${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`
-          : `+${cc} (${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
-      }
-      function bindPhoneInput(inputId, prevId) {
-        const input = $(inputId), prev = $(prevId);
-        function update() {
-          const dig = onlyDigits(input.value);
-          const br = toBRWith55(dig);
-          const nice = formatPrettyBR(br);
-          if (nice) {
-            prev.textContent = "Formato: " + nice;
-            prev.style.color = "#334155";
-          } else if (dig.length) {
-            prev.textContent = "Formato inválido — digite com DDD. Ex.: (21) 98765-4321";
-            prev.style.color = "#b91c1c";
-          } else {
-            prev.textContent = "";
-          }
-        }
-        input.addEventListener("input", update);
-        input.addEventListener("blur", () => {
-          const dig = onlyDigits(input.value);
-          const br = toBRWith55(dig);
-          if (isValidBR(br)) input.value = br; // normaliza no próprio campo
-          update();
-        });
-        update();
-      }
-      bindPhoneInput("whatsapp", "whatsPrev");
-      bindPhoneInput("telefone", "telPrev");
-
-      // --- Password meter + toggles + match
-      const senha = $("senha");
-      const confirma = $("confirmaSenha");
-      const meterFill = $("senhaMeterFill");
-      const hint = $("senhaHint");
-      const matchMsg = $("matchMsg");
-
-      function scorePassword(pw) {
-        let s = 0;
-        if (pw.length >= 8) s += 25;
-        if (/[a-zA-Z]/.test(pw)) s += 25;
-        if (/\d/.test(pw)) s += 25;
-        if (/[^a-zA-Z0-9]/.test(pw)) s += 25;
-        return Math.min(100, s);
-      }
-      function updateMeter() {
-  const v = senha.value || "";
-  const sc = scorePassword(v);
-  meterFill.style.width = sc + "%";
-  meterFill.style.background =
-    sc < 50 ? "#f87171" :
-    sc < 75 ? "#fbbf24" :
-              "#22c55e";
-  hint.textContent =
-    sc < 50 ? "Senha fraca" :
-    sc < 75 ? "Senha média" :
-              "Senha forte";
-}
-function updateMatch() {
-        if (!confirma.value) {
-          matchMsg.textContent = "";
-          return;
-        }
-        if (senha.value === confirma.value) {
-          matchMsg.textContent = "As senhas coincidem.";
-          matchMsg.style.color = "#16a34a";
-        } else {
-          matchMsg.textContent = "As senhas não coincidem.";
-          matchMsg.style.color = "#b91c1c";
-        }
-      }
-
-      senha.addEventListener("input", () => {
-        updateMeter();
-        updateMatch();
-      });
-
-      confirma.addEventListener("input", updateMatch);
-
-      updateMeter();
-
-      $("toggleSenha").addEventListener("click", () => {
-        senha.type = senha.type === "password" ? "text" : "password";
-      });
-
-      $("toggleConfirma").addEventListener("click", () => {
-        confirma.type = confirma.type === "password" ? "text" : "password";
-      });
-
-      // --------------------------------------------------------------------
-      //  ENVIO DO FORMULÁRIO VIA FETCH + POPUP + REDIRECIONAMENTO
-      // --------------------------------------------------------------------
-      const form = $("formCad");
-
-      form.addEventListener("submit", async (ev) => {
-        ev.preventDefault();
-
-        err.style.display = "none";
-        err.textContent = "";
-
-        // Copia profissão -> serviço se só profissão estiver preenchido
-        const servInput = $("servico");
-        const profInput = $("profissao");
-
-        if (servInput && profInput) {
-          const serv = servInput.value.trim();
-          const prof = profInput.value.trim();
-          if (!serv && prof) servInput.value = prof;
-        }
-
-        if (senha.value !== confirma.value) {
-          matchMsg.textContent = "As senhas não coincidem.";
-          matchMsg.style.color = "#b91c1c";
-          err.textContent = "Corrija os campos destacados e tente novamente.";
-          err.style.display = "";
-          confirma.focus();
-          return;
-        }
-
-        // Botão carregando
-        const submitBtn = form.querySelector('button[type="submit"]');
-        const originalText = submitBtn ? submitBtn.textContent : "";
-        if (submitBtn) {
-          submitBtn.disabled = true;
-          submitBtn.textContent = "Enviando...";
-        }
-
-        try {
-          const formData = new FormData(form);
-
-          const resp = await fetch(form.action, {
-            method: "POST",
-            body: formData,
-          });
-
-          let data = null;
-          try {
-            data = await resp.json();
-          } catch (_) {
-            data = null;
-          }
-
-          if (!resp.ok || !data || data.ok === false) {
-            const msg = (data && (data.error || data.msg)) || "Erro ao enviar cadastro.";
-            err.textContent = msg;
-            err.style.display = "";
-
-            alert("Não foi possível concluir o cadastro:\n\n" + msg);
-          } else {
-            // SUCESSO — popup + redirecionamento
-            const id = data.id;
-            const redirectPerfil = id
-              ? `/perfil.html?id=${encodeURIComponent(id)}`
-              : (data.redirect || "/painel.html");
-
-            alert("Cadastro realizado com sucesso!");
-
-            window.location.href = redirectPerfil;
-          }
-
-        } catch (e) {
-          console.error("Erro ao enviar cadastro:", e);
-          err.textContent = "Erro inesperado ao enviar seus dados. Tente novamente.";
-          err.style.display = "";
-          alert("Erro inesperado ao enviar seus dados. Tente novamente.");
-        } finally {
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = originalText || "Cadastrar";
-          }
-        }
-      });
-
-    })();
-  </script>
+  setTimeout(() => {
+    window.location.href = '/painel.html'
+  }, 1200)
+})
+</script>
 
 </body>
 </html>

@@ -1,70 +1,139 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Baixar o app • Autônoma</title>
-  <link rel="stylesheet" href="/css/app.css">
-  <meta name="theme-color" content="#0b49c8">
-  <style>
-    body{margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial; background:#f8fafc; color:#0f172a;}
-    .wrap{max-width:600px; margin:0 auto; padding:24px;}
-    .header{display:flex; align-items:center; gap:12px; margin-bottom:18px;}
-    .logo{height:36px}
-    h1{margin:0; font-size:22px}
-    .card{background:#fff; border:1px solid #e5e7eb; border-radius:16px; padding:20px; margin-bottom:16px;}
-    .step{margin:10px 0; font-size:16px;}
-    .meta{color:#64748b; font-size:14px;}
-    .btn{display:inline-block; padding:12px 16px; background:#0b49c8; color:#fff; text-decoration:none; border-radius:12px; font-weight:600;}
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Autônoma — Encontre profissionais perto de você</title>
+
+  <!-- CSS GLOBAL -->
+  <link rel="stylesheet" href="/public.css.global.css">
+
+  <!-- Fonte -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="wrap">
-    <div class="header">
-      <a href="/"><img src="/img/logo.png" alt="Autônoma.app" class="logo"></a>
-      <h1>Instale o app</h1>
-    </div>
 
+  <!-- HEADER -->
+  <header>
+    <div class="container header-content">
+      <a href="/" class="logo">Autônoma</a>
+      <a href="/Painel-login.html" class="btn btn-outline">Sou Profissional</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="container" style="margin-top:2rem;">
+    <h1>Encontre profissionais perto de você</h1>
+    <p style="color:#6b7280; margin-bottom:1.5rem;">
+      Serviços confiáveis, avaliados e verificados na sua cidade
+    </p>
+
+    <!-- BUSCA -->
     <div class="card">
-      <p>Adicione o Autônoma.app à tela inicial para usar como um aplicativo.</p>
-    </div>
+      <div class="grid grid-3">
+        <input id="cidade" placeholder="Digite sua cidade">
+        <input id="estado" placeholder="Estado (ex: RJ)">
+        <input id="servico" placeholder="Serviço (ex: Eletricista)">
+      </div>
 
-    <div class="card" id="steps">
-      <h2>Como instalar</h2>
-      <div id="dynamicSteps">
-        <p class="meta">Detectando seu navegador…</p>
+      <div style="margin-top:1rem;">
+        <button class="btn btn-primary" onclick="buscarProfissionais()">
+          Buscar profissionais
+        </button>
       </div>
     </div>
+  </section>
 
-    <div class="card">
-      <a href="/" class="btn">← Voltar ao início</a>
-    </div>
-  </div>
+  <!-- RESULTADOS -->
+  <section class="container" style="margin-top:2rem;">
+    <div id="resultado" class="grid grid-3"></div>
+  </section>
 
+  <!-- FOOTER -->
+  <footer>
+    © 2026 Autônoma.app — Todos os direitos reservados
+  </footer>
+
+  <!-- SCRIPT -->
   <script>
-    function renderSteps(html){
-      document.getElementById('dynamicSteps').innerHTML = html;
-    }
-    const ua = navigator.userAgent || navigator.vendor || window.opera;
+    let userLat = null
+    let userLng = null
 
-    if (/android/i.test(ua)) {
-      renderSteps(`
-        <div class="step">1. Abra o menu ⋮ do navegador (Chrome ou similar).</div>
-        <div class="step">2. Toque em <strong>"Adicionar à tela inicial"</strong>.</div>
-        <div class="step">3. Confirme e o app estará disponível no seu celular.</div>
-      `);
-    } else if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) {
-      renderSteps(`
-        <div class="step">1. Toque no botão <strong>Compartilhar</strong> (ícone quadrado com seta para cima).</div>
-        <div class="step">2. Role e escolha <strong>"Adicionar à Tela de Início"</strong>.</div>
-        <div class="step">3. Confirme e o app aparecerá no seu iPhone/iPad.</div>
-      `);
-    } else {
-      renderSteps(`
-        <div class="step">No seu navegador, procure a opção <strong>"Instalar app"</strong> ou <strong>"Adicionar à tela inicial"</strong>.</div>
-        <div class="step">Depois, abra o Autônoma como se fosse um aplicativo.</div>
-      `);
+    // GEOLOCALIZAÇÃO
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        userLat = pos.coords.latitude
+        userLng = pos.coords.longitude
+      })
+    }
+
+    async function buscarProfissionais() {
+      const cidade = document.getElementById('cidade').value
+      const estado = document.getElementById('estado').value
+      const servico = document.getElementById('servico').value
+
+      const params = new URLSearchParams({
+        cidade,
+        estado,
+        servico,
+        lat: userLat,
+        lng: userLng
+      })
+
+      const res = await fetch(`/api/profissionais?${params}`)
+      const data = await res.json()
+
+      const container = document.getElementById('resultado')
+      container.innerHTML = ''
+
+      if (!data.ok || data.profissionais.length === 0) {
+        container.innerHTML = '<p>Nenhum profissional encontrado.</p>'
+        return
+      }
+
+      data.profissionais.forEach(p => {
+        const card = document.createElement('div')
+        card.className = 'card'
+
+        card.innerHTML = `
+          <div class="card-header">
+            <img src="${p.foto || '/img/user.png'}">
+            <div>
+              <div class="card-title">${p.nome}</div>
+              <div class="card-subtitle">${p.servicos.join(', ')}</div>
+            </div>
+          </div>
+
+          <div style="margin-top:0.8rem;">
+            <span class="stars">⭐ ${p.avaliacao}</span>
+            <span style="margin-left:0.5rem; font-size:0.8rem; color:#6b7280;">
+              (${p.totalAvaliacoes} avaliações)
+            </span>
+          </div>
+
+          <div style="margin-top:0.5rem; font-size:0.85rem;">
+            📍 ${p.distanciaKm ? p.distanciaKm.toFixed(1) + ' km' : 'Distância indisponível'}
+          </div>
+
+          <div style="margin-top:0.8rem; display:flex; gap:0.5rem;">
+            <a class="btn btn-secondary" target="_blank"
+              href="https://wa.me/55${p.whatsapp}">
+              WhatsApp
+            </a>
+            <a class="btn btn-outline" href="/perfil.html?id=${p.id}">
+              Ver perfil
+            </a>
+          </div>
+
+          <div style="margin-top:0.5rem;">
+            ${p.plano !== 'FREE' ? '<span class="badge badge-premium">Destaque</span>' : ''}
+          </div>
+        `
+
+        container.appendChild(card)
+      })
     }
   </script>
+
 </body>
 </html>
