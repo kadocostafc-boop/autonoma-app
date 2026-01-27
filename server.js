@@ -484,12 +484,12 @@ function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
   return R * c
 }
 
-// ===================================================
-// BUSCAR PROFISSIONAIS (NORMALIZADO POR SERVIÇOS)
-// ===================================================
+// ===============================
+// BUSCAR PROFISSIONAIS
+// ===============================
 app.get('/api/profissionais', async (req, res) => {
   try {
-    const { cidade, estado, servico } = req.query
+    const { cidade, estado } = req.query
 
     if (!cidade || !estado) {
       return res.status(400).json({
@@ -501,53 +501,39 @@ app.get('/api/profissionais', async (req, res) => {
     const profissionais = await prisma.profissional.findMany({
       where: {
         ativo: true,
-        cidade: { equals: cidade, mode: 'insensitive' },
-        estado: { equals: estado, mode: 'insensitive' },
-
-        ...(servico && {
-          servicos: {
-            some: {
-              servico: {
-                slug: servico
-              }
-            }
-          }
-        })
+        cidade,
+        estado
       },
       include: {
-        servicos: {
-          include: {
-            servico: true
-          }
-        },
         avaliacoes: true
-      },
-      orderBy: {
-        createdAt: 'desc'
       }
     })
 
-    const resultado = profissionais.map(p => ({
-      id: p.id,
-      nome: p.nome,
-      foto: p.foto,
-      cidade: p.cidade,
-      estado: p.estado,
-      bairro: p.bairro,
-      plano: p.plano,
-      verificado: p.verificado,
-      servicos: p.servicos.map(ps => ps.servico.nome),
-      notaMedia: p.avaliacoes.length
-        ? (
-            p.avaliacoes.reduce((s, a) => s + a.nota, 0) /
-            p.avaliacoes.length
-          ).toFixed(1)
-        : null
-    }))
+    // Mapeia e calcula média de avaliações
+    const profissionaisFinal = profissionais.map(p => {
+      const totalAvaliacoes = p.avaliacoes.length
+      const media =
+        totalAvaliacoes > 0
+          ? p.avaliacoes.reduce((soma, a) => soma + a.nota, 0) / totalAvaliacoes
+          : 0
+
+      return {
+        id: p.id,
+        nome: p.nome,
+        foto: p.foto,
+        cidade: p.cidade,
+        estado: p.estado,
+        avaliacao: Number(media.toFixed(1))
+      }
+    })
+
+    // Ordena por avaliação (maior primeiro)
+    profissionaisFinal.sort((a, b) => b.avaliacao - a.avaliacao)
 
     res.json({
       ok: true,
-      profissionais: resultado
+      total: profissionaisFinal.length,
+      profissionais: profissionaisFinal
     })
   } catch (error) {
     console.error('ERRO BUSCA PROFISSIONAIS:', error)
@@ -557,8 +543,6 @@ app.get('/api/profissionais', async (req, res) => {
     })
   }
 })
-
-
     // =====================================
 // AUTOCOMPLETE DE SERVIÇOS
 // =====================================
@@ -624,13 +608,8 @@ function ordenarProfissionais(lista = []) {
     return (b.avaliacao || 0) - (a.avaliacao || 0)
   })
 }
-    res.json({
-      ok: true,
-      total: resultado.length,
-      profissionais: resultado
-    })
+   
 
- 
 // ======================================================================
 // PARTE 5/5 — PLANOS, ASAAS, ADMIN, VERIFICAÇÃO E START
 // ======================================================================
