@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <title>Cadastro de Profissional | Autônoma</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <link rel="stylesheet" href="/css/global.css" />
 
   <style>
@@ -16,160 +15,244 @@
       border-radius: 10px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.08);
     }
-    h1 { text-align: center; margin-bottom: 20px; }
-    label { display:block; margin-top:12px; font-weight:600; }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-top: 12px;
+      font-weight: 600;
+    }
+
     input, button {
-      width:100%; padding:10px; margin-top:6px;
-      border-radius:6px; border:1px solid #ddd;
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border-radius: 6px;
+      border: 1px solid #ddd;
     }
-    button { background:#111; color:#fff; margin-top:20px; cursor:pointer; }
+
+    button {
+      background: #111;
+      color: #fff;
+      margin-top: 20px;
+      cursor: pointer;
+    }
+
+    /* FOTO */
     .foto-preview img {
-      width:120px; height:120px; border-radius:50%;
-      object-fit:cover; display:none; margin:auto;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      display: none;
+      margin: 10px auto;
     }
-    .autocomplete-list {
-      border:1px solid #ddd; border-radius:6px;
-      max-height:160px; overflow-y:auto;
+
+    /* SERVIÇOS */
+    .servicos-box {
+      position: relative;
     }
-    .autocomplete-item {
-      padding:8px; cursor:pointer;
+
+    .sugestoes {
+      list-style: none;
+      position: absolute;
+      width: 100%;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      max-height: 160px;
+      overflow-y: auto;
+      z-index: 10;
+      margin: 0;
+      padding: 0;
     }
-    .autocomplete-item:hover { background:#f2f2f2; }
-    .tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+
+    .sugestoes li {
+      padding: 8px;
+      cursor: pointer;
+    }
+
+    .sugestoes li:hover {
+      background: #f2f2f2;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
     .tag {
-      background:#111; color:#fff;
-      padding:4px 8px; border-radius:12px;
-      font-size:13px; cursor:pointer;
+      background: #111;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 14px;
+      font-size: 13px;
+      cursor: pointer;
     }
   </style>
 </head>
 
 <body>
+  <div class="container">
+    <h1>Cadastro Profissional</h1>
 
-<div class="container">
-  <h1>Cadastro Profissional</h1>
+    <form id="formCadastro">
+      <label>Nome</label>
+      <input name="nome" required>
 
-  <form id="formCadastro">
+      <label>Email</label>
+      <input name="email" type="email" required>
 
-    <label>Nome</label>
-    <input name="nome" required>
+      <label>WhatsApp</label>
+      <input name="whatsapp" required>
 
-    <label>Email</label>
-    <input name="email" type="email" required>
+      <label>Senha</label>
+      <input name="senha" type="password" required>
 
-    <label>WhatsApp</label>
-    <input name="whatsapp" required>
+      <!-- SERVIÇOS -->
+      <label>Serviços</label>
+      <div class="servicos-box">
+        <input
+          type="text"
+          id="servicoInput"
+          placeholder="Digite o serviço e aperte Enter"
+          autocomplete="off"
+        />
+        <ul id="servicoSugestoes" class="sugestoes"></ul>
+        <div id="servicosSelecionados" class="tags"></div>
+      </div>
 
-    <label>Senha</label>
-    <input name="senha" type="password" required>
+      <label>Cidade</label>
+      <input name="cidade" id="cidade" required>
 
-    <label>Serviços</label>
-    <input id="servicoInput" placeholder="Digite e pressione Enter">
-    <div id="servicoList" class="autocomplete-list" style="display:none"></div>
-    <div class="tags" id="servicoTags"></div>
+      <label>Estado</label>
+      <input name="estado" id="estado" required>
 
-    <input type="hidden" name="servicos" id="servicosHidden">
+      <label>Bairro</label>
+      <input name="bairro" id="bairro">
 
-    <label>Cidade</label>
-    <input name="cidade" id="cidade" required>
+      <label>Foto</label>
+      <input type="file" name="foto" id="fotoInput" accept="image/*">
 
-    <label>Estado</label>
-    <input name="estado" id="estado" required>
+      <div class="foto-preview">
+        <img id="fotoPreview">
+      </div>
 
-    <label>Bairro</label>
-    <input name="bairro" id="bairro">
+      <button>Cadastrar</button>
+    </form>
+  </div>
 
-    <label>Foto</label>
-    <input type="file" name="foto" id="fotoInput" accept="image/*">
-    <div class="foto-preview">
-      <img id="fotoPreview">
-    </div>
+  <script>
+    /* ===============================
+       PREVIEW FOTO
+    =============================== */
+    fotoInput.onchange = () => {
+      if (fotoInput.files[0]) {
+        fotoPreview.src = URL.createObjectURL(fotoInput.files[0])
+        fotoPreview.style.display = 'block'
+      }
+    }
 
-    <button>Cadastrar</button>
-  </form>
-</div>
+    /* ===============================
+       GEOLOCALIZAÇÃO
+    =============================== */
+    navigator.geolocation?.getCurrentPosition(async pos => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`
+        )
+        const d = await res.json()
+        cidade.value = d.address.city || d.address.town || ''
+        estado.value = d.address.state || ''
+        bairro.value = d.address.suburb || d.address.neighbourhood || ''
+      } catch {}
+    })
 
-<script>
-/* ===============================
-   PREVIEW FOTO
-================================ */
-fotoInput.onchange = () => {
-  fotoPreview.src = URL.createObjectURL(fotoInput.files[0])
-  fotoPreview.style.display = 'block'
-}
+    /* ===============================
+       SERVIÇOS — AUTOCOMPLETE + ENTER
+    =============================== */
+    const servicoInput = document.getElementById('servicoInput')
+    const sugestoesEl = document.getElementById('servicoSugestoes')
+    const selecionadosEl = document.getElementById('servicosSelecionados')
 
-/* ===============================
-   GEOLOCALIZAÇÃO
-================================ */
-navigator.geolocation?.getCurrentPosition(async pos => {
-  const res = await fetch(
-    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`
-  )
-  const d = await res.json()
-  cidade.value = d.address.city || d.address.town || ''
-  estado.value = d.address.state || ''
-})
+    let servicosSelecionados = []
 
-/* ===============================
-   SERVIÇOS INTELIGENTES
-================================ */
-const sugestoes = [
-  'Eletricista','Encanador','Faxineira','Pedreiro',
-  'Pintor','Jardineiro','Montador de móveis',
-  'Diarista','Marceneiro','Técnico de informática'
-]
+    function renderServicos() {
+      selecionadosEl.innerHTML = ''
+      servicosSelecionados.forEach(servico => {
+        const tag = document.createElement('span')
+        tag.className = 'tag'
+        tag.textContent = servico
+        tag.onclick = () => {
+          servicosSelecionados = servicosSelecionados.filter(s => s !== servico)
+          renderServicos()
+        }
+        selecionadosEl.appendChild(tag)
+      })
+    }
 
-const selecionados = new Set()
+    servicoInput.addEventListener('input', async () => {
+      const q = servicoInput.value.trim()
+      sugestoesEl.innerHTML = ''
 
-servicoInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    e.preventDefault()
-    adicionarServico(servicoInput.value)
-  }
-})
+      if (q.length < 2) return
 
-function adicionarServico(nome) {
-  nome = nome.trim()
-  if (!nome || selecionados.has(nome)) return
-  selecionados.add(nome)
+      const res = await fetch(`/api/servicos/suggest?q=${encodeURIComponent(q)}`)
+      const data = await res.json()
 
-  const tag = document.createElement('div')
-  tag.className = 'tag'
-  tag.textContent = nome
-  tag.onclick = () => {
-    selecionados.delete(nome)
-    tag.remove()
-    atualizarHidden()
-  }
+      data.forEach(s => {
+        const li = document.createElement('li')
+        li.textContent = s.nome
+        li.onclick = () => {
+          if (!servicosSelecionados.includes(s.nome)) {
+            servicosSelecionados.push(s.nome)
+            renderServicos()
+          }
+          servicoInput.value = ''
+          sugestoesEl.innerHTML = ''
+        }
+        sugestoesEl.appendChild(li)
+      })
+    })
 
-  servicoTags.appendChild(tag)
-  servicoInput.value = ''
-  atualizarHidden()
-}
+    servicoInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        const valor = servicoInput.value.trim()
+        if (valor && !servicosSelecionados.includes(valor)) {
+          servicosSelecionados.push(valor)
+          renderServicos()
+        }
+        servicoInput.value = ''
+        sugestoesEl.innerHTML = ''
+      }
+    })
 
-function atualizarHidden() {
-  servicosHidden.value = JSON.stringify([...selecionados])
-}
+    /* ===============================
+       SUBMIT
+    =============================== */
+    formCadastro.onsubmit = async e => {
+      e.preventDefault()
 
-/* ===============================
-   SUBMIT
-================================ */
-formCadastro.onsubmit = async e => {
-  e.preventDefault()
-  atualizarHidden()
+      const formData = new FormData(formCadastro)
+      formData.append('servicos', JSON.stringify(servicosSelecionados))
 
-  const formData = new FormData(formCadastro)
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        body: formData
+      })
 
-  const res = await fetch('/api/auth/register', {
-    method:'POST', body:formData
-  })
-  const data = await res.json()
+      const data = await res.json()
+      if (!data.ok) return alert(data.message)
 
-  if (!data.ok) return alert(data.message)
-  alert('Cadastro realizado!')
-  location.href = '/painel.html'
-}
-</script>
-
+      alert('Cadastro realizado!')
+      location.href = '/painel.html'
+    }
+  </script>
 </body>
-</html>

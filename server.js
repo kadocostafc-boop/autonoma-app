@@ -189,6 +189,33 @@ function generateToken() {
   return crypto.randomBytes(32).toString('hex')
 }
 
+// ===============================
+// HELPERS DE SERVIÇO
+// ===============================
+function slugify(text) {
+  return text
+    .toString()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]+/g, '')
+}
+
+function parseServicos(input) {
+  if (!input) return []
+
+  // aceita:
+  // "eletricista, encanador"
+  // ["eletricista", "encanador"]
+  if (Array.isArray(input)) return input
+
+  return input
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean)
+}
 // -------------------------------
 // CADASTRO PROFISSIONAL (COM FOTO)
 // -------------------------------
@@ -202,7 +229,7 @@ app.post(
         email,
         whatsapp,
         senha,
-        servicos,
+        servicos,                      
         cidade,
         estado,
         bairro
@@ -236,7 +263,6 @@ app.post(
           email,
           whatsapp,
           senha: senhaHash,
-          servicos: servicos ? JSON.parse(servicos) : [],
           cidade,
           estado,
           bairro,
@@ -246,7 +272,34 @@ app.post(
           verificado: false
         }
       })
+// ===============================
+// VINCULAR SERVIÇOS (NORMALIZADO)
+// ===============================
+const listaServicos = parseServicos(servicos)
 
+for (const nomeServico of listaServicos) {
+  const slug = slugify(nomeServico)
+
+  let servicoDb = await prisma.servico.findUnique({
+    where: { slug }
+  })
+
+  if (!servicoDb) {
+    servicoDb = await prisma.servico.create({
+      data: {
+        nome: nomeServico,
+        slug
+      }
+    })
+  }
+
+  await prisma.profissionalServico.create({
+    data: {
+      profissionalId: profissional.id,
+      servicoId: servicoDb.id
+    }
+  })
+}
       req.session.userId = profissional.id
       req.session.role = 'PROFISSIONAL'
 
@@ -431,18 +484,12 @@ function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
   return R * c
 }
 
-// -------------------------------
-// BUSCAR PROFISSIONAIS (CARDS)
-// -------------------------------
+// ===================================================
+// BUSCAR PROFISSIONAIS (NORMALIZADO POR SERVIÇOS)
+// ===================================================
 app.get('/api/profissionais', async (req, res) => {
   try {
-    const {
-      cidade,
-      estado,
-      servico,
-      lat,
-      lng
-    } = req.query
+    const { cidade, estado, servico } = req.query
 
     if (!cidade || !estado) {
       return res.status(400).json({
@@ -456,48 +503,98 @@ app.get('/api/profissionais', async (req, res) => {
         ativo: true,
         cidade: { equals: cidade, mode: 'insensitive' },
         estado: { equals: estado, mode: 'insensitive' },
+
         ...(servico && {
-          servicos: { has: servico }
+          servicos: {
+            some: {
+              servico: {
+                slug: servico
+              }
+            }
+          }
         })
       },
       include: {
+        servicos: {
+          include: {
+            servico: true
+          }
+        },
         avaliacoes: true
+      },
+      orderBy: {
+        createdAt: 'desc'
       }
     })
 
-    const resultado = profissionais.map(p => {
-      let distanciaKm = null
+    const resultado = profissionais.map(p => ({
+      id: p.id,
+      nome: p.nome,
+      foto: p.foto,
+      cidade: p.cidade,
+      estado: p.estado,
+      bairro: p.bairro,
+      plano: p.plano,
+      verificado: p.verificado,
+      servicos: p.servicos.map(ps => ps.servico.nome),
+      notaMedia: p.avaliacoes.length
+        ? (
+            p.avaliacoes.reduce((s, a) => s + a.nota, 0) /
+            p.avaliacoes.length
+          ).toFixed(1)
+        : null
+    }))
 
-      if (lat && lng && p.latitude && p.longitude) {
-        distanciaKm = calcularDistanciaKm(
-          Number(lat),
-          Number(lng),
-          p.latitude,
-          p.longitude
-        )
-      }
+    res.json({
+      ok: true,
+      profissionais: resultado
+    })
+  } catch (error) {
+    console.error('ERRO BUSCA PROFISSIONAIS:', error)
+    res.status(500).json({
+      ok: false,
+      message: 'Erro ao buscar profissionais'
+    })
+  }
+})
 
-      const mediaAvaliacao =
-        p.avaliacoes.length > 0
-          ? p.avaliacoes.reduce((acc, a) => acc + a.nota, 0) / p.avaliacoes.length
-          : 0
 
-      return {
-        id: p.id,
-        nome: p.nome,
-        foto: p.foto,
-        servicos: p.servicos,
-        plano: p.plano,
-        whatsapp: p.whatsapp,
-        cidade: p.cidade,
-        estado: p.estado,
-        distanciaKm,
-        avaliacao: Number(mediaAvaliacao.toFixed(1)),
-        totalAvaliacoes: p.avaliacoes.length,
-        verificado: p.verificado
-      }
+    // =====================================
+// AUTOCOMPLETE DE SERVIÇOS
+// =====================================
+app.get('/api/servicos/suggest', async (req, res) => {
+  try {
+    const { q } = req.query
+               
+    if (!q || q.length < 2) {
+      return res.json([])
+    }
+
+    const servicos = await prisma.servico.findMany({
+      where: {
+        ativo: true,
+        nome: {
+          contains: q,
+          mode: 'insensitive'
+        }
+      },
+      orderBy: {
+        nome: 'asc'
+      },
+      take: 10
     })
 
+    res.json(
+      servicos.map(s => ({
+        id: s.id,
+        nome: s.nome
+      }))
+    )
+  } catch (error) {
+    console.error('SERVICOS SUGGEST ERROR:', error)
+    res.status(500).json([])
+  }
+})
     // -------------------------------
     // ORDENAÇÃO: PLANO > DISTÂNCIA > AVALIAÇÃO
     // -------------------------------
@@ -521,14 +618,8 @@ app.get('/api/profissionais', async (req, res) => {
       total: resultado.length,
       profissionais: resultado
     })
-  } catch (error) {
-    console.error('BUSCA PROFISSIONAIS ERROR:', error)
-    res.status(500).json({
-      ok: false,
-      message: 'Erro ao buscar profissionais'
-    })
-  }
-})
+
+ 
 // ======================================================================
 // PARTE 5/5 — PLANOS, ASAAS, ADMIN, VERIFICAÇÃO E START
 // ======================================================================

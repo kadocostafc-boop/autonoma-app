@@ -1,6 +1,6 @@
 // ======================================================================
-// AUTÔNOMA.APP — SCHEMA.PRISMA (FINAL)
-// Compatível com login, geo, planos, Asaas, admin e verificação
+// AUTÔNOMA.APP — SCHEMA.PRISMA (FINAL / PRODUÇÃO)
+// Login • Geo • Serviços • Planos • Asaas • Admin • Verificação
 // ======================================================================
 
 generator client {
@@ -35,7 +35,7 @@ enum StatusVerificacao {
 }
 
 // ======================================================================
-// PROFISSIONAL
+// MODELS
 // ======================================================================
 
 model Profissional {
@@ -45,10 +45,9 @@ model Profissional {
   whatsapp             String   @unique
   senha                String
 
-  bio                  String?
   foto                 String?
+  bio                  String?
 
-  servicos             String[]
   cidade               String
   estado               String
   bairro               String?
@@ -56,32 +55,61 @@ model Profissional {
   latitude             Float?
   longitude            Float?
 
-  plano                Plano            @default(FREE)
+  plano                Plano              @default(FREE)
   planoSolicitado      Plano?
-  statusAssinatura     StatusAssinatura  @default(PENDENTE)
+  statusAssinatura     StatusAssinatura   @default(PENDENTE)
+  taxaPlataforma       Float              @default(0)
+
   asaasCustomerId      String?
   asaasSubscriptionId  String?
-  taxaPlataforma       Float             @default(0)
-  modoRaioAtivo        Boolean           @default(false)
 
-  ativo                Boolean           @default(true)
-  verificado           Boolean           @default(false)
-  statusVerificacao    StatusVerificacao @default(PENDENTE)
+  modoRaioAtivo        Boolean            @default(false)
+  ativo                Boolean            @default(true)
+
+  verificado           Boolean            @default(false)
+  statusVerificacao    StatusVerificacao  @default(PENDENTE)
   documentoVerificacao String?
 
   resetToken           String?
   resetTokenExpires    DateTime?
 
-  avaliacoes           Avaliacao[]
-  denuncias            Denuncia[]
-
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+
+  // RELAÇÕES
+  servicos             ProfissionalServico[]
+  avaliacoes           Avaliacao[]
+  denuncias            Denuncia[]
+  pagamentos           Pagamento[]
 }
 
-// ======================================================================
-// AVALIAÇÃO
-// ======================================================================
+// ----------------------------------------------------------------------
+
+model Servico {
+  id        String   @id @default(uuid())
+  nome      String   @unique
+  slug      String   @unique
+  ativo     Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+
+  profissionais ProfissionalServico[]
+}
+
+// ----------------------------------------------------------------------
+
+model ProfissionalServico {
+  id              String @id @default(uuid())
+  profissionalId  String
+  servicoId       String
+
+  profissional    Profissional @relation(fields: [profissionalId], references: [id], onDelete: Cascade)
+  servico          Servico      @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+
+  @@unique([profissionalId, servicoId])
+}
+
+// ----------------------------------------------------------------------
 
 model Avaliacao {
   id              String   @id @default(uuid())
@@ -89,21 +117,42 @@ model Avaliacao {
   nota            Int
   comentario      String?
 
-  profissional    Profissional @relation(fields: [profissionalId], references: [id], onDelete: Cascade)
-
   createdAt       DateTime @default(now())
+
+  profissional    Profissional @relation(fields: [profissionalId], references: [id], onDelete: Cascade)
 }
 
-// ======================================================================
-// DENÚNCIA
-// ======================================================================
+// ----------------------------------------------------------------------
 
 model Denuncia {
   id              String   @id @default(uuid())
   profissionalId  String
   motivo          String
 
-  profissional    Profissional @relation(fields: [profissionalId], references: [id], onDelete: Cascade)
+  cidade          String?
+  estado          String?
 
   createdAt       DateTime @default(now())
+
+  profissional    Profissional @relation(fields: [profissionalId], references: [id], onDelete: Cascade)
+}
+
+// ----------------------------------------------------------------------
+// FINANCEIRO (PRONTO PARA ASAAS)
+// ----------------------------------------------------------------------
+
+model Pagamento {
+  id              String   @id @default(uuid())
+  profissionalId  String
+
+  valor           Float
+  taxaPlataforma  Float
+  plano           Plano
+
+  asaasPaymentId  String?
+  status          String
+
+  createdAt       DateTime @default(now())
+
+  profissional    Profissional @relation(fields: [profissionalId], references: [id], onDelete: Cascade)
 }
