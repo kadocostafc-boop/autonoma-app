@@ -595,24 +595,35 @@ app.get('/api/servicos/suggest', async (req, res) => {
     res.status(500).json([])
   }
 })
-    // -------------------------------
-    // ORDENAÇÃO: PLANO > DISTÂNCIA > AVALIAÇÃO
-    // -------------------------------
-    const pesoPlano = plano =>
-      plano === 'PREMIUM' ? 3 : plano === 'PRO' ? 2 : 1
+   // =====================================
+// ORDENAÇÃO SEGURA DE PROFISSIONAIS
+// Plano > Distância > Avaliação
+// =====================================
 
-    resultado.sort((a, b) => {
-      if (pesoPlano(b.plano) !== pesoPlano(a.plano)) {
-        return pesoPlano(b.plano) - pesoPlano(a.plano)
-      }
+function ordenarProfissionais(lista = []) {
+  if (!Array.isArray(lista)) return []
 
-      if (a.distanciaKm !== null && b.distanciaKm !== null) {
-        return a.distanciaKm - b.distanciaKm
-      }
+  const pesoPlano = (plano) => {
+    if (plano === 'PREMIUM') return 3
+    if (plano === 'PRO') return 2
+    return 1
+  }
 
-      return b.avaliacao - a.avaliacao
-    })
+  return lista.sort((a, b) => {
+    // 1️⃣ Plano
+    if (pesoPlano(b.plano) !== pesoPlano(a.plano)) {
+      return pesoPlano(b.plano) - pesoPlano(a.plano)
+    }
 
+    // 2️⃣ Distância (se existir)
+    if (a.distanciaKm != null && b.distanciaKm != null) {
+      return a.distanciaKm - b.distanciaKm
+    }
+
+    // 3️⃣ Avaliação
+    return (b.avaliacao || 0) - (a.avaliacao || 0)
+  })
+}
     res.json({
       ok: true,
       total: resultado.length,
@@ -644,6 +655,7 @@ async function criarClienteAsaas(profissional) {
   })
   return response.data.id
 }
+
 
 // -------------------------------
 // CRIAR ASSINATURA
