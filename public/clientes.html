@@ -5,15 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Encontre profissionais • Autônoma.app</title>
 
-  <!-- SEO/PWA -->
+  <!-- SEO / PWA -->
   <link rel="canonical" href="https://autonomaapp.com.br/clientes.html">
-  <meta name="description" content="Busque profissionais perto de você. Filtre por serviço. Veja distância, preço, atendimentos e avaliações.">
+  <meta name="description" content="Busque profissionais perto de você. Filtre por serviço. Veja distância, avaliações e contato direto.">
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#0b1f63">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+
+  <!-- OpenGraph -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Autônoma.app">
   <meta property="og:title" content="Encontre profissionais">
@@ -24,11 +26,11 @@
   <link rel="stylesheet" href="/css/global.css?v=2.0">
 
   <style>
-    /* HERO de busca */
+    /* HERO */
     .search-hero {
       background: linear-gradient(180deg, #2D81FF 0%, #1E6EF2 100%);
       color: #fff;
-      margin: 0 0 14px 0;
+      margin: 0 0 14px;
       padding: 20px 14px 16px;
       border-radius: 18px;
       box-shadow: 0 10px 24px rgba(0,0,0,.10);
@@ -36,567 +38,659 @@
     .search-hero h1 {
       margin: 0 0 10px;
       font-size: 26px;
-      line-height: 1.15;
       font-weight: 900;
-      letter-spacing: .2px;
-      text-shadow: 0 1px 0 #e8f0ff, 0 10px 24px rgba(0,0,0,.22);
+      line-height: 1.15;
     }
+
     .gps-row {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
       margin: 8px 0 12px;
     }
-    .gps-row .pill {
-      background: #ffffff20;
-      border: 1px solid #ffffff40;
-      color: #fff;
-      padding: 6px 10px;
-      border-radius: 12px;
+
+    .pill {
+      background:#ffffff20;
+      border:1px solid #ffffff40;
+      color:#fff;
+      padding:6px 10px;
+      border-radius:12px;
+      font-size:13px;
     }
-    .gps-row .muted { color: #e2ebff; }
 
     .filters {
-      display: grid;
-      gap: 10px;
-      grid-template-columns: 1fr;
-      background: #fff;
-      border: 1px solid #ffffff40;
-      border-radius: 14px;
-      padding: 12px;
+      display:grid;
+      gap:10px;
+      grid-template-columns:1fr;
+      background:#fff;
+      border-radius:14px;
+      padding:12px;
     }
-    @media(min-width:820px) {
-      .filters { grid-template-columns: 1.2fr 1fr 1fr .8fr auto; }
+
+    @media(min-width:820px){
+      .filters {
+        grid-template-columns: 1.2fr 1fr 1fr .8fr auto;
+      }
     }
+
     .filters label {
-      color: var(--text-primary);
-      font-weight: 700;
-      font-size: 13px;
+      font-weight:700;
+      font-size:13px;
     }
-
-    /* GRID */
-    .results-grid{ display:grid; gap:10px; grid-template-columns:1fr; }
-    @media(min-width:720px){ .results-grid{ grid-template-columns:1fr 1fr } }
-    @media(min-width:1060px){ .results-grid{ grid-template-columns:1fr 1fr 1fr } }
-
-    /* === CARD PADRÃO (usar em todas as páginas) === */
-    .pro-card{
-      background:#fff; border:1px solid var(--borda); border-radius:14px; padding:10px 12px;
-      display:flex; align-items:center; gap:10px; box-shadow: 0 4px 12px rgba(0,0,0,.05);
-      transition:transform .16s ease, box-shadow .16s ease; min-height:84px;
-    }
-    .pro-card:hover{ transform:translateY(-1px); box-shadow:0 8px 18px rgba(0,0,0,.08) }
-    .pro-avatar{ width:62px; height:62px; border-radius:999px; object-fit:cover; border:1px solid var(--borda); background:#f8fafc; flex:0 0 62px }
-    .pro-main{ flex:1 1 auto; min-width:0 }
-    .pro-name{ margin:0; font-size:15px; font-weight:900; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-    .pro-sub{ margin:2px 0 0; font-size:12.5px; color:var(--cinza); overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-    .meta-line{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px }
-    .pill{ font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--borda); background:#f8fafc }
-    .rating{ color:#f59e0b; }
-    .right{ display:flex; flex-direction:column; gap:6px; align-items:flex-end; min-width:98px }
-
-        /* Correção de Responsividade para Mobile */
-        @media(max-width: 500px) {
-          .pro-card { flex-wrap: wrap; } /* Permite que o conteúdo quebre para baixo */
-          .pro-main { flex: 1 1 100%; } /* Permite que o conteúdo principal ocupe 100% da largura */
-          .right { flex: 1 1 100%; align-items: stretch; min-width: auto; } /* Botão ocupa 100% da largura */
-          .right .btn { width: 100%; }
-        }
-
-    .loader{ display:none; font-size:14px }
-    .gps-ok{ color:#22c55e } .gps-warn{ color:#f59e0b }
-
-    .card{ background:#fff; border:1px solid var(--borda); border-radius:16px; padding:14px; }
-
-    footer { padding: 28px 12px; background:#0b1f63; margin-top:16px }
-    .foot-links { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
-    .foot-links a { color:#cde1ff; font-size:14px; text-decoration:none; }
-    .foot-links a:hover { text-decoration:underline; }
-
-    /* paginação */
-    .pager{ display:flex; gap:8px; align-items:center; justify-content:center; margin:10px 0 0 }
   </style>
 </head>
+
 <body>
-  <!-- HEADER -->
-  <header class="header" role="banner" aria-label="Cabeçalho">
-    <a class="nav-btn" href="/">Início</a>
-    <a class="nav-btn" href="/top10.html">Top 10</a>
-    <a class="nav-btn" href="/painel_login.html">Entrar</a>
-  </header>
 
-  <main class="wrap" role="main">
-    <!-- HERO -->
-    <section class="search-hero" aria-labelledby="hTitle">
-      <h1 id="hTitle">Encontre profissionais qualificados</h1>
+<!-- HEADER -->
+<header class="header">
+  <a class="nav-btn" href="/">Início</a>
+  <a class="nav-btn" href="/top10.html">Top 10</a>
+  <a class="nav-btn" href="/painel_login.html">Entrar</a>
+</header>
 
-      <div class="gps-row">
-        <label class="pill" style="gap:8px">
-          <input id="useGPS" type="checkbox">
-          Usar minha localização
-        </label>
-        <span id="gpsStatus" class="small muted">GPS desativado.</span>
-      </div>
+<main class="wrap">
 
-      <form id="formBusca" class="filters" role="search" aria-label="Filtros de busca" novalidate>
-        <div>
-          <label for="cidade">Cidade</label>
-          <input id="cidade" name="cidade" type="text" placeholder="Ex.: Rio de Janeiro/RJ" list="listaCidades" autocomplete="off">
-          <datalist id="listaCidades"></datalist>
-        </div>
-        <div>
-          <label for="bairro">Bairro</label>
-          <input id="bairro" name="bairro" type="text" placeholder="Ex.: Copacabana" list="listaBairros" autocomplete="off">
-          <datalist id="listaBairros"></datalist>
-        </div>
-        <div>
-          <label for="servico">Serviço</label>
-          <input id="servico" name="servico" type="text" placeholder="Ex.: Diarista" list="listaServicos" autocomplete="off">
-          <datalist id="listaServicos"></datalist>
-        </div>
-        <div>
-          <label for="minRating">Melhor avaliação (opcional)</label>
-          <select id="minRating" name="minRating">
-            <option value="">Qualquer</option>
-            <option value="3">3+ ⭐</option>
-            <option value="4">4+ ⭐</option>
-            <option value="4.5">4.5+ ⭐</option>
-          </select>
-        </div>
-        <div style="display:flex; gap:8px; align-items:flex-end">
-          <button class="btn" type="submit" id="btnBuscar">Buscar</button>
-          <button class="btn ghost" type="button" id="btnLimpar">Limpar</button>
-        </div>
-      </form>
+  <!-- HERO -->
+  <section class="search-hero">
+    <h1>Encontre profissionais qualificados</h1>
 
-      <div class="gps-row">
-        <span class="pill" id="tagCidade" style="display:none"></span>
-        <span class="pill" id="tagBairro" style="display:none"></span>
-        <span class="pill" id="tagServico" style="display:none"></span>
-        <span class="pill" id="tagRating" style="display:none"></span>
-        <span class="loader" id="loader">Carregando…</span>
-      </div>
-    </section>
-
-    <!-- RESULTADOS -->
-    <section id="results" class="results-grid" aria-live="polite"></section>
-
-    <!-- Paginação (apenas durante BUSCA: 15 por página) -->
-    <div id="paginacao" class="pager" style="display:none">
-      <button id="prev" class="btn ghost">« Anterior</button>
-      <span id="pageInfo" class="small muted">1/1</span>
-      <button id="next" class="btn ghost">Próxima »</button>
+    <div class="gps-row">
+      <label class="pill">
+        <input id="useGPS" type="checkbox">
+        Usar minha localização
+      </label>
+      <span id="gpsStatus" class="pill">GPS desativado</span>
     </div>
 
-    <!-- Info -->
-    <div id="info" class="small muted" style="text-align:center;margin-top:8px"></div>
+    <!-- FORM DE BUSCA -->
+    <form id="formBusca" class="filters" novalidate>
 
-    <!-- DESTAQUES (fallback quando não houver busca/resultado) -->
-    <section class="card" aria-labelledby="destaquesTitle" style="margin-top:12px">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <h2 id="destaquesTitle" style="margin:0;font-size:18px">Profissionais em destaque</h2>
-        <small class="muted" id="destCount"></small>
+      <div>
+        <label for="cidade">Cidade</label>
+        <input id="cidade" name="cidade" type="text" placeholder="Ex: Rio de Janeiro">
+        <datalist id="listaCidades"></datalist>
       </div>
-      <div id="destaques" class="results-grid" aria-live="polite"></div>
-    </section>
-  </main>
 
-  <footer>
-    <nav class="foot-links" aria-label="Links do rodapé">
-      <a href="/termos.html">Termos</a>
-      <a href="/privacidade.html">Privacidade</a>
-      <a href="/top10.html">Top 10</a>
-      <a href="/planos.html">Planos</a>
-      <a href="/politica-de-seguranca.html">Segurança</a>
-      <a href="/favoritos.html">Favoritos</a>
-    </nav>
-  </footer>
+      <div>
+        <label for="bairro">Bairro</label>
+        <input id="bairro" name="bairro" type="text" placeholder="Ex: Copacabana">
+        <datalist id="listaBairros"></datalist>
+      </div>
 
+      <div>
+        <label for="servico">Serviço</label>
+        <input id="servico" name="servico" type="text" placeholder="Ex: Diarista">
+        <datalist id="listaServicos"></datalist>
+      </div>
+
+      <div>
+        <label for="minRating">Avaliação mínima</label>
+        <select id="minRating" name="minRating">
+          <option value="">Qualquer</option>
+          <option value="3">3+ ⭐</option>
+          <option value="4">4+ ⭐</option>
+          <option value="4.5">4.5+ ⭐</option>
+        </select>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:flex-end">
+        <button class="btn" type="submit">Buscar</button>
+        <button class="btn ghost" type="button" id="btnLimpar">Limpar</button>
+      </div>
+
+    </form>
+
+  </section>
   <script>
-  (function(){
-    // ===== Utils =====
-    const $ = (id)=> document.getElementById(id);
-    const esc = (s)=> String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-    const norm = (s)=> String(s||"").normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase();
-    const estrelas = (n)=>{ const r=Math.round((Number(n)||0)*2)/2; const f=Math.floor(r),h=(r%1!==0); return "★".repeat(f)+(h?"½":"")+"☆".repeat(5-f-(h?1:0)); };
-    const kmFmt = (d)=> (d==null ? "—" : (d<1 ? `${(d*1000).toFixed(0)} m` : `${Number(d).toFixed(1)} km`));
-    const NO_STORE = { cache:'no-store' };
-    const ts = () => `ts=${Date.now()}`;
+/* =========================================================
+   AUTÔNOMA.APP — CLIENTES
+   PARTE 2/4
+   Estado global + Autocomplete + GPS + Busca base
+========================================================= */
 
-    // Haversine
-    function hav(lat1, lon1, lat2, lon2){
-      if([lat1,lon1,lat2,lon2].some(v=>!Number.isFinite(v))) return null;
-      const toRad = d=> d*Math.PI/180, R=6371;
-      const dLat = toRad(lat2-lat1), dLon=toRad(lon2-lon1);
-      const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
-      return 2*R*Math.asin(Math.sqrt(a));
+(function () {
+  // ========================
+  // HELPERS
+  // ========================
+  const $ = (id) => document.getElementById(id)
+  const esc = (s) => String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+
+  const normalize = (s) =>
+    String(s || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+
+  // ========================
+  // ESTADO GLOBAL
+  // ========================
+  let userLat = null
+  let userLng = null
+  let useGPS = false
+
+  let currentPage = 1
+  let totalPages = 1
+  let searching = false
+
+  let lastQuery = {
+    cidade: '',
+    bairro: '',
+    servico: '',
+    minRating: ''
+  }
+
+  const PAGE_SIZE_SEARCH = 15
+  const PAGE_SIZE_INITIAL = 10
+
+  // ========================
+  // AUTOCOMPLETE — CIDADES
+  // ========================
+  async function carregarCidades() {
+    try {
+      const res = await fetch('/api/geo/cidades', { cache: 'no-store' })
+      if (!res.ok) return
+      const cidades = await res.json()
+      $('listaCidades').innerHTML = cidades
+        .map(c => `<option value="${esc(c)}">`)
+        .join('')
+    } catch (e) {
+      console.warn('Erro cidades', e)
+    }
+  }
+
+  // ========================
+  // AUTOCOMPLETE — BAIRROS
+  // ========================
+  async function carregarBairros(cidade) {
+    if (!cidade) return
+    try {
+      const res = await fetch(
+        `/api/geo/bairros?cidade=${encodeURIComponent(cidade)}`,
+        { cache: 'no-store' }
+      )
+      if (!res.ok) return
+      const bairros = await res.json()
+      $('listaBairros').innerHTML = bairros
+        .map(b => `<option value="${esc(b)}">`)
+        .join('')
+    } catch (e) {
+      console.warn('Erro bairros', e)
+    }
+  }
+
+  // ========================
+  // AUTOCOMPLETE — SERVIÇOS
+  // ========================
+  async function sugerirServicos(q) {
+    if (!q || q.length < 2) return []
+    try {
+      const res = await fetch(
+        `/api/servicos/suggest?q=${encodeURIComponent(q)}`,
+        { cache: 'no-store' }
+      )
+      if (!res.ok) return []
+      return await res.json()
+    } catch (e) {
+      return []
+    }
+  }
+
+  $('servico').addEventListener('input', async (e) => {
+    const q = e.target.value.trim()
+    const lista = await sugerirServicos(q)
+    $('listaServicos').innerHTML = lista
+      .map(s => `<option value="${esc(s.nome || s)}">`)
+      .join('')
+  })
+
+  // ========================
+  // EVENTOS DE INPUT
+  // ========================
+  $('cidade').addEventListener('change', async (e) => {
+    $('bairro').value = ''
+    await carregarBairros(e.target.value)
+  })
+
+  // ========================
+  // GPS
+  // ========================
+  function gpsPermitido() {
+    return (
+      location.hostname === 'localhost' ||
+      location.hostname === '127.0.0.1' ||
+      window.isSecureContext === true
+    )
+  }
+
+  async function detectarCidadePorGPS(lat, lng) {
+    try {
+      const res = await fetch(
+        `/api/geo/closest-city?lat=${lat}&lng=${lng}`,
+        { cache: 'no-store' }
+      )
+      const json = await res.json()
+      if (json?.cidade) {
+        $('cidade').value = json.cidade
+        await carregarBairros(json.cidade)
+      }
+    } catch {}
+  }
+
+  $('useGPS').addEventListener('change', async (e) => {
+    useGPS = e.target.checked
+
+    if (!useGPS) {
+      userLat = null
+      userLng = null
+      $('gpsStatus').textContent = 'GPS desativado.'
+      return
     }
 
-    // Estado
-    let userLat=null, userLng=null, useGPS=false;
-    let lastQuery={ cidade:"", bairro:"", servico:"", minRating:"" };
-    let page=1, pages=1, isSearching=false;
-    const INITIAL_MAX = 10;
-    const SEARCH_PAGE_SIZE = 15;
+    if (!gpsPermitido()) {
+      $('gpsStatus').textContent =
+        'Para usar GPS, acesse via HTTPS.'
+      $('useGPS').checked = false
+      useGPS = false
+      return
+    }
 
-    // Autocomplete
-    async function fillCidades(){
-      try{
-        const r=await fetch(`/api/geo/cidades?${ts()}`, NO_STORE);
-        if(!r.ok) return;
-        const js=await r.json();
-        $('listaCidades').innerHTML=(js||[]).map(c=>`<option value="${esc(c)}">`).join('');
-      }catch{}
-    }
-    async function loadBairrosDaCidade(cidadeVal){
-      if(!cidadeVal) { $('listaBairros').innerHTML=''; return; }
-      try{
-        const r = await fetch(`/api/geo/bairros?cidade=${encodeURIComponent(cidadeVal)}&${ts()}`, NO_STORE);
-        if(!r.ok) return;
-        const js = await r.json();
-        $('listaBairros').innerHTML = (js||[]).map(b=>`<option value="${esc(b)}">`).join('');
-      }catch{}
-    }
-    async function suggestBairros(q){
-      const cid=$('cidade').value.trim();
-      if(!cid||!q) return [];
-      const r=await fetch(`/api/geo/bairros/suggest?cidade=${encodeURIComponent(cid)}&q=${encodeURIComponent(q)}&${ts()}`, NO_STORE);
-      return r.ok?(await r.json()):[];
-    }
-    async function suggestServicos(q){
-      if(!q) return [];
-      const r=await fetch(`/api/geo/servicos/suggest?q=${encodeURIComponent(q)}&${ts()}`, NO_STORE);
-      return r.ok?(await r.json()):[];
-    }
-    $('cidade').addEventListener('change', async e=>{
-      const v=e.target.value.trim();
-      $('bairro').value=''; await loadBairrosDaCidade(v);
-    });
-    $('bairro').addEventListener('input', async e=>{
-      const v=e.target.value.trim();
-      const list=await suggestBairros(v);
-      $('listaBairros').innerHTML=list.map(b=>`<option value="${esc(b)}">`).join('');
-    });
-    $('servico').addEventListener('input', async e=>{
-      const v=e.target.value.trim();
-      const list=await suggestServicos(v);
-      $('listaServicos').innerHTML=list.map(s=>`<option value="${esc(s)}">`).join('');
-    });
-
-    // GPS
-    function isSecureForGeo(){
-      return location.hostname==='localhost' || location.hostname==='127.0.0.1' || (window.isSecureContext===true);
-    }
-    async function resolveCityByGPS(lat,lng){
-      try{
-        const r=await fetch(`/api/geo/closest-city?lat=${lat}&lng=${lng}&${ts()}`, NO_STORE);
-        const js=await r.json();
-        if(js&&js.ok&&js.cidade){
-          $('cidade').value=js.cidade;
-          showTag('tagCidade','Cidade: '+js.cidade);
-          await loadBairrosDaCidade(js.cidade);
-          if(!lastQuery.cidade){ lastQuery.cidade = js.cidade; }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        userLat = pos.coords.latitude
+        userLng = pos.coords.longitude
+        $('gpsStatus').textContent = 'Localização ativada.'
+        if (!$('cidade').value) {
+          await detectarCidadePorGPS(userLat, userLng)
         }
-      }catch{}
-    }
-    async function askGPS(){
-      if(!isSecureForGeo()){
-        $('gpsStatus').innerHTML='<span class="gps-warn">Para usar GPS, acesse via HTTPS ou localhost.</span>';
-        useGPS=false; $('useGPS').checked=false; return;
-      }
-      if(!('geolocation' in navigator)){
-        $('gpsStatus').textContent='Seu navegador não suporta geolocalização.';
-        useGPS=false; $('useGPS').checked=false; return;
-      }
-      $('gpsStatus').textContent='Solicitando localização…';
-      navigator.geolocation.getCurrentPosition(async pos=>{
-        userLat=pos.coords.latitude; userLng=pos.coords.longitude;
-        $('gpsStatus').innerHTML='<span class="gps-ok">Localização ativada.</span>';
-        if(!$('cidade').value.trim()) await resolveCityByGPS(userLat,userLng);
-        if(useGPS && isSearching) submitBusca(); // se já estiver buscando, refaz com coords
-      }, _=>{
-        $('gpsStatus').innerHTML='<span class="gps-warn">Não foi possível obter a localização.</span>';
-        useGPS=false; $('useGPS').checked=false;
-      }, {enableHighAccuracy:true,timeout:12000,maximumAge:30000});
-    }
-    $('useGPS').addEventListener('change', e=>{
-      useGPS=!!e.target.checked;
-      if(useGPS) askGPS();
-      else { $('gpsStatus').textContent='GPS desativado.'; userLat=null; userLng=null; }
-    });
+      },
+      () => {
+        $('gpsStatus').textContent =
+          'Não foi possível obter localização.'
+        $('useGPS').checked = false
+        useGPS = false
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  })
 
-    // UI helpers
-    function showTag(id, txt){ const el=$(id); el.textContent=txt; el.style.display='inline-flex'; }
-    function hideTags(){ ['tagCidade','tagBairro','tagServico','tagRating'].forEach(id=>$(id).style.display='none'); }
-    function resetResults(){
-      $('results').innerHTML=''; $('info').textContent='';
-      $('paginacao').style.display='none'; $('pageInfo').textContent='1/1';
-      page=1; pages=1;
+  // ========================
+  // PREPARAR BUSCA
+  // ========================
+  function prepararBusca() {
+    lastQuery = {
+      cidade: $('cidade').value.trim(),
+      bairro: $('bairro').value.trim(),
+      servico: $('servico').value.trim(),
+      minRating: $('minRating').value
     }
 
-    // Card padrão
-    function cardHTML(p){
-      const foto = p.foto || '/icons/icon-192.png';
-      const nome = p.nome || 'Profissional';
-      const serv = p.servico || p.profissao || '';
-      const local = [p.bairro||'', p.cidade||''].filter(Boolean).join(' • ');
-      const rating = Number(p.rating||0);
-      const avals = Array.isArray(p.avaliacoes) ? p.avaliacoes.length : (Number(p.avaliacoes)||0);
-      const atend = Number(p.atendimentos||0);
-      const id = encodeURIComponent(p.id);
-      const price = (p.precoBase!=null && p.precoBase!=="") ? `R$ ${String(p.precoBase)}` : null;
-      let dist = p.distanceKm;
-      if((dist==null || !isFinite(dist)) && isFinite(p.lat) && isFinite(p.lng) && isFinite(userLat) && isFinite(userLng)){
-        try{ dist = hav(userLat,userLng,p.lat,p.lng); }catch{}
-      }
-      return `
-        <article class="pro-card">
-          <img class="pro-avatar" src="${esc(foto)}" alt="Foto de ${esc(nome)}" loading="lazy" onerror="this.src='/icons/icon-192.png'">
-          <div class="pro-main">
-            <h3 class="pro-name" title="${esc(nome)}">${esc(nome)}</h3>
-            <div class="pro-sub">${esc(serv)} • <span>${esc(local||'—')}</span></div>
-            <div class="meta-line">
-              <span class="pill"><span class="rating">⭐ ${estrelas(rating)}</span> <span>(${avals})</span></span>
-              <span class="pill">Distância: ${kmFmt(dist)}</span>
-              <span class="pill">Atendimentos: ${Number.isFinite(atend)?atend:0}</span>
-              ${price ? `<span class="pill">Valor: ${esc(price)}</span>`:''}
-            </div>
+    currentPage = 1
+    searching = !!lastQuery.servico
+  }
+
+  // ========================
+  // INICIALIZAÇÃO
+  // ========================
+  async function init() {
+    await carregarCidades()
+  }
+
+  init()
+
+  // PARTE 3 CONTINUA…
+})();
+</script>
+/* =========================================================
+   AUTÔNOMA.APP — CLIENTES
+   PARTE 3/4
+   Renderização de cards + busca + paginação
+========================================================= */
+
+(function () {
+  // ========================
+  // UTILIDADES
+  // ========================
+  function estrelas(nota) {
+    const r = Math.round((Number(nota) || 0) * 2) / 2
+    const full = Math.floor(r)
+    const half = r % 1 !== 0
+    return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(5 - full - (half ? 1 : 0))
+  }
+
+  function kmFormat(km) {
+    if (km == null || !isFinite(km)) return '—'
+    if (km < 1) return `${Math.round(km * 1000)} m`
+    return `${km.toFixed(1)} km`
+  }
+
+  function haversine(lat1, lon1, lat2, lon2) {
+    if (![lat1, lon1, lat2, lon2].every(v => isFinite(v))) return null
+    const R = 6371
+    const dLat = (lat2 - lat1) * Math.PI / 180
+    const dLon = (lon2 - lon1) * Math.PI / 180
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1 * Math.PI / 180) *
+      Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) ** 2
+    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  }
+
+  // ========================
+  // CARD HTML
+  // ========================
+  function renderCard(p) {
+    const foto = p.foto || '/icons/icon-192.png'
+    const nome = p.nome || 'Profissional'
+    const local = [p.bairro, p.cidade].filter(Boolean).join(' • ')
+    const rating = Number(p.avaliacao || p.rating || 0)
+    const totalAval = Number(p.totalAvaliacoes || 0)
+
+    let distancia = p.distanciaKm
+    if (distancia == null && window.userLat && window.userLng && p.latitude && p.longitude) {
+      distancia = haversine(userLat, userLng, p.latitude, p.longitude)
+    }
+
+    return `
+      <article class="pro-card">
+        <img class="pro-avatar"
+             src="${foto}"
+             alt="Foto de ${nome}"
+             onerror="this.src='/icons/icon-192.png'">
+        <div class="pro-main">
+          <h3 class="pro-name">${nome}</h3>
+          <div class="pro-sub">${p.servicos?.join(', ') || ''} • ${local || '—'}</div>
+          <div class="meta-line">
+            <span class="pill rating">⭐ ${estrelas(rating)} (${totalAval})</span>
+            <span class="pill">Distância: ${kmFormat(distancia)}</span>
+            ${p.verificado ? `<span class="pill">✔ Verificado</span>` : ''}
           </div>
-          <div class="right">
-            <a class="btn" href="/profissional/${id}">Ver Perfil</a>
-          </div>
-        </article>
-      `;
+        </div>
+        <div class="right">
+          <a class="btn" href="/profissional/${p.id}">Ver Perfil</a>
+          <a class="btn ghost" target="_blank"
+             href="https://wa.me/55${p.whatsapp?.replace(/\D/g, '')}">
+             WhatsApp
+          </a>
+        </div>
+      </article>
+    `
+  }
+
+  // ========================
+  // ORDENAÇÃO
+  // ========================
+  function pesoPlano(plano) {
+    if (plano === 'PREMIUM') return 3
+    if (plano === 'PRO') return 2
+    return 1
+  }
+
+  function ordenarResultados(lista) {
+    return lista.sort((a, b) => {
+      const p1 = pesoPlano(a.plano)
+      const p2 = pesoPlano(b.plano)
+      if (p1 !== p2) return p2 - p1
+
+      const d1 = a.distanciaKm ?? Infinity
+      const d2 = b.distanciaKm ?? Infinity
+      if (d1 !== d2) return d1 - d2
+
+      return (b.avaliacao || 0) - (a.avaliacao || 0)
+    })
+  }
+
+  // ========================
+  // BUSCAR NO BACKEND
+  // ========================
+  async function buscarProfissionais() {
+    const params = new URLSearchParams()
+
+    if (lastQuery.cidade) params.set('cidade', lastQuery.cidade)
+    if (lastQuery.bairro) params.set('bairro', lastQuery.bairro)
+    if (lastQuery.servico) params.set('servico', lastQuery.servico)
+    if (lastQuery.minRating) params.set('minRating', lastQuery.minRating)
+    if (useGPS && userLat && userLng) {
+      params.set('lat', userLat)
+      params.set('lng', userLng)
     }
 
-    // Regras: Premium > Pro > Free; depois distância; depois rating
-    function planRank(p){
-      const v = String(p.plano||'').toLowerCase();
-      if (v==='premium') return 3;
-      if (v==='pro') return 2;
-      return 1; // free ou vazio
+    params.set('page', currentPage)
+    params.set('limit', searching ? PAGE_SIZE_SEARCH : PAGE_SIZE_INITIAL)
+
+    $('loader').style.display = 'inline'
+    const res = await fetch('/api/profissionais?' + params.toString(), { cache: 'no-store' })
+    const json = await res.json()
+    $('loader').style.display = 'none'
+
+    return json
+  }
+
+  // ========================
+  // RENDER RESULTADOS
+  // ========================
+  async function renderResultados() {
+    const data = await buscarProfissionais()
+    let lista = data.profissionais || []
+
+    lista = ordenarResultados(lista)
+
+    $('results').innerHTML = lista.length
+      ? lista.map(renderCard).join('')
+      : `<div class="card"><p class="muted">Nenhum profissional encontrado.</p></div>`
+
+    totalPages = data.totalPages || 1
+    $('pageInfo').textContent = `${currentPage}/${totalPages}`
+    $('paginacao').style.display = totalPages > 1 ? '' : 'none'
+  }
+
+  // ========================
+  // EVENTOS
+  // ========================
+  $('formBusca').addEventListener('submit', (e) => {
+    e.preventDefault()
+    prepararBusca()
+    renderResultados()
+  })
+
+  $('prev').addEventListener('click', () => {
+    if (currentPage > 1) {
+      currentPage--
+      renderResultados()
     }
-    function distanceValue(p){
-      let d = p.distanceKm;
-      if((d==null || !isFinite(d)) && isFinite(p.lat) && isFinite(p.lng) && isFinite(userLat) && isFinite(userLng)){
-        d = hav(userLat,userLng,p.lat,p.lng);
-      }
-      return Number.isFinite(d) ? d : 9e9;
+  })
+
+  $('next').addEventListener('click', () => {
+    if (currentPage < totalPages) {
+      currentPage++
+      renderResultados()
     }
-    function sortByPlanDistance(a,b){
-      const pa = planRank(a), pb = planRank(b);
-      if (pa !== pb) return pb - pa;               // Premium > Pro > Free
-      const da = distanceValue(a), db = distanceValue(b);
-      if (da !== db) return da - db;               // menor distância primeiro
-      const ra = Number(a.rating||0), rb = Number(b.rating||0);
-      if (ra !== rb) return rb - ra;               // maior rating
-      return (Number(b.atendimentos||0) - Number(a.atendimentos||0));
-    }
+  })
 
-    // Busca do backend
-    async function fetchAll(params){
-      const r = await fetch('/api/profissionais?'+params.toString(), NO_STORE);
-      return r.json();
-    }
+  // PARTE 4 CONTINUA…
+})();
+</script>
+/* =========================================================
+   AUTÔNOMA.APP — CLIENTES
+   PARTE 4/4
+   Destaques + Inicialização + Service Worker
+========================================================= */
 
-    // Lista inicial (sem busca): mostrar até 10 (qualquer serviço), priorizando planos e proximidade
-    async function loadInitial(){
-      resetResults();
-      try{
-        const params = new URLSearchParams();
-        params.set('limit','60');
-        if($('cidade').value.trim()) params.set('cidade', $('cidade').value.trim());
-        if(useGPS && userLat!=null && userLng!=null){ params.set('userLat', userLat); params.set('userLng', userLng); }
-        params.set('ts', Date.now());
+(function () {
 
-        $('loader').style.display='';
-        const js = await fetchAll(params);
-        const items = js.items || js.itens || [];
-        items.sort(sortByPlanDistance);
-        const top = items.slice(0, INITIAL_MAX);
-        $('results').innerHTML = top.length
-          ? top.map(cardHTML).join('')
-          : `<div class="card"><p class="muted">Nenhum profissional disponível.</p></div>`;
-        $('info').textContent = top.length ? `Exibindo ${top.length} de ${items.length} encontrados` : '';
-      }catch{
-        $('results').innerHTML = `<div class="card"><p class="muted">Falha ao carregar.</p></div>`;
-      }finally{
-        $('loader').style.display='none';
-      }
-    }
+  // ========================
+  // VARIÁVEIS GLOBAIS
+  // ========================
+  window.userLat = null
+  window.userLng = null
+  window.useGPS = false
 
-    // BUSCA: apenas serviço correspondente, 15 por página
-    let SEARCH_POOL = []; // resultados completos desta busca
-    function applyFiltersForSearch(items){
-      const svc = norm(lastQuery.servico);
-      const city = lastQuery.cidade.trim();
-      const bairro = norm(lastQuery.bairro);
-      const minR = lastQuery.minRating ? Number(lastQuery.minRating) : 0;
+  window.currentPage = 1
+  window.totalPages = 1
+  window.searching = false
 
-      return (items||[]).filter(p=>{
-        // Serviço OBRIGATÓRIO na busca
-        const a = norm(p.servico || p.profissao || '');
-        if (!a.includes(svc)) return false;
+  window.PAGE_SIZE_INITIAL = 10
+  window.PAGE_SIZE_SEARCH = 15
 
-        // Cidade se preenchida (igual exata normalizada)
-        if (city && norm(p.cidade) !== norm(city)) return false;
+  window.lastQuery = {
+    cidade: '',
+    bairro: '',
+    servico: '',
+    minRating: ''
+  }
 
-        // Bairro se preenchido (contém)
-        if (bairro && !norm(p.bairro||'').includes(bairro)) return false;
-
-        // Rating mínimo
-        if (minR && Number(p.rating||0) < minR) return false;
-
-        return true;
-      });
-    }
-    function renderSearchPage(){
-      // ordena e pagina
-      SEARCH_POOL.sort(sortByPlanDistance);
-      pages = Math.max(1, Math.ceil(SEARCH_POOL.length / SEARCH_PAGE_SIZE));
-      if (page > pages) page = pages;
-
-      const start = (page-1)*SEARCH_PAGE_SIZE;
-      const slice = SEARCH_POOL.slice(start, start + SEARCH_PAGE_SIZE);
-
-      $('results').innerHTML = slice.length
-        ? slice.map(cardHTML).join('')
-        : `<div class="card"><p class="muted">Nenhum profissional encontrado para o serviço buscado.</p></div>`;
-
-      $('paginacao').style.display = (SEARCH_POOL.length > SEARCH_PAGE_SIZE) ? '' : 'none';
-      $('pageInfo').textContent = `${page}/${pages}`;
-      $('info').textContent = slice.length ? `Exibindo ${slice.length} de ${SEARCH_POOL.length} resultados` : '';
-    }
-    async function performSearch(){
-      // busca ampla do backend e filtra aqui
-      try{
-        const params = new URLSearchParams();
-        params.set('limit', '120');
-        if(useGPS && userLat!=null && userLng!=null){ params.set('userLat', userLat); params.set('userLng', userLng); }
-        params.set('ts', Date.now());
-
-        $('loader').style.display='';
-        const js = await fetchAll(params);
-        const items = js.items || js.itens || [];
-        SEARCH_POOL = applyFiltersForSearch(items);
-        page = 1;
-        renderSearchPage();
-      }catch{
-        $('results').innerHTML = `<div class="card"><p class="muted">Falha ao buscar.</p></div>`;
-      }finally{
-        $('loader').style.display='none';
-      }
+  // ========================
+  // PREPARAR BUSCA
+  // ========================
+  window.prepararBusca = function () {
+    lastQuery = {
+      cidade: $('cidade').value.trim(),
+      bairro: $('bairro').value.trim(),
+      servico: $('servico').value.trim(),
+      minRating: $('minRating').value
     }
 
-    // Tags de estado
-    function applyStateTags(q){
-      hideTags();
-      if(q.cidade) $('tagCidade').style.display='', $('tagCidade').textContent='Cidade: '+q.cidade;
-      if(q.bairro) $('tagBairro').style.display='', $('tagBairro').textContent='Bairro: '+q.bairro;
-      if(q.servico) $('tagServico').style.display='', $('tagServico').textContent='Serviço: '+q.servico;
-      if(q.minRating) $('tagRating').style.display='', $('tagRating').textContent='Avaliação: '+q.minRating+'+';
+    currentPage = 1
+    searching = !!lastQuery.servico
+
+    // Tags visuais
+    $('tagCidade').style.display = lastQuery.cidade ? 'inline-flex' : 'none'
+    $('tagCidade').textContent = `Cidade: ${lastQuery.cidade}`
+
+    $('tagBairro').style.display = lastQuery.bairro ? 'inline-flex' : 'none'
+    $('tagBairro').textContent = `Bairro: ${lastQuery.bairro}`
+
+    $('tagServico').style.display = lastQuery.servico ? 'inline-flex' : 'none'
+    $('tagServico').textContent = `Serviço: ${lastQuery.servico}`
+
+    $('tagRating').style.display = lastQuery.minRating ? 'inline-flex' : 'none'
+    $('tagRating').textContent = `Avaliação: ${lastQuery.minRating}+`
+  }
+
+  // ========================
+  // GPS AUTOMÁTICO
+  // ========================
+  async function ativarGPS() {
+    if (!navigator.geolocation) {
+      $('gpsStatus').textContent = 'GPS não suportado'
+      return
     }
 
-    // Submit / limpar
-    function submitBusca(){
-      lastQuery = {
-        cidade: $('cidade').value.trim(),
-        bairro: $('bairro').value.trim(),
-        servico: $('servico').value.trim(),
-        minRating: $('minRating').value.trim()
-      };
-      resetResults();
-      applyStateTags(lastQuery);
+    $('gpsStatus').textContent = 'Obtendo localização…'
 
-      isSearching = !!lastQuery.servico; // busca só vale se tiver SERVIÇO
-      if (isSearching){
-        performSearch();                // mostra 15/página e ordena Premium>Pro>Free
-      } else {
-        loadInitial();                  // sem busca → mostra até 10
-      }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        userLat = pos.coords.latitude
+        userLng = pos.coords.longitude
+        useGPS = true
+
+        $('gpsStatus').innerHTML = '<span class="gps-ok">Localização ativa</span>'
+
+        // Resolver cidade pelo backend
+        try {
+          const r = await fetch(`/api/geo/closest-city?lat=${userLat}&lng=${userLng}`)
+          const j = await r.json()
+          if (j.ok && j.cidade) {
+            $('cidade').value = j.cidade
+            $('tagCidade').style.display = 'inline-flex'
+            $('tagCidade').textContent = `Cidade: ${j.cidade}`
+          }
+        } catch {}
+      },
+      () => {
+        $('gpsStatus').innerHTML = '<span class="gps-warn">GPS negado</span>'
+        useGPS = false
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
+
+  $('useGPS').addEventListener('change', (e) => {
+    if (e.target.checked) ativarGPS()
+    else {
+      useGPS = false
+      userLat = null
+      userLng = null
+      $('gpsStatus').textContent = 'GPS desativado.'
     }
-    $('formBusca').addEventListener('submit', (e)=>{ e.preventDefault(); submitBusca(); });
-    $('btnLimpar').addEventListener('click', async ()=>{
-      $('cidade').value=''; $('bairro').value=''; $('servico').value=''; $('minRating').value='';
-      lastQuery = { cidade:'', bairro:'', servico:'', minRating:'' };
-      hideTags(); resetResults();
-      await fillCidades();
-      isSearching = false;
-      loadInitial();
-    });
+  })
 
-    // paginação
-    $('prev').addEventListener('click', ()=>{ if(isSearching && page>1){ page--; renderSearchPage(); } });
-    $('next').addEventListener('click', ()=>{ if(isSearching && page<pages){ page++; renderSearchPage(); } });
+  // ========================
+  // DESTAQUES
+  // ========================
+  async function carregarDestaques() {
+    const cont = $('destaques')
+    const count = $('destCount')
 
-    // Destaques
-    async function tryFeaturedFallback(){
-      try{
-        const url1 = `/api/profissionais?featured=1&limit=6&${ts()}`;
-        let r = await fetch(url1, NO_STORE);
-        let js = r.ok ? await r.json() : null;
-        const items1 = js?.items || js?.itens || [];
-        if(items1.length) return items1;
+    try {
+      const r = await fetch('/api/profissionais?limit=6&featured=1', { cache: 'no-store' })
+      const j = await r.json()
+      const lista = j.profissionais || []
 
-        const url2 = `/api/profissionais?limit=6&${ts()}`;
-        r = await fetch(url2, NO_STORE);
-        js = r.ok ? await r.json() : {items:[]};
-        return (js.items || js.itens || []);
-      }catch{ return []; }
+      count.textContent = lista.length ? `${lista.length} selecionados` : ''
+      cont.innerHTML = lista.length
+        ? lista.map(p => `
+            <article class="pro-card">
+              <img class="pro-avatar" src="${p.foto || '/icons/icon-192.png'}">
+              <div class="pro-main">
+                <h3 class="pro-name">${p.nome}</h3>
+                <div class="pro-sub">${p.cidade}</div>
+              </div>
+              <div class="right">
+                <a class="btn" href="/profissional/${p.id}">Ver</a>
+              </div>
+            </article>
+          `).join('')
+        : '<div class="muted">Sem destaques no momento.</div>'
+    } catch {
+      cont.innerHTML = '<div class="muted">Erro ao carregar destaques.</div>'
     }
-    async function loadDestaques(){
-      const cont = $('destaques');
-      const count = $('destCount');
-      cont.innerHTML = `<div class="muted">Carregando destaques…</div>`;
-      try{
-        const items = await tryFeaturedFallback();
-        count.textContent = items.length ? `${items.length} selecionados` : '';
-        cont.innerHTML = items.length ? items.map(cardHTML).join('') : `<div class="muted">Sem destaques no momento.</div>`;
-        if($('results').children.length===0 && items.length){
-          $('results').innerHTML = items.map(cardHTML).join('');
-          $('info').textContent = `Exibindo ${Math.min(10, items.length)} de ${items.length} selecionados`;
-        }
-      }catch{
-        cont.innerHTML = `<div class="muted">Não foi possível carregar os destaques.</div>`;
-      }
-    }
+  }
 
-    // Boot
-    (async function init(){
-      if('serviceWorker' in navigator){
-        try{
-          const regs=await navigator.serviceWorker.getRegistrations();
-          regs.forEach(r=>r.update());
-        }catch{}
-      }
-      await fillCidades();
+  // ========================
+  // LIMPAR FILTROS
+  // ========================
+  $('btnLimpar').addEventListener('click', () => {
+    $('cidade').value = ''
+    $('bairro').value = ''
+    $('servico').value = ''
+    $('minRating').value = ''
 
-      // query compartilhável (opcional)
-      const u=new URL(location.href);
-      const cid=u.searchParams.get('cidade')||'';
-      const bai=u.searchParams.get('bairro')||'';
-      const ser=u.searchParams.get('servico')||'';
-      const mr =u.searchParams.get('minRating')||'';
-      if(cid) { $('cidade').value=cid; await loadBairrosDaCidade(cid); }
-      if(bai) $('bairro').value=bai;
-      if(ser) $('servico').value=ser;
-      if(mr) $('minRating').value=mr;
+    $('tagCidade').style.display = 'none'
+    $('tagBairro').style.display = 'none'
+    $('tagServico').style.display = 'none'
+    $('tagRating').style.display = 'none'
 
-      // inicial: sem busca -> até 10
-      submitBusca();
-      loadDestaques();
-    })();
-  })();
-  </script>
+    currentPage = 1
+    searching = false
 
-  <!-- SW -->
-  <script>
-    if ('serviceWorker' in navigator){
-      window.addEventListener('load', ()=>{
-        navigator.serviceWorker.register('/sw.js?v=clients-std-cards-2025-09-07').catch(()=>{});
-      });
-    }
-  </script>
+    carregarDestaques()
+  })
+
+  // ========================
+  // BOOTSTRAP FINAL
+  // ========================
+  document.addEventListener('DOMContentLoaded', async () => {
+    carregarDestaques()
+  })
+
+  // ========================
+  // SERVICE WORKER
+  // ========================
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {})
+    })
+  }
+
+})()
+</script>
 </body>
-</html>a\zxxxxz|||||||Z\\xzzzzz
+</html>
